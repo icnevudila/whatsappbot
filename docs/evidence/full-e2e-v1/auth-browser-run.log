@@ -1,0 +1,4 @@
+locator.waitFor: Timeout 15000ms exceeded.
+Call log:
+  - waiting for getByText('QA A VERIFIED FIXTURE 25', { exact: true }) to be visible
+

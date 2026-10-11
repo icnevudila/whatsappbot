@@ -1,3 +1,4 @@
+import { isApprovedFinalVideoOutput } from '@/lib/creative/video-output-approval'
 import { NextResponse } from 'next/server'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
@@ -74,19 +75,20 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (mediaJob) {
-      if (mediaJob.state === 'COMPLETED') {
+      if (mediaJob.state === 'COMPLETED' || mediaJob.state === 'NEEDS_REVIEW') {
         const { data: out } = await (supabase as any)
           .from('ai_media_outputs')
-          .select('id, verified, file_path, storage_url, sha256')
+          .select('id, verified, is_approved, file_path, storage_url, sha256, byte_size, duration_seconds, width, height, product_type, visual_qa_report')
           .eq('job_id', jobId)
           .eq('org_id', org.id)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle()
 
-        if (!out?.id || !out.verified || !(out.file_path || out.storage_url) || !/^[a-f0-9]{64}$/i.test(out.sha256 || '')) {
-          return NextResponse.json({ ok: true, pending: true, retryAfterSeconds: 5,
-            evidenceRequired: 'MISSING_VERIFIED_OUTPUT' }, { status: 202 })
+        if (!out?.id || !isApprovedFinalVideoOutput(out) || !out.file_path || !/^[a-f0-9]{64}$/i.test(out.sha256 || '')) {
+          await (supabase as any).from('creatives').update({status:'needs_review'})
+            .eq('id',id).eq('org_id',org.id).eq('status',data.status)
+          return NextResponse.json({ok:true, needsReview:true, message:'Video dosyası doğrulanamadı veya bir sorun tespit edildi. Kampanyada kullanmadan önce yeniden oluşturun.'})
         }
         const pUrl = `/api/ai-media/outputs/${out.id}`
         const tUrl = `/api/ai-media/outputs/${out.id}?thumb=1`

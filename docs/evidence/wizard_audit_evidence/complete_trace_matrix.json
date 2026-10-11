@@ -1,0 +1,92 @@
+{
+  "SESSION_1_NEW_GENERATION_20261010_1644": {
+    "description": "Bugün (10.10.2026 16:44) Wizard üzerinden fiyat girilmeden (Bilgi Alın modu) tetiklenen yeni üretim oturumu",
+    "BOFE": {
+      "creativeId": "0555fc95-bdc5-5962-a0d5-b1cb0e1d16a9",
+      "jobId": "job_5d0dde4007c37a0f",
+      "createdAt": "2026-10-10T13:44:18.153Z",
+      "screenshot_step1": "bofe_step1.png",
+      "screenshot_step2": "bofe_step2.png",
+      "screenshot_step3": "bofe_step3.png",
+      "actualInputs": {
+        "headline": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası için Bilgi Alın",
+        "price": null,
+        "oldPrice": null,
+        "offer": "%22 İndirim",
+        "cta": "Bilgi Alın",
+        "aspect": "1:1"
+      },
+      "outputImage": "NEW_BOFE_job_5d0dde4007c37a0f.png",
+      "outputSha256": "178ebbfc524b26b0d5d678dcca7444b9b8f6497a9d1201d3288d9322c16fc412",
+      "status": "completed",
+      "durationSeconds": 42
+    },
+    "AYVAZOGLU": {
+      "creativeId": "a052f552-82c1-5431-a3e4-e8028e4cc578",
+      "jobId": "job_d8e786fff11a1e82",
+      "createdAt": "2026-10-10T13:44:35.844Z",
+      "screenshot_step1": "ayvazoglu_step1.png",
+      "screenshot_step2": "ayvazoglu_step2.png",
+      "screenshot_step3": "ayvazoglu_step3.png",
+      "actualInputs": {
+        "headline": "Ayvazoğlu Klinker Tuğla — Doğrudan Fabrikadan",
+        "price": null,
+        "oldPrice": null,
+        "offer": "Şantiyeye Teslim",
+        "cta": "Teklif Alın",
+        "aspect": "1:1"
+      },
+      "outputImage": "NEW_AYVAZOGLU_job_d8e786fff11a1e82.png",
+      "outputSha256": "0882bb9306f4eb23411ea6770068c5d267a58a3c6501e1b066ff686774690679",
+      "status": "completed",
+      "durationSeconds": 72
+    }
+  },
+  "SESSION_2_EXISTING_ASSETS_HISTORICAL": {
+    "description": "Önceki testlerde fiyat bilgisi girilerek üretilmiş referans varlıklar",
+    "BOFE_HISTORICAL": {
+      "creativeId": "e40f5937-bc19-5338-a8c4-edd250bc3479",
+      "jobId": "job_1e7ff68879400c1c",
+      "createdAt": "2026-10-09T22:26:45.903Z",
+      "inputs": {
+        "headline": "Bofe 16L Akülü Pompa — Sezona Özel %22 İndirim",
+        "price": "1.450 TL",
+        "oldPrice": "1.850 TL",
+        "offer": "%22 İndirim",
+        "cta": "Bilgi Alın",
+        "aspect": "1:1"
+      },
+      "outputImage": "1_BOFE_FINAL_OUTPUT.png",
+      "outputSha256": "77a07fecf13008213a8a31a18818b5fca62dfcecac032b8119daaf770b50f382"
+    },
+    "AYVAZOGLU_HISTORICAL": {
+      "creativeId": "8ea519d8-611a-5a94-aba6-51038ba74bea",
+      "jobId": "job_4a1cec4a4df11652",
+      "createdAt": "2026-10-10T12:38:07.842Z",
+      "inputs": {
+        "headline": "Ayvazoğlu Tuğla — Bilgi ve Sipariş",
+        "price": "500 TL",
+        "oldPrice": "1.900 TL",
+        "offer": "Şantiyeye Teslim",
+        "cta": "Fiyat Teklifi Al",
+        "aspect": "1:1"
+      },
+      "outputImage": "2_AYVAZOGLU_FINAL_OUTPUT.png",
+      "outputSha256": "7f7a648528385f1731e3a4d0c9f2189966f0ca1bcefb7ffc41ee69bc7e37a6d3"
+    },
+    "MESAJIFY_HISTORICAL": {
+      "creativeId": "215d8dcd-6cfc-4c81-bd62-448ff48f63f2",
+      "jobId": "job_d4774540a71b6522",
+      "createdAt": "2026-10-06T15:21:00.000Z",
+      "outputImage": "3_MESAJIFY_FINAL_OUTPUT.png",
+      "outputSha256": "89a3733de506856c62e9a4584a56bb6f0b685c309d277223206565b1de992bdd"
+    },
+    "DONER_HISTORICAL": {
+      "creativeId": "efa2cd8b-c5e9-466b-920b-0de57b37dee0",
+      "jobId": "job_279f69e62158deee",
+      "createdAt": "2026-10-04T21:10:39.171Z",
+      "outputImage": "4_DONER_FINAL_OUTPUT.png",
+      "outputSha256": "60ee56a287127849545c44b8ada4a8b6ca7e12504b4e81e8bfa4b559ccc45669"
+    }
+  }
+}

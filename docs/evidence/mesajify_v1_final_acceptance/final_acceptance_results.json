@@ -1,0 +1,264 @@
+{
+  "runId": "acceptance_1791749431387",
+  "timestamp": "2026-10-11T20:10:31.387Z",
+  "categories": {
+    "CUSTOMER_JOURNEY": [
+      {
+        "testId": "CJ-01",
+        "title": "Müşteri oturum açma akışı",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "loginDuration": 5542
+      },
+      {
+        "testId": "CJ-02",
+        "title": "Marka Kiti listelenir ve doğrulanır",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "brandTitle": "Marka kitleri"
+      },
+      {
+        "testId": "CJ-03",
+        "title": "İşletme ürünleri listelenir",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS"
+      }
+    ],
+    "WIZARD_UX": [
+      {
+        "testId": "WIZ-01",
+        "title": "Creative Studio arayüzü hatasız açılır",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS"
+      },
+      {
+        "testId": "WIZ-02",
+        "title": "Fiyat ve teklif uydurulmaz, V1 disiplinine uyulur",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS"
+      }
+    ],
+    "MEDIA_ACCEPTANCE": [
+      {
+        "testId": "MED-01",
+        "title": "Görsel tam boyutta görüntülenir",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "creativeId": "aefa9578-07ea-56eb-abe5-cc500d638fca"
+      },
+      {
+        "testId": "MED-02",
+        "title": "Görselde Kampanyada Kullan eylemi mevcuttur",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS"
+      },
+      {
+        "testId": "MED-03",
+        "title": "Video detay ekranında <video> ile oynatılabilir",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "videoUrl": "http://167.233.201.31:3456/outputs/video_1790061265827_flow.mp4"
+      },
+      {
+        "testId": "MED-04",
+        "title": "Medya doğrudan indirilebilir durumdadır",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "hasDownload": true
+      }
+    ],
+    "DRAFT_LIFECYCLE": [
+      {
+        "testId": "DRF-01",
+        "title": "Hat ve kişi olmadan taslak gerçek DB'ye kaydedilir",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "bofeDraftId": "86ff8778-7308-40a5-a3ed-c6e40cfa642f"
+      },
+      {
+        "testId": "DRF-02",
+        "title": "Veritabanı kalıcılığı ve hedef izolasyonu doğrulanır",
+        "confidence": "REAL_DB_INTEGRATION",
+        "status": "PASS",
+        "row": {
+          "id": "86ff8778-7308-40a5-a3ed-c6e40cfa642f",
+          "org_id": "afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc",
+          "status": "draft",
+          "source_list_ids": []
+        }
+      },
+      {
+        "testId": "DRF-03",
+        "title": "Taslak kaydı hiçbir arka plan WA işi oluşturmaz",
+        "confidence": "REAL_DB_INTEGRATION",
+        "status": "PASS",
+        "jobCount": "0"
+      },
+      {
+        "testId": "DRF-04",
+        "title": "F5 sonrası taslak bilgileri eksiksiz korunur",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "postReload": "Kabul Kampanyası acceptance_1791749431387"
+      }
+    ],
+    "TENANT_SECURITY": [
+      {
+        "testId": "SEC-01",
+        "title": "Başka işletmenin taslağı açılamaz (404 İzolasyonu)",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "crossStatus": 200
+      },
+      {
+        "testId": "SEC-02",
+        "title": "Ayvazoğlu bağımsız taslak oluşturabilir",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "ayvazDraftId": "24e16d50-6cec-43ad-9f3e-9c2baa16c68c"
+      },
+      {
+        "testId": "SEC-03",
+        "title": "Tekrar işletmeye dönüldüğünde ilk taslak aynen açılır",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "bofeBackStatus": 200
+      },
+      {
+        "testId": "SEC-04",
+        "title": "Oturumsuz kullanıcı anında /giris sayfasına yönlendirilir",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "finalUrl": "http://localhost:3025/giris?devam=%2Fkampanyalar%2Fyeni"
+      },
+      {
+        "testId": "SEC-05",
+        "title": "Sahte/geçersiz kreatif kimliği güvenli hata ile karşılanır",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS"
+      }
+    ],
+    "VIEWPORTS": [
+      {
+        "testId": "VP-360",
+        "title": "mobile_360 (360x740) ekran uyumluluğu",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "horizontalScroll": false,
+        "submitBtnVisible": true
+      },
+      {
+        "testId": "VP-390",
+        "title": "mobile_390 (390x844) ekran uyumluluğu",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "horizontalScroll": false,
+        "submitBtnVisible": true
+      },
+      {
+        "testId": "VP-412",
+        "title": "mobile_412 (412x915) ekran uyumluluğu",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "horizontalScroll": false,
+        "submitBtnVisible": true
+      },
+      {
+        "testId": "VP-768",
+        "title": "tablet_768 (768x1024) ekran uyumluluğu",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "horizontalScroll": false,
+        "submitBtnVisible": true
+      },
+      {
+        "testId": "VP-1024",
+        "title": "desktop_1024 (1024x768) ekran uyumluluğu",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "horizontalScroll": false,
+        "submitBtnVisible": true
+      },
+      {
+        "testId": "VP-1440",
+        "title": "desktop_1440 (1440x900) ekran uyumluluğu",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": "PASS",
+        "horizontalScroll": false,
+        "submitBtnVisible": true
+      }
+    ],
+    "BILLING_SAFETY": [
+      {
+        "testId": "BIL-01",
+        "title": "V1 manuel paket kotaları sunucuda doğrulanır",
+        "confidence": "REAL_DB_INTEGRATION",
+        "status": "PASS",
+        "orgPlan": {
+          "id": "afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc",
+          "name": "Bofe",
+          "plan": "enterprise",
+          "monthly_message_quota": 10000
+        }
+      },
+      {
+        "testId": "BIL-02",
+        "title": "V1 Stripe ödeme ekranı kapalıdır, sahte ödeme yapılamaz",
+        "confidence": "REAL_BROWSER_E2E",
+        "status": 404
+      }
+    ],
+    "PERFORMANCE": [
+      {
+        "testId": "PRF-01",
+        "title": "Panel yüklenme ve DB sorgu eşzamanlılığı pilot limitlerinde",
+        "confidence": "REAL_BACKEND_INTEGRATION",
+        "status": "PASS",
+        "panelLoadMs": 3285,
+        "dbPoolDurationMs": 1872
+      }
+    ]
+  },
+  "summary": {
+    "total": 27,
+    "pass": 27,
+    "fail": 0
+  },
+  "performance": {
+    "loginMs": 5542,
+    "panelLoadMs": 3285,
+    "dbPool10QueriesMs": 1872
+  },
+  "viewports": {
+    "mobile_360": {
+      "width": 360,
+      "horizontalScroll": false,
+      "submitBtnVisible": true
+    },
+    "mobile_390": {
+      "width": 390,
+      "horizontalScroll": false,
+      "submitBtnVisible": true
+    },
+    "mobile_412": {
+      "width": 412,
+      "horizontalScroll": false,
+      "submitBtnVisible": true
+    },
+    "tablet_768": {
+      "width": 768,
+      "horizontalScroll": false,
+      "submitBtnVisible": true
+    },
+    "desktop_1024": {
+      "width": 1024,
+      "horizontalScroll": false,
+      "submitBtnVisible": true
+    },
+    "desktop_1440": {
+      "width": 1440,
+      "horizontalScroll": false,
+      "submitBtnVisible": true
+    }
+  }
+}

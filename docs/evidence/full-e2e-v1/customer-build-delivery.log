@@ -1,0 +1,29 @@
+▲ Next.js 16.3.4 (webpack)
+✓ Running next.config.ts took 212ms
+- Experiments (use with caution):
+  · serverActions
+  · staleTimes
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 85s
+  Running TypeScript ...
+  Finished TypeScript in 28.1s ...
+  Collecting page data using 7 workers ...
+Error: Failed to collect configuration for /api/ai-media/draft
+    at ignore-listed frames {
+  [cause]: Error: Ortam degiskeni eksik: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY. apps/customer/.env.local dosyasini .env.example'a bakarak doldurun.
+      at g (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\api\ai-media\draft\route.js:1:14965)
+      at 25804 (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\api\ai-media\draft\route.js:1:15177)
+      at k (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\webpack-runtime.js:1:158)
+      at 20521 (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\api\ai-media\draft\route.js:1:12438)
+      at k (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\webpack-runtime.js:1:158)
+      at 29008 (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\api\ai-media\draft\route.js:1:17109)
+      at k (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\webpack-runtime.js:1:158)
+      at rB.userland [as load] (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\api\ai-media\draft\route.js:1:3851)
+}
+
+> Build error occurred
+Error: Failed to collect page data for /api/ai-media/draft
+    at ignore-listed frames {
+  type: 'Error'
+}

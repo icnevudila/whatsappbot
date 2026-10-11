@@ -57,14 +57,14 @@ function makeMockSnapshot(overrides: Partial<CreativeSnapshot> = {}): CreativeSn
   }
 }
 
-test('1. Template selection: default to CAMPAIGN_POSTER and map styles correctly', () => {
+test('1. Template selection: sales hierarchy takes precedence and brand showcase preserves explicit family', () => {
   // Default physical SME
   const snap1 = makeMockSnapshot({ templateFamily: 'CAMPAIGN_POSTER' })
   const v1 = deriveVerifiedCampaignData(snap1)
   assert.equal(v1.templateFamily, 'CAMPAIGN_POSTER')
 
   // Product Showcase
-  const snap2 = makeMockSnapshot({ templateFamily: 'PRODUCT_SHOWCASE' })
+  const snap2 = makeMockSnapshot({ templateFamily: 'PRODUCT_SHOWCASE', objective: 'BRAND_SHOWCASE' })
   const v2 = deriveVerifiedCampaignData(snap2)
   assert.equal(v2.templateFamily, 'PRODUCT_SHOWCASE')
 
@@ -76,7 +76,7 @@ test('1. Template selection: default to CAMPAIGN_POSTER and map styles correctly
   // Elegant Retail
   const snap4 = makeMockSnapshot({ templateFamily: undefined, style: 'luxury' })
   const v4 = deriveVerifiedCampaignData(snap4)
-  assert.equal(v4.templateFamily, 'ELEGANT_RETAIL')
+  assert.equal(v4.templateFamily, 'CAMPAIGN_POSTER')
 
   // SaaS Promo Card
   const snap5 = makeMockSnapshot({ templateFamily: undefined, style: 'corporate', sector: 'SaaS & Yazılım' })
@@ -120,7 +120,7 @@ test('3. Price hierarchy and discount handling: verified numbers only, no fabric
   })
 
   const { prompt } = buildCreativePrompt(snapWithPrice)
-  assert.match(prompt, /Price hierarchy: 499 TL \(was 750 TL\)/)
+  assert.match(prompt, /Mandatory Campaign Price & Offer: 499 TL \(was 750 TL\)/)
   assert.match(prompt, /Discount: %33/)
 
   // Case with NO price given: prompt must NOT fabricate price or discount
@@ -142,7 +142,7 @@ test('3. Price hierarchy and discount handling: verified numbers only, no fabric
   })
 
   const res2 = buildCreativePrompt(snapWithoutPrice)
-  assert.doesNotMatch(res2.prompt, /Price hierarchy:/)
+  assert.doesNotMatch(res2.prompt, /Mandatory Campaign Price & Offer:/)
   assert.doesNotMatch(res2.prompt, /Discount:/)
   assert.match(res2.prompt, /Do not invent prices, discounts/)
 })
@@ -188,20 +188,20 @@ test('5. No invented facts: strictly omits unprovided delivery, dates, or badges
   assert.doesNotMatch(prompt, /Key verified selling point:/)
 })
 
-test('6. Reference Contract: historical d350985 phrasing for product and logo', () => {
+test('6. Reference Contract: exact attached product and logo fidelity', () => {
   const snap = makeMockSnapshot()
   const { prompt, negative } = buildCreativePrompt(snap, {
     verifiedRefs: { logo: true, product: true },
   })
 
-  // Historical golden phrasing from d350985
+  // Exact reference fidelity must survive prompt evolution.
   assert.match(
     prompt,
-    /A real brand logo image is attached\. Place it as a small clean logo\. Do NOT redraw, restyle or invent a new logo\. Do not distort it\./,
+    /STRICT LOGO FIDELITY:.*Place that exact logo cleanly without any modification, restyling, or variation\./,
   )
   assert.match(
     prompt,
-    /A product photo is attached as a reference\. Keep the real product identity\./,
+    /STRICT PRODUCT FIDELITY:.*preserve the real physical product exactly as shown:/,
   )
 
   // Strict negative constraints
@@ -245,8 +245,8 @@ test('7. No brand-specific runtime hardcodes: works for unseen arbitrary busines
   const { prompt } = buildCreativePrompt(unseenBrandSnap)
   assert.match(prompt, /Brand name: Vortex Rulman A\.Ş\./)
   assert.match(prompt, /Sector: Endüstriyel Yedek Parça\./)
-  assert.match(prompt, /Campaign headline: "Yüksek Devirde Kesintisiz Güç"/)
-  assert.match(prompt, /Price hierarchy: 850 TL \(was 1\.050 TL\) · Discount: %20/)
+  assert.match(prompt, /Mandatory Headline: "Yüksek Devirde Kesintisiz Güç"/)
+  assert.match(prompt, /Mandatory Campaign Price & Offer: 850 TL \(was 1\.050 TL\) · Discount: %20/)
 })
 
 test('8. Separate AI WhatsApp Campaign Message: factual and conversational pairing', () => {

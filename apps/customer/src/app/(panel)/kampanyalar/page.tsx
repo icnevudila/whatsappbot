@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
@@ -192,7 +192,7 @@ export default async function CampaignsPage({
   let campaignsQuery = supabase
     .from('campaigns')
     .select(
-      'id, name, status, body, media_url, total_targets, sent_count, failed_count, skipped_count, created_at, updated_at, scheduled_at',
+      'id, name, status, body, media_url, message_type, total_targets, sent_count, failed_count, skipped_count, created_at, updated_at, scheduled_at',
     )
     .eq('org_id', org.id)
     .order('created_at', { ascending: false })
@@ -342,6 +342,7 @@ export default async function CampaignsPage({
                         name={campaign.name}
                         body={campaign.body}
                         mediaUrl={campaign.media_url}
+                        messageType={campaign.message_type}
                       />
                       {scheduledAt ? (
                         <ScheduledStatusPill at={scheduledAt} />

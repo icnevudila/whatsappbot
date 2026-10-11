@@ -1,4 +1,4 @@
-import type { BrandKitOption } from '@/components/ai-image'
+import type { BrandKitOption, ProductOption } from '@/components/ai-image'
 
 export const WIZARD_STEPS = [
   { id: 'kampanya', label: 'Kampanya' },
@@ -63,6 +63,7 @@ export type WizardSharedProps = {
   brandName?: string
   brandTone?: string
   brandKits: BrandKitOption[]
+  products?: ProductOption[]
 }
 
 export function parseWizardStep(raw: string | null | undefined): WizardStepId {

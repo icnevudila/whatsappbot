@@ -1,0 +1,93 @@
+[
+  {
+    "path": "apps\\customer\\public\\animations\\image\\creative-design.json",
+    "layers": 3,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "6fe78257b8ce97e3d544234ee3410e9184c331a01125fdfa024feddb02a85a06"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\image\\image-render.json",
+    "layers": 2,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "fc3be0ef3827ddcf2f90abd3dc07f26e2562d7fd50efeda27edc7b0328da43fa"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\image\\image-scan.json",
+    "layers": 3,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "040e57b26db915e844aeac415207384284c2f0604ed5bc503ca91c6197f90235"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\image\\image-success.json",
+    "layers": 2,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "e32b986eb96e13e829e7ad2feb76001157299206570830c9217f2cea7b22f9b0"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\image\\product-upload.json",
+    "layers": 3,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "d0238c5a6c66f46a986d5059c08f21f364a82dbc3375883dd5af3209ac771544"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\shared\\loading.json",
+    "layers": 1,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "c641e71cd29cc3f949fc75e008b5b5e0e6abc49e9e196ca238f19990ef31d1a9"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\shared\\warning.json",
+    "layers": 1,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "3f24416d84ce5a07c68ed6f8de3534b7ca30d46c4759e4335bab8c55ed6d46e4"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\video\\camera-motion.json",
+    "layers": 2,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "5cf975a15a1ef9babff2c2046c9e73697f22da84eb6e64420417e8088ea928be"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\video\\reference-attach.json",
+    "layers": 3,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "cc4b1a406fc784cf6e624ef376fd58e34a922383bf95b604335ba824f46ee961"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\video\\storyboard.json",
+    "layers": 2,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "03bf1e1b6f9f04f3604e1a42daf1185fd3197e880a921a6b8b176cc64fcd2a0f"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\video\\timeline-edit.json",
+    "layers": 2,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "1a6f1634d105685edf1cb7c11f125488f32749eebb50e8a93a781e33de959c99"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\video\\video-render.json",
+    "layers": 2,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "c4653fe45f1ee746ecc9e1f32968376599d6493ff52f250f410c6d4389292552"
+  },
+  {
+    "path": "apps\\customer\\public\\animations\\video\\video-success.json",
+    "layers": 2,
+    "frames": 90,
+    "fps": 30,
+    "sha256": "0e5ccc99e83df12034d1cda0aad8cc2fece33f7863a1315a35ef4b5df0b89891"
+  }
+]

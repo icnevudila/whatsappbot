@@ -9,7 +9,7 @@ RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path TO 'public'
-AS $
+AS $$
 DECLARE
   v_org_id uuid;
   v_created_by uuid;
@@ -76,6 +76,6 @@ BEGIN
     'message', 'Mesaj aninda gonderim kuyruguna alindi (Oncelik: 1)'
   );
 END;
-$;
+$$;
 
 GRANT EXECUTE ON FUNCTION public.admin_send_message(uuid, text, text, text) TO anon, authenticated;

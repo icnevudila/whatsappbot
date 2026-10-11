@@ -1,0 +1,155 @@
+TAP version 13
+# Subtest: provider receipt and real output contract remain bound to the exact image job
+    # Subtest: two owned references and exact decoded output pass
+    ok 1 - two owned references and exact decoded output pass
+      ---
+      duration_ms: 181.4085
+      type: 'test'
+      ...
+    # Subtest: missing, mismatched count or foreign receipt fails before downloading artifact
+    ok 2 - missing, mismatched count or foreign receipt fails before downloading artifact
+      ---
+      duration_ms: 9.2949
+      type: 'test'
+      ...
+    # Subtest: wrong output SHA or oversized artifact cannot become a ready image
+    ok 3 - wrong output SHA or oversized artifact cannot become a ready image
+      ---
+      duration_ms: 5.5935
+      type: 'test'
+      ...
+    # Subtest: completed provider job without output URL requires reconciliation and never resubmits
+    ok 4 - completed provider job without output URL requires reconciliation and never resubmits
+      ---
+      duration_ms: 2.1991
+      type: 'test'
+      ...
+    # Subtest: malformed independent expected count performs zero provider submits
+    ok 5 - malformed independent expected count performs zero provider submits
+      ---
+      duration_ms: 2.3546
+      type: 'test'
+      ...
+    # Subtest: unknown or corrupted persisted reference count cannot bypass receipt validation
+    ok 6 - unknown or corrupted persisted reference count cannot bypass receipt validation
+      ---
+      duration_ms: 2.4381
+      type: 'test'
+      ...
+    # Subtest: 401/403 auth errors throw terminal ImageJobFailedError, never ImageJobPendingError
+    ok 7 - 401/403 auth errors throw terminal ImageJobFailedError, never ImageJobPendingError
+      ---
+      duration_ms: 3.3634
+      type: 'test'
+      ...
+    # Subtest: 404 missing job and 500 server error throw ImageJobReconciliationError, never ImageJobPendingError
+    ok 8 - 404 missing job and 500 server error throw ImageJobReconciliationError, never ImageJobPendingError
+      ---
+      duration_ms: 2.5889
+      type: 'test'
+      ...
+    1..8
+ok 1 - provider receipt and real output contract remain bound to the exact image job
+  ---
+  duration_ms: 257.7342
+  type: 'test'
+  ...
+# Subtest: unknown capacity or queue order cannot claim an authoritative queued ETA
+ok 2 - unknown capacity or queue order cannot claim an authoritative queued ETA
+  ---
+  duration_ms: 4.1102
+  type: 'test'
+  ...
+# Subtest: failed/review terminal states do not display completed; only ready does
+ok 3 - failed/review terminal states do not display completed; only ready does
+  ---
+  duration_ms: 5.1621
+  type: 'test'
+  ...
+# Subtest: remaining range uses actual measured duration and elapsed time instead of a stage percentage
+ok 4 - remaining range uses actual measured duration and elapsed time instead of a stage percentage
+  ---
+  duration_ms: 4.9278
+  type: 'test'
+  ...
+# Subtest: fewer than five measured samples cannot produce a numeric estimate
+ok 5 - fewer than five measured samples cannot produce a numeric estimate
+  ---
+  duration_ms: 0.6978
+  type: 'test'
+  ...
+# Subtest: library replaces stale ready with owned output approval and actual duration
+ok 6 - library replaces stale ready with owned output approval and actual duration
+  ---
+  duration_ms: 17.1093
+  type: 'test'
+  ...
+# Subtest: technical validation alone never releases a video awaiting editorial review
+ok 7 - technical validation alone never releases a video awaiting editorial review
+  ---
+  duration_ms: 4.1955
+  type: 'test'
+  ...
+# Subtest: review preview requires an owned validated review output and never grants approval
+ok 8 - review preview requires an owned validated review output and never grants approval
+  ---
+  duration_ms: 4.1004
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Canonical 7-Stage Engine State Mapping
+ok 9 - Production Progress Authority: Canonical 7-Stage Engine State Mapping
+  ---
+  duration_ms: 7.5408
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: VISUAL_QA_EVALUATING is strictly QA, NEVER outro branding
+ok 10 - Production Progress Authority: VISUAL_QA_EVALUATING is strictly QA, NEVER outro branding
+  ---
+  duration_ms: 0.7133
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Terminal Failure & Review Mapping
+ok 11 - Production Progress Authority: Terminal Failure & Review Mapping
+  ---
+  duration_ms: 0.7408
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Elapsed time alone NEVER mutates authoritative stage
+ok 12 - Production Progress Authority: Elapsed time alone NEVER mutates authoritative stage
+  ---
+  duration_ms: 0.892
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Data-Driven ETA with Insufficient History yields LOW confidence
+ok 13 - Production Progress Authority: Data-Driven ETA with Insufficient History yields LOW confidence
+  ---
+  duration_ms: 1.3589
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Data-Driven ETA with Adequate History yields Medium/High Confidence
+ok 14 - Production Progress Authority: Data-Driven ETA with Adequate History yields Medium/High Confidence
+  ---
+  duration_ms: 0.6068
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Completed state always yields 0 remaining ETA
+ok 15 - Production Progress Authority: Completed state always yields 0 remaining ETA
+  ---
+  duration_ms: 0.5859
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Worker Capacity Concurrency scaling
+ok 16 - Production Progress Authority: Worker Capacity Concurrency scaling
+  ---
+  duration_ms: 0.9148
+  type: 'test'
+  ...
+1..16
+# tests 24
+# suites 0
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2561.9198

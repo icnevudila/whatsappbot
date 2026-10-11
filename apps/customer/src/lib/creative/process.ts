@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto'
 import type { AiKeyBag } from '@/lib/ai/config'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { buildCreativePrompt, buildVideoPrompt, deriveVerifiedCampaignData } from './prompt'
+import { buildCreativePromptV3 } from './director/brief-v3'
+import { promotionPolicyError } from './promotion-policy'
 import { generateCampaignWhatsAppMessage } from '@/lib/ai/campaign-message'
 import { formatToAspect, type CreativePayload, type CreativeSnapshot } from './types'
 import { createVideoGenerationIdentity } from './video-generation-identity'
@@ -376,7 +378,7 @@ export async function processCreativeGeneration(
       const update = await supabase.from('creatives').update({
         status: imagePublicationStatus(payload), error: null, storage_path: storagePath, public_url: url.publicUrl,
         width: image.width || null, height: image.height || null,
-        payload: { ...payload, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
+        payload: { ...payload, lastImageJob: payload.imageJob, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
           campaignMessage: payload.campaignMessage || (asSnapshot(payload) ? generateCampaignWhatsAppMessage(deriveVerifiedCampaignData(asSnapshot(payload)!)) : null),
           imageOutputReceipt: {orgId:creative.org_id,creativeId,jobId:payload.imageJob.id,sha256:storedReceipt.sha256,size:storedReceipt.size,
             mimeType:storedReceipt.mimeType,width:storedReceipt.width,height:storedReceipt.height,decodedImage:true,storagePath,
@@ -387,25 +389,65 @@ export async function processCreativeGeneration(
       return { ok: true, ready: imagePublicationStatus(payload) === 'ready', needsReview: imagePublicationStatus(payload) === 'needs_review', publicUrl: url.publicUrl }
     } catch (error) {
       if (error instanceof ImageJobReconciliationError) {
-        await supabase.from('creatives').update({ status: 'rendering', error: null,
-          payload: { ...payload, imageReconciliationRequired: true },
+        const reconciliationMsg = 'Üretim durumu doğrulanamıyor, işlem inceleniyor. Çift ücretli üretim başlatılmadı.'
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: reconciliationMsg,
+          payload: {
+            ...payload,
+            imageReconciliationRequired: true,
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: 'RECONCILIATION_REQUIRED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, queuedAt: payload.imageJob.queuedAt, error: reconciliationMsg },
+            imageJob: null,
+          },
         }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
-        return { ok: true, pending: true, retryAfterSeconds: 10, progressInfo: {
-          elapsedSeconds: Math.max(0, Math.floor((Date.now() - Date.parse(payload.imageJob.queuedAt)) / 1000)) || 0,
-          remainingSeconds: 0, progressPercent: 0, stage: 'reconciliation',
-          stageLabel: 'Önceki üretimin sonucu doğrulanamadı',
-          stageDetail: 'Çift üretim başlatılmadı. Mevcut sağlayıcı işi kontrol edilmeli.',
-        } }
+        return {
+          ok: false,
+          pending: false,
+          error: reconciliationMsg,
+          progressInfo: {
+            elapsedSeconds: Math.max(0, Math.floor((Date.now() - Date.parse(payload.imageJob.queuedAt)) / 1000)) || 0,
+            remainingSeconds: 0,
+            progressPercent: 0,
+            stage: 'reconciliation',
+            stageLabel: 'Üretim durumu doğrulanamıyor',
+            stageDetail: 'İşlem inceleniyor. Çift üretim başlatılmadı; mevcut iş kontrol edilmeli.',
+          },
+        }
       }
-      if (!(error instanceof ImageJobFailedError) && !(error instanceof ImageOutputInvalidError)) return { ok: true, pending: true, retryAfterSeconds: 10 }
-      const message = error.message.slice(0,400)
-      await supabase.from('creatives').update({ status: 'failed', error: message,
-        payload: error instanceof ImageJobReconciliationError
-          ? { ...payload, imageReconciliationRequired: true }
-          : { ...payload, imageTerminalFailure: { kind: error instanceof ImageOutputInvalidError ? 'OUTPUT_INVALID' : 'PROVIDER_FAILED', jobId: payload.imageJob.id,
-            gatewayUrl: payload.imageJob.gatewayUrl }, imageSubmissionUncertain: false },
-      }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
-      return { ok: false, error: message }
+      if (error instanceof ImageJobFailedError || error instanceof ImageOutputInvalidError) {
+        const message = error.message.slice(0, 400)
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: message,
+          payload: {
+            ...payload,
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: error instanceof ImageOutputInvalidError ? 'OUTPUT_INVALID' : 'PROVIDER_FAILED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, error: message },
+            imageSubmissionUncertain: false,
+            imageJob: null,
+          },
+        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+        return { ok: false, error: message }
+      }
+      const queuedMs = Date.parse(payload.imageJob.queuedAt) || 0
+      const elapsedMs = queuedMs > 0 ? Date.now() - queuedMs : 0
+      if (elapsedMs > 5 * 60 * 1000) {
+        const timeoutMsg = 'Görsel üretimi zaman aşımına uğradı (5 dakika). Sonuç doğrulanamadı; işlem inceleniyor.'
+        await supabase.from('creatives').update({
+          status: 'failed',
+          error: timeoutMsg,
+          payload: {
+            ...payload,
+            imageReconciliationRequired: true,
+            lastImageJob: payload.imageJob,
+            imageTerminalFailure: { kind: 'TIMEOUT_RECONCILIATION_REQUIRED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, queuedAt: payload.imageJob.queuedAt, error: timeoutMsg },
+            imageJob: null,
+          },
+        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+        return { ok: false, pending: false, error: timeoutMsg }
+      }
+      return { ok: true, pending: true, retryAfterSeconds: 5 }
     }
   }
 
@@ -574,7 +616,30 @@ export async function processCreativeGeneration(
   try {
     const refs: ReferenceImage[] = []
 
-    // 0. Beklenen referansların tespiti (Pre-flight Gate Kontratı)
+    // 0. Marka Kiti güvencesi: Eğer snapshot.brandKit eksikse veya ID ile referans verildiyse DB'den yükle
+    if (!snapshot.brandKit || !snapshot.brandKit.colors) {
+      const kitId = (snapshot as any).brandKitId || creative.brand_kit_id
+      let dbKitQuery = supabase.from('brand_kits').select('id, name, tone, colors, fonts, logo_path, is_default').eq('org_id', creative.org_id)
+      if (kitId) {
+        dbKitQuery = dbKitQuery.eq('id', kitId)
+      } else {
+        dbKitQuery = dbKitQuery.order('is_default', { ascending: false }).limit(1)
+      }
+      const { data: dbKits } = await dbKitQuery
+      const foundKit = dbKits && dbKits.length > 0 ? dbKits[0] : null
+      if (foundKit) {
+        snapshot.brandKit = {
+          id: foundKit.id,
+          name: foundKit.name || 'Brand Kit',
+          tone: foundKit.tone || null,
+          colors: foundKit.colors || {},
+          fonts: foundKit.fonts || {},
+          logoPath: foundKit.logo_path || null,
+        }
+      }
+    }
+
+    // Beklenen referansların tespiti (Pre-flight Gate Kontratı)
     const expectedBase = Boolean(snapshot.baseCreativeId)
     const expectedProducts = snapshot.products.filter((p) => Boolean(p.include?.image && p.imageUrl))
     const shouldIncludeLogo = snapshot.useLogo !== false
@@ -591,6 +656,12 @@ export async function processCreativeGeneration(
       }
     }
     const expectedLogo = Boolean(shouldIncludeLogo && expectedLogoPath)
+    if (snapshot.promotionMode === 'brand') {
+      const subjectError = promotionPolicyError({mode:'brand',video:creative.format === 'video' || snapshot.formatId === 'reels_video',
+        hasLogo:expectedLogo,hasOfferingReference:false,hasOfferingSelection:snapshot.products.length > 0,
+        hasBase:expectedBase || Boolean(snapshot.referenceImageUrls?.length)})
+      if (subjectError) throw new Error(subjectError)
+    }
     const expectedRefUrls = Array.isArray(snapshot.referenceImageUrls) ? snapshot.referenceImageUrls : []
     const expected_reference_count = (expectedBase ? 1 : 0) + expectedProducts.length + (expectedLogo ? 1 : 0) + expectedRefUrls.length
 
@@ -690,7 +761,8 @@ export async function processCreativeGeneration(
     // Use buildImagePromptV2 only if deterministic locked copy overlay is requested.
     const useLockedCopy = Boolean((payload as any).lockCopyOverlay)
 
-    const prompt = creative.template === 'ai_send' && payload.quickSendPrompt
+    const prompt = snapshot.promotionMode === 'brand' || snapshot.offeringKind === 'software' || snapshot.offeringKind === 'service' ? buildCreativePromptV3(snapshot).prompt
+      : creative.template === 'ai_send' && payload.quickSendPrompt
       ? payload.quickSendPrompt
       : useLockedCopy
         ? buildImagePromptV2({

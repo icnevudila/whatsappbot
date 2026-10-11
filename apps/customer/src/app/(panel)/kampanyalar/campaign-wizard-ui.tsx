@@ -221,6 +221,7 @@ export function MediaPicker({
   imageAiEnabled,
   brandName,
   brandKits,
+  products = [],
   uploading,
   onUpload,
   onSelect,
@@ -233,6 +234,7 @@ export function MediaPicker({
   imageAiEnabled: boolean
   brandName?: string
   brandKits: { id: string; name: string; isDefault: boolean }[]
+  products?: { id: string; name: string; imageUrl?: string | null }[]
   uploading: boolean
   onUpload: (file: File) => void
   onSelect: (url: string, messageType?: 'image' | 'video') => void
@@ -281,6 +283,7 @@ export function MediaPicker({
         enabled={imageAiEnabled}
         brand={brandName}
         brandKits={brandKits}
+        products={products}
         onApply={(url) => onSelect(url)}
       />
       {libraryOpen ? (
@@ -405,8 +408,8 @@ function AiWriteModalForm({
         body: JSON.stringify({ mode: 'generate', brief, tone }),
       })
       const json = (await response.json()) as { text?: string; error?: string }
-      if (!response.ok) throw new Error(json.error ?? 'Metin üretilemedi.')
-      setDraft(json.text ?? '')
+      if (!response.ok || !json.text?.trim()) throw new Error(json.error ?? 'Metin üretilemedi.')
+      setDraft(json.text.trim())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Metin üretilemedi.')
     } finally {
@@ -535,8 +538,8 @@ export function AiRewriteBar({
         body: JSON.stringify({ mode: 'rewrite', currentMessage, action: next, creativeId }),
       })
       const json = (await response.json()) as { text?: string; error?: string }
-      if (!response.ok) throw new Error(json.error ?? 'İyileştirme başarısız.')
-      setSuggestion(json.text ?? '')
+      if (!response.ok || !json.text?.trim()) throw new Error(json.error ?? 'İyileştirme metni üretilemedi.')
+      setSuggestion(json.text.trim())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'İyileştirme başarısız.')
     } finally {

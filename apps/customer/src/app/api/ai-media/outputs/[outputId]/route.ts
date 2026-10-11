@@ -36,7 +36,6 @@ export async function GET(
     }
 
     const isCanliTakipAdmin = await checkIsAuthenticated().catch(() => false)
-    let isSuperAdmin = isCanliTakipAdmin
     let org: any = null
     let supabase: any = null
 
@@ -44,12 +43,9 @@ export async function GET(
     if (activeRes) {
       org = activeRes.org
       supabase = activeRes.supabase
-      if (activeRes.isPlatformAdmin) {
-        isSuperAdmin = true
-      }
     }
 
-    if (!isSuperAdmin && !org) {
+    if (!isCanliTakipAdmin && !org) {
       return new NextResponse('Yetkisiz: Giriş yapılmadı.', { status: 401 })
     }
 
@@ -65,7 +61,7 @@ export async function GET(
     let output: any = null
     const { data, error } = await (supabase as any)
       .from('ai_media_outputs')
-      .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type')
+      .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type, visual_qa_report')
       .eq('id', outputId)
       .single()
 
@@ -74,7 +70,7 @@ export async function GET(
       if (serviceClient && serviceClient !== supabase) {
         const { data: sData } = await serviceClient
           .from('ai_media_outputs')
-          .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type')
+          .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type, visual_qa_report')
           .eq('id', outputId)
           .single()
         output = sData
@@ -101,10 +97,10 @@ export async function GET(
       })
     }
 
-    // 2. Strict Tenant Isolation Gate (FAIL CLOSED for normal tenants, Super Admin bypasses)
-    if (!isSuperAdmin) {
-      if (!org || output.org_id !== org.id) {
-        console.warn(`[SECURITY_ALERT] CROSS_ORG_CONTAMINATION attempt blocked: Org ${org?.id} tried to access output ${output.id} belonging to org ${output.org_id}`)
+    // 2. Strict Tenant Isolation Gate (FAIL CLOSED: any customer session is strictly bound to its own org)
+    if (org) {
+      if (output.org_id !== org.id) {
+        console.warn(`[SECURITY_ALERT] CROSS_ORG_CONTAMINATION attempt blocked: Org ${org.id} tried to access output ${output.id} belonging to org ${output.org_id}`)
         return new NextResponse('Yetkisiz erişim: Bu medya işletmenize ait değil.', { status: 403 })
       }
 
@@ -112,6 +108,8 @@ export async function GET(
       if (!isApprovedFinalVideoOutput(output) && !reviewPreview) {
         return new NextResponse('Medya henüz kalite kontrolünden geçmedi.', { status: 422 })
       }
+    } else if (!isCanliTakipAdmin) {
+      return new NextResponse('Yetkisiz: Giriş yapılmadı.', { status: 401 })
     }
 
     // 4. Resolve Upstream Video or Thumbnail
@@ -138,22 +136,19 @@ export async function GET(
       )
 
       for (const tName of thumbCandidates) {
-        const thumbUrl = `${GATEWAY_HOST}/outputs/${tName}`
-        try {
-          const tRes = await fetch(thumbUrl, { cache: 'force-cache' })
-          if (tRes.ok) {
-            const tHeaders = new Headers()
-            tHeaders.set('Content-Type', 'image/jpeg')
-            tHeaders.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
-            if (reviewPreview) {
+        const hosts = Array.from(new Set([GATEWAY_HOST, 'http://167.233.201.31:3456', 'https://media.167.233.201.31.nip.io'].filter(Boolean)))
+        for (const host of hosts) {
+          const thumbUrl = `${host}/outputs/${tName}`
+          try {
+            const tRes = await fetch(thumbUrl, { cache: 'force-cache' })
+            if (tRes.ok) {
               const image = await fetch(thumbUrl, { cache: 'no-store' })
-              if (image.ok) return buildStreamResponse(image, tName, true)
-              continue
+              if (image.ok) return await buildStreamResponse(image, tName, reviewPreview)
+              return NextResponse.redirect(thumbUrl, 307)
             }
-            return NextResponse.redirect(thumbUrl, 307)
+          } catch {
+            // continue fallback
           }
-        } catch {
-          // continue fallback
         }
       }
       return new NextResponse('Thumbnail bulunamadı.', { status: 404 })
@@ -174,23 +169,33 @@ export async function GET(
   }
 }
 
-function buildStreamResponse(upstreamRes: Response, fileName: string, reviewPreview = false): NextResponse {
+async function buildStreamResponse(upstreamRes: Response, fileName: string, reviewPreview = false): Promise<NextResponse> {
   const resHeaders = new Headers()
   const contentType =
     upstreamRes.headers.get('content-type') ||
     (fileName.endsWith('.mp4') ? 'video/mp4' : 'application/octet-stream')
 
   resHeaders.set('Content-Type', contentType)
+  resHeaders.set('Accept-Ranges', 'bytes')
+  resHeaders.set('Cache-Control', reviewPreview ? 'private, no-store' : 'private, max-age=3600')
+  if (reviewPreview) resHeaders.set('X-Media-Review-Required', 'true')
+
+  // Buffer static images and thumbnails to prevent destination stream closed early on client teardown
+  if (!fileName.endsWith('.mp4') || upstreamRes.status !== 206) {
+    const arrayBuffer = await upstreamRes.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+    resHeaders.set('Content-Length', buffer.length.toString())
+    return new NextResponse(buffer, {
+      status: 200,
+      headers: resHeaders,
+    })
+  }
 
   const contentLength = upstreamRes.headers.get('content-length')
   if (contentLength) resHeaders.set('Content-Length', contentLength)
 
   const contentRange = upstreamRes.headers.get('content-range')
   if (contentRange) resHeaders.set('Content-Range', contentRange)
-
-  resHeaders.set('Accept-Ranges', 'bytes')
-  resHeaders.set('Cache-Control', reviewPreview ? 'private, no-store' : 'private, max-age=3600')
-  if (reviewPreview) resHeaders.set('X-Media-Review-Required', 'true')
 
   return new NextResponse(upstreamRes.body, {
     status: upstreamRes.status === 206 ? 206 : 200,

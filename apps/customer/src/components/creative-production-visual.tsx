@@ -21,7 +21,7 @@ export function CreativeProductionVisual({
   stageIndex,
   lottieSrc,
 }: CreativeProductionVisualProps) {
-  if (!lottieSrc) {
+  if (!stageKey && !lottieSrc) {
     const animation = kind === 'video' ? 'pulse-rings-2' : 'blocks-scale'
     return (
       <div className="mx-auto mb-5 flex h-36 w-36 items-center justify-center rounded-[32px] border border-[#dbe4ff] bg-[radial-gradient(circle_at_50%_35%,#fff_0%,#edf2ff_75%)] shadow-[0_12px_36px_-18px_rgba(47,91,255,0.35)]" aria-hidden="true">

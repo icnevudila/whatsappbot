@@ -1,0 +1,69 @@
+TAP version 13
+# Subtest: P0 Fast-ACK Creative Submission & Art Direction Contract Suite
+    # Subtest: 1. ART_DIRECTION_AI_READY_RESULT: precomputed AI plan freezes instantly with AI_PRECOMPUTED source
+    ok 1 - 1. ART_DIRECTION_AI_READY_RESULT: precomputed AI plan freezes instantly with AI_PRECOMPUTED source
+      ---
+      duration_ms: 13.3752
+      type: 'test'
+      ...
+    # Subtest: 2. ART_DIRECTION_FALLBACK_RESULT: missing AI plan immediately uses deterministic Designer fallback
+    not ok 2 - 2. ART_DIRECTION_FALLBACK_RESULT: missing AI plan immediately uses deterministic Designer fallback
+      ---
+      duration_ms: 15.4174
+      type: 'test'
+      location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\tests\\fast-ack-submission.test.ts:2:3156'
+      failureType: 'testCodeFailure'
+      error: 'Deterministic plan generation must take <5ms, got 6.49ms'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\tests\fast-ack-submission.test.ts:94:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: 3. LATE_AI_MUTATION_TEST: persisted creative snapshot is strictly immutable against late background AI updates
+    ok 3 - 3. LATE_AI_MUTATION_TEST: persisted creative snapshot is strictly immutable against late background AI updates
+      ---
+      duration_ms: 0.681
+      type: 'test'
+      ...
+    # Subtest: 4. IDEMPOTENCY_RESULT: duplicate submission with same requestKey preserves single durable job & creative
+    ok 4 - 4. IDEMPOTENCY_RESULT: duplicate submission with same requestKey preserves single durable job & creative
+      ---
+      duration_ms: 0.8318
+      type: 'test'
+      ...
+    # Subtest: 5. FAST_SUBMISSION_BUDGET: critical ACK path executes well within <3000ms budget
+    ok 5 - 5. FAST_SUBMISSION_BUDGET: critical ACK path executes well within <3000ms budget
+      ---
+      duration_ms: 0.6559
+      type: 'test'
+      ...
+    1..5
+not ok 1 - P0 Fast-ACK Creative Submission & Art Direction Contract Suite
+  ---
+  duration_ms: 34.8822
+  type: 'suite'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\tests\\fast-ack-submission.test.ts:2:1059'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 5
+# suites 1
+# pass 4
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1816.057

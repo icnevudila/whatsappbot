@@ -38,16 +38,23 @@ export function OrgSwitcher({
   const active = orgs.find((org) => org.id === activeOrgId) ?? orgs[0]
   const canSwitch = orgs.length > 1
 
+  const [selectedOrgId, setSelectedOrgId] = useState(activeOrgId)
+  useEffect(() => {
+    setSelectedOrgId(activeOrgId)
+  }, [activeOrgId])
+
   const onSwitch = (orgId: string) => {
     if (orgId === activeOrgId) return
+    setSelectedOrgId(orgId)
     setError(null)
     startTransition(async () => {
       const result = await switchOrg(orgId)
       if (result?.error) {
+        setSelectedOrgId(activeOrgId)
         setError(result.error)
         return
       }
-      router.refresh()
+      window.location.reload()
     })
   }
 
@@ -81,7 +88,7 @@ export function OrgSwitcher({
         <div className="relative min-w-0">
           <select
             className={`w-full min-w-0 appearance-none bg-transparent py-0.5 pr-5 text-right focus:outline-none disabled:opacity-60 ${typeClass}`}
-            value={activeOrgId}
+            value={selectedOrgId}
             disabled={pending}
             aria-label="İşletme seç"
             onChange={(event) => onSwitch(event.target.value)}
@@ -136,7 +143,7 @@ export function OrgSwitcher({
               ? 'w-full appearance-none rounded-none border-0 bg-transparent px-0 py-1 text-[16px] font-medium text-[#111b21] focus:outline-none'
               : 'max-w-[240px] truncate rounded-md border border-hairline bg-canvas px-2.5 py-1 text-[13px] font-medium text-ink-soft focus:border-accent focus:outline-none'
           }
-          value={activeOrgId}
+          value={selectedOrgId}
           disabled={pending}
           aria-label="İşletme seç"
           onChange={(event) => onSwitch(event.target.value)}

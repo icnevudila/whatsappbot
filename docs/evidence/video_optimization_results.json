@@ -1,0 +1,119 @@
+[
+  {
+    "file": "01-ana-urun-veo-i2v.mp4",
+    "originalBytes": 3799536,
+    "optimizedBytes": 2042423,
+    "savingsBytes": 1757113,
+    "savingsPercent": 46.2,
+    "originalBitrateKbps": 3800,
+    "optimizedBitrateKbps": 2042
+  },
+  {
+    "file": "04-ortak-inbox-veo-i2v.mp4",
+    "originalBytes": 3074466,
+    "optimizedBytes": 1667050,
+    "savingsBytes": 1407416,
+    "savingsPercent": 45.8,
+    "originalBitrateKbps": 3074,
+    "optimizedBitrateKbps": 1667
+  },
+  {
+    "file": "06-isletme-bulucu-veo-i2v.mp4",
+    "originalBytes": 2153048,
+    "optimizedBytes": 1261333,
+    "savingsBytes": 891715,
+    "savingsPercent": 41.4,
+    "originalBitrateKbps": 2153,
+    "optimizedBitrateKbps": 1261
+  },
+  {
+    "file": "05-kreatif-studyosu-veo-i2v.mp4",
+    "originalBytes": 3574561,
+    "optimizedBytes": 2079796,
+    "savingsBytes": 1494765,
+    "savingsPercent": 41.8,
+    "originalBitrateKbps": 3575,
+    "optimizedBitrateKbps": 2080
+  },
+  {
+    "file": "03-coklu-hat-veo-i2v.mp4",
+    "originalBytes": 2884740,
+    "optimizedBytes": 1442928,
+    "savingsBytes": 1441812,
+    "savingsPercent": 50,
+    "originalBitrateKbps": 2885,
+    "optimizedBitrateKbps": 1443
+  },
+  {
+    "file": "ecommerce-flow-veo.mp4",
+    "originalBytes": 1715973,
+    "optimizedBytes": 1646061,
+    "savingsBytes": 69912,
+    "savingsPercent": 4.1,
+    "originalBitrateKbps": 1707,
+    "optimizedBitrateKbps": 1646
+  },
+  {
+    "file": "restaurant-flow-veo.mp4",
+    "originalBytes": 1015909,
+    "optimizedBytes": 946586,
+    "savingsBytes": 69323,
+    "savingsPercent": 6.8,
+    "originalBitrateKbps": 1011,
+    "optimizedBitrateKbps": 947
+  },
+  {
+    "file": "automotive-flow-veo.mp4",
+    "originalBytes": 1427180,
+    "optimizedBytes": 1357505,
+    "savingsBytes": 69675,
+    "savingsPercent": 4.9,
+    "originalBitrateKbps": 1420,
+    "optimizedBitrateKbps": 1358
+  },
+  {
+    "file": "realestate-flow-veo.mp4",
+    "originalBytes": 1321058,
+    "optimizedBytes": 1251298,
+    "savingsBytes": 69760,
+    "savingsPercent": 5.3,
+    "originalBitrateKbps": 1314,
+    "optimizedBitrateKbps": 1251
+  },
+  {
+    "file": "clinic-flow-veo.mp4",
+    "originalBytes": 690671,
+    "optimizedBytes": 620233,
+    "savingsBytes": 70438,
+    "savingsPercent": 10.2,
+    "originalBitrateKbps": 687,
+    "optimizedBitrateKbps": 620
+  },
+  {
+    "file": "service-flow-veo.mp4",
+    "originalBytes": 791450,
+    "optimizedBytes": 721735,
+    "savingsBytes": 69715,
+    "savingsPercent": 8.8,
+    "originalBitrateKbps": 787,
+    "optimizedBitrateKbps": 722
+  },
+  {
+    "file": "hero-flow-veo.mp4",
+    "originalBytes": 3148352,
+    "optimizedBytes": 1733353,
+    "savingsBytes": 1414999,
+    "savingsPercent": 44.9,
+    "originalBitrateKbps": 3132,
+    "optimizedBitrateKbps": 1733
+  },
+  {
+    "file": "pipeline-flow-veo.mp4",
+    "originalBytes": 4769196,
+    "optimizedBytes": 3299262,
+    "savingsBytes": 1469934,
+    "savingsPercent": 30.8,
+    "originalBitrateKbps": 4769,
+    "optimizedBitrateKbps": 3299
+  }
+]

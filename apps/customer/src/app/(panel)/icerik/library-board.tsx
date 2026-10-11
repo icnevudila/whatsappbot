@@ -10,6 +10,7 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { CreativeGenerating } from '@/components/creative-generating'
+import { CreativeDownload } from '@/components/creative-download'
 import { deleteCreative, listLibraryCreatives } from './actions'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
 import { getSafeMediaUrl } from './detail-view'
@@ -27,10 +28,12 @@ export function LibraryBoard({
   orgId,
   initial,
   initialHasMore,
+  initialNextOffset,
   canManage,
 }: {
   orgId: string
   initial: LibraryItem[]
+  initialNextOffset?: number
   initialHasMore: boolean
   canManage: boolean
 }) {
@@ -47,14 +50,22 @@ export function LibraryBoard({
   const confirm = useConfirm()
   const router = useRouter()
   const [pending, startTransition] = useTransition()
-  const kicked = useRef<Set<string>>(new Set())
-  const [renderErrors, setRenderErrors] = useState<Record<string, string>>({})
   const sentinelRef = useRef<HTMLDivElement>(null)
   const loadingMore = useRef(false)
   const requestId = useRef(0)
-  const skipFirstQuery = useRef(true)
+  const previousQuery = useRef({ query: '', sort: 'new' })
+  const nextOffset = useRef(initialNextOffset ?? initial.length)
+  const [pageCursor, setPageCursor] = useState(initialNextOffset ?? initial.length)
   const loadedCount = useRef(initial.length)
   loadedCount.current = items.length
+
+  useEffect(() => {
+    setItems(initial)
+    setHasMore(initialHasMore)
+    nextOffset.current = initialNextOffset ?? initial.length
+    setPageCursor(initialNextOffset ?? initial.length)
+    loadedCount.current = initial.length
+  }, [orgId, initial, initialHasMore, initialNextOffset])
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 280)
@@ -83,20 +94,19 @@ export function LibraryBoard({
       })
       if (id !== requestId.current) return
       if (result.error) toast(result.error, 'danger')
+      nextOffset.current = result.nextOffset ?? offset + result.items.length
+      setPageCursor(nextOffset.current)
+      loadingMore.current = false
       setItems((current) => (replace ? result.items : [...current, ...result.items]))
       setHasMore(result.hasMore)
       setLoading(false)
-      loadingMore.current = false
     },
     [debouncedQuery, sort, toast],
   )
 
   useEffect(() => {
-    if (skipFirstQuery.current && !debouncedQuery && sort === 'new') {
-      skipFirstQuery.current = false
-      return
-    }
-    skipFirstQuery.current = false
+    if (previousQuery.current.query === debouncedQuery && previousQuery.current.sort === sort) return
+    previousQuery.current = { query: debouncedQuery, sort }
     loadedCount.current = LIBRARY_PAGE_SIZE
     void fetchPage(0, true)
   }, [debouncedQuery, sort, fetchPage])
@@ -119,71 +129,28 @@ export function LibraryBoard({
   }, [orgId, fetchPage])
 
   useEffect(() => {
-    if (!canManage) return
-    const waiting = items.filter(
-      (item) =>
-        item.source === 'ai' &&
-        (item.status === 'pending' || item.status === 'rendering') &&
-        !kicked.current.has(item.id),
-    )
-    for (const item of waiting.slice(0, 4)) {
-      kicked.current.add(item.id)
-      void fetch('/api/icerik/render', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: item.id }),
-        signal: AbortSignal.timeout(120_000),
-      })
-        .then(async (response) => {
-          const json = (await response.json().catch(() => null))
-          if (!response.ok) {
-            const message = json?.error ?? 'İçerik üretilemedi.'
-            setRenderErrors((prev) => ({ ...prev, [item.id]: message }))
-          }
-          if (response.status === 202) {
-            // Video veya görsel arka planda devam ediyor, 4 saniye sonra tekrar kontrol et
-            setTimeout(() => {
-              kicked.current.delete(item.id)
-            }, 4000)
-          }
-          void fetchPage(0, true)
-        })
-        .catch(() => {
-          setTimeout(() => {
-            kicked.current.delete(item.id)
-            void fetchPage(0, true)
-          }, 4000)
-        })
+    // An entirely filtered page has no cards to scroll through. Continue using
+    // the raw cursor instead of waiting for a viewport intersection.
+    if (items.length === 0 && hasMore && !loading && !loadingMore.current) {
+      void fetchPage(nextOffset.current, false)
     }
-  }, [canManage, items, fetchPage])
-
-  // Arka planda bekleyen veya çizilen işler varsa periyodik olarak listeyi tazele
-  useEffect(() => {
-    const hasActiveJobs = items.some(
-      (item) => item.source === 'ai' && (item.status === 'pending' || item.status === 'rendering')
-    )
-    if (!hasActiveJobs) return
-    const pollTimer = setInterval(() => {
-      void fetchPage(0, true)
-    }, 5000)
-    return () => clearInterval(pollTimer)
-  }, [items, fetchPage])
+  }, [fetchPage, hasMore, items.length, loading, pageCursor])
 
   useEffect(() => {
     const el = sentinelRef.current
-    if (!el || !hasMore) return
+    if (!el || !hasMore || loading) return
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries[0]?.isIntersecting || loadingMore.current) return
-        void fetchPage(items.length, false)
+        void fetchPage(nextOffset.current, false)
       },
       { rootMargin: '240px' },
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [fetchPage, hasMore, items.length])
+  }, [fetchPage, hasMore, items.length, loading, pageCursor])
 
-  const emptyLibrary = items.length === 0 && !loading && !debouncedQuery
+  const emptyLibrary = items.length === 0 && !loading && !debouncedQuery && !hasMore
   const toolsOpen = filtersOpen || searchOpen
 
   return (
@@ -282,7 +249,7 @@ export function LibraryBoard({
         <div className="space-y-3 px-0">
           {items.length === 0 ? (
             <p className="rounded-md border border-hairline bg-surface px-4 py-8 text-center text-[13px] text-ink-muted">
-              Bu aramaya uyan görsel yok.
+              {loading || hasMore ? 'Hazır içerikler kontrol ediliyor…' : 'Bu aramaya uyan görsel yok.'}
             </p>
           ) : (
             <ul className="grid grid-cols-2 items-stretch gap-2 lg:grid-cols-3">
@@ -292,7 +259,6 @@ export function LibraryBoard({
                     item={item}
                     canManage={canManage}
                     pending={pending}
-                    renderError={renderErrors[item.id]}
                     onDelete={() => {
                       void (async () => {
                         const ok = await confirm({
@@ -343,7 +309,9 @@ function LibraryCard({
   onDelete: () => void
 }) {
   const failed = Boolean(renderError) && item.status !== 'ready'
-  const ready = item.status === 'ready' && Boolean(item.publicUrl)
+  const ready =
+    (item.status === 'ready' || (item.status === 'needs_review' && Boolean(item.thumbnailUrl || item.publicUrl))) &&
+    Boolean(item.publicUrl || item.thumbnailUrl)
   const isVideo =
     item.format === 'video' ||
     Boolean(item.publicUrl?.endsWith('.mp4')) ||
@@ -397,7 +365,7 @@ function LibraryCard({
               failed ? 'bg-[#fff5f4] text-danger' : 'bg-surface/90 text-ink-muted'
             }`}
           >
-            {statusLabel(failed ? 'failed' : item.status)}
+            {isVideo && item.status === 'needs_review' ? 'Kullanıma hazır değil' : statusLabel(failed ? 'failed' : item.status)}
           </span>
         ) : null}
         <ItemMenu item={item} canManage={canManage} pending={pending} onDelete={onDelete} />
@@ -454,7 +422,7 @@ function ItemMenu({
     })
     items.push({ key: 'revise', label: 'Revize et', href: `/icerik/${item.id}?revize=1` })
     items.push({ key: 'vary', label: 'Varyasyon', href: `/icerik/${item.id}` })
-    items.push({ key: 'download', label: 'İndir', href: item.publicUrl, download: true })
+    items.push({ key: 'download', label: 'İndir', download: true })
   }
   if (canManage) items.push({ key: 'delete', label: 'Sil', danger: true, onSelect: onDelete })
   if (items.length === 0) return null
@@ -478,7 +446,11 @@ function ItemMenu({
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
           {items.map((entry) =>
-            entry.href ? (
+            entry.download ? (
+              <CreativeDownload key={entry.key} creativeId={item.id} role="menuitem"
+                className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
+                onStarted={() => setOpen(false)} />
+            ) : entry.href ? (
               <a
                 key={entry.key}
                 role="menuitem"
@@ -549,8 +521,8 @@ function GeneratingFrame({ status, error }: { status: string; error: string | nu
       {status === 'needs_review' ? (
         <div className="flex h-full flex-col items-center justify-center bg-canvas px-4 text-center">
           <Icon name="video" className="mb-3 size-7 text-ink-muted" />
-          <p className="text-[13px] font-semibold text-ink">Video inceleme bekliyor</p>
-          <p className="mt-2 text-[12.5px] text-ink-muted">Kalite kontrolü tamamlanmadan kullanılamaz.</p>
+          <p className="text-[13px] font-semibold text-ink">Video kullanıma hazır değil</p>
+          <p className="mt-2 text-[12.5px] text-ink-muted">Dosya doğrulanamadı veya bir sorun tespit edildi.</p>
         </div>
       ) : status === 'failed' ? (
         <div className="flex h-full flex-col items-center justify-center bg-canvas px-3 text-center">

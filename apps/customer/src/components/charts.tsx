@@ -180,7 +180,7 @@ export function WeeklyLineChart({
                   </span>
                   {!denseLabels ? (
                     <span className="mt-0.5 block text-center text-[11px] font-semibold tabular text-[#111b21]">
-                      {d.out}
+                      —
                     </span>
                   ) : null}
                 </span>

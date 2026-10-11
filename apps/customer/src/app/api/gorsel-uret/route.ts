@@ -53,7 +53,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'İşletme askıda.' }, { status: 403 })
   }
 
-  let body: { requestId?: string; requestScope?: string; brief?: string; brand?: string; style?: string; brandKitId?: string | null }
+  let body: {
+    requestId?: string
+    requestScope?: string
+    brief?: string
+    brand?: string
+    style?: string
+    brandKitId?: string | null
+    productId?: string | null
+  }
   try {
     body = await request.json()
     if (!body || typeof body !== 'object' || Array.isArray(body)) throw new Error('Invalid body')
@@ -77,7 +85,15 @@ export async function POST(request: Request) {
   }
 
   const requestedKitId = String(body.brandKitId ?? '').trim() || null
-  const identity = quickImageIdentity({ brief, brand: String(body.brand || ''), style: String(body.style || 'duyuru'), brandKitId: requestedKitId })
+  const requestedProductId = String(body.productId ?? '').trim() || null
+
+  const identity = quickImageIdentity({
+    brief,
+    brand: String(body.brand || ''),
+    style: String(body.style || 'duyuru'),
+    brandKitId: requestedKitId,
+    productId: requestedProductId,
+  })
   const existing = await supabase.from('creatives').select('id,org_id,created_by,source,template,format,status,payload,public_url,error')
     .eq('id', requestId).eq('org_id', org.id).maybeSingle()
   if (existing.error) return NextResponse.json({ error: 'İş kaydı doğrulanamadı; aynı kimlikle tekrar kontrol edin.', canRetryNew: false }, { status: 503 })
@@ -151,10 +167,138 @@ export async function POST(request: Request) {
     const logoResult = await supabase.from('organizations').select('logo_path').eq('id', org.id).maybeSingle()
     if (logoResult.error) throw new Error('İşletme logosu doğrulanamadı; üretim başlatılmadı.')
     const logoPath = kit?.logo_path || logoResult.data?.logo_path || null
+
+    // Marka logosu ve gerçek ürün varlığı zorunluluğu:
+    // Eğer işletmenin marka kiti veya logosu yoksa, rastgele kurumsal olmayan görsel üretimi engellenir.
+    if (!logoPath) {
+      return NextResponse.json(
+        { error: 'İşletme veya marka kiti logosu tanımlanmamış. Profesyonel reklam görseli için lütfen önce işletme logosu veya marka kiti ekleyin.', canRetryNew: false },
+        { status: 422 }
+      )
+    }
+
+    // Gerçek ürün görseli / kanonik referans kontrolü (P0.1 & P0.2 Kuralları):
+    // 1. Arayüzden açıkça gönderilen productId varsa onu doğrula:
+    let matchedProducts: CreativePayload['products'] = []
+    if (requestedProductId) {
+      const { data: prodData, error: prodErr } = await supabase
+        .from('org_products')
+        .select('id, name, is_active')
+        .eq('org_id', org.id)
+        .eq('id', requestedProductId)
+        .maybeSingle()
+
+      if (prodErr || !prodData) {
+        return NextResponse.json(
+          { error: 'Seçilen ürün işletmenize ait değil veya bulunamadı.', canRetryNew: false },
+          { status: 404 }
+        )
+      }
+      if (!prodData.is_active) {
+        return NextResponse.json(
+          { error: 'Seçilen ürün aktif değil. Lütfen aktif bir katalog ürünü seçin.', canRetryNew: false },
+          { status: 422 }
+        )
+      }
+
+      // Ürün görselini kontrol et
+      const { data: imgData } = await supabase
+        .from('org_product_images')
+        .select('public_url')
+        .eq('org_id', org.id)
+        .eq('product_id', prodData.id)
+        .order('sort_order', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+
+      if (!imgData?.public_url) {
+        return NextResponse.json(
+          { error: `"${prodData.name}" ürününe ait kanonik görsel bulunamadı. Lütfen önce ürün ayarlarından ürün görseli yükleyin.`, canRetryNew: false },
+          { status: 422 }
+        )
+      }
+
+      matchedProducts.push({
+        id: prodData.id,
+        name: prodData.name,
+        description: null,
+        boxContents: null,
+        imageUrl: imgData.public_url,
+        price: null,
+        oldPrice: null,
+        promo: null,
+        extra: null,
+        include: { image: true, name: true, description: false, boxContents: false, price: false, promo: false },
+      })
+    } else {
+      // 2. productId gönderilmediyse: Brief içinde tam ürün adı arayarak eşleştir
+      const { data: activeProducts } = await supabase
+        .from('org_products')
+        .select('id, name')
+        .eq('org_id', org.id)
+        .eq('is_active', true)
+
+      if (activeProducts && activeProducts.length > 0) {
+        const lowerBrief = brief.toLocaleLowerCase('tr-TR')
+        const matched = activeProducts.find((p) => lowerBrief.includes(p.name.toLocaleLowerCase('tr-TR')))
+
+        if (matched) {
+          const { data: imgData } = await supabase
+            .from('org_product_images')
+            .select('public_url')
+            .eq('org_id', org.id)
+            .eq('product_id', matched.id)
+            .order('sort_order', { ascending: true })
+            .limit(1)
+            .maybeSingle()
+
+          if (!imgData?.public_url) {
+            return NextResponse.json(
+              { error: `Eşleşen "${matched.name}" ürününe ait görsel bulunamadı. Lütfen ürün görseli ekleyin veya doğru ürünü seçin.`, canRetryNew: false },
+              { status: 422 }
+            )
+          }
+
+          matchedProducts.push({
+            id: matched.id,
+            name: matched.name,
+            description: null,
+            boxContents: null,
+            imageUrl: imgData.public_url,
+            price: null,
+            oldPrice: null,
+            promo: null,
+            extra: null,
+            include: { image: true, name: true, description: false, boxContents: false, price: false, promo: false },
+          })
+        }
+      }
+    }
+
+    // P0.2 Güvencesi: Eğer işletmenin kayıtlı ürünleri varsa ve hiçbiri seçilmemiş/eşleşmemişse,
+    // ya da ürün referansı olmadan hayali ürün çizilmek isteniyorsa, kullanıcıdan açık ürün seçimi iste:
+    if (matchedProducts.length === 0) {
+      const { count: productCount } = await supabase
+        .from('org_products')
+        .select('id', { count: 'exact', head: true })
+        .eq('org_id', org.id)
+        .eq('is_active', true)
+
+      if (productCount && productCount > 0) {
+        return NextResponse.json(
+          {
+            error: 'Reklam görseli için bir katalog ürünü seçmelisiniz. Sessizce başka bir ürün seçilemez veya kanonik ürün görseli olmadan üretim başlatılamaz.',
+            canRetryNew: false,
+          },
+          { status: 422 }
+        )
+      }
+    }
+
     const payload: CreativePayload = {
       brief, style: styleKey, formatId: 'square', aspect: '1:1', textDensity: 'low', useLogo: Boolean(logoPath),
       labels: [], cta: null, address: null, website: null, dateRange: null, customText: null,
-      phones: [], socials: [], products: [], baseCreativeId: null,
+      phones: [], socials: [], products: matchedProducts, baseCreativeId: null,
       brandKit: kit ? { id: kit.id, name: kit.name, tone: kit.tone, colors, fonts: {}, logoPath } : null,
       quickSendPrompt: prompt, quickSendIdentity: identity,
       ...(logoPath && !kit ? { customLogoUrl: logoPath } : {}),

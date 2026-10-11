@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next'
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Notice, PageHeader } from '@/components/ui'
@@ -45,13 +45,6 @@ export default async function SettingsHubPage({
   return (
     <div className="wb-wa-page wb-wa-settings">
       <PageHeader title="Ayarlar" description="Bölüm seçin" />
-
-      {billing === 'ok' ? (
-        <Notice tone="success">Ödeme alındı. Paket kısa süre içinde güncellenir.</Notice>
-      ) : null}
-      {billing === 'cancel' ? (
-        <Notice tone="warn">Ödeme iptal edildi.</Notice>
-      ) : null}
 
       {org.suspended_at ? (
         <Notice tone="danger">

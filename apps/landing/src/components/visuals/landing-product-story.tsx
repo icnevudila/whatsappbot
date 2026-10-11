@@ -7,6 +7,7 @@ import { UnifiedInboxShowcase } from './unified-inbox-showcase'
 import { CleanCreativeStudio } from './clean-creative-studio'
 import { type ReactNode } from 'react'
 import { SectorCampaignLab } from './product-modules'
+import { LazyVideo } from './lazy-video'
 
 function Story({ eyebrow, title, description, dark = false, chapter = '', children }: { eyebrow: string; title: string; description: string; dark?: boolean; chapter?: string; children: ReactNode }) {
   return <section className={`ml-product-story ml-chapter-${chapter}${dark ? ' ml-story-dark' : ''}`}>
@@ -79,19 +80,10 @@ export function LandingDiscoveryStory() {
     >
       <div className="w-full max-w-[1100px] mx-auto">
         <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-3xl overflow-hidden border border-slate-200/90 shadow-2xl bg-slate-950 mb-8">
-          <video
-            ref={(el) => {
-              if (el) {
-                el.muted = true
-                el.defaultMuted = true
-              }
-            }}
+          <LazyVideo
             src="/landing/infographics/06-isletme-bulucu-veo-i2v.mp4"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
+            poster="/landing/infographics/06-isletme-bulucu-veo-i2v-poster.webp"
+            alt="Mesajify Hedef Kitle ve İşletme Bulucu"
             className="w-full h-full object-cover object-center"
           />
         </div>

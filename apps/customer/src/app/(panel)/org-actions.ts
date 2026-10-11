@@ -31,8 +31,10 @@ export async function switchOrg(orgId: string): Promise<OrgActionState> {
 
   if (!membership) return { error: 'Bu işletmeye erişiminiz yok.' }
 
-  // Cihaz bazlı tercih — profiles.active_org_id güncellenmez (diğer oturumlar etkilenmez).
-  await writeActiveOrgCookie(orgId)
+  await Promise.all([
+    writeActiveOrgCookie(orgId),
+    supabase.from('profiles').update({ active_org_id: orgId }).eq('id', user.id),
+  ])
 
   revalidatePath('/', 'layout')
   return { ok: 'İşletme değiştirildi.' }

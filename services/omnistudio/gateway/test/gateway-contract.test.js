@@ -4,6 +4,7 @@ const { after, before, test } = require('node:test');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
 
 const gatewayDir = path.resolve(__dirname, '..');
 const port = 41000 + Math.floor(Math.random() * 1000);
@@ -11,6 +12,9 @@ const baseUrl = `http://127.0.0.1:${port}`;
 let gateway;
 
 async function request(pathname, options = {}) {
+  if (/^\/(?:job(?:\/|$)|worker(?:\/|$)|upload(?:\?|$))/.test(pathname)) {
+    options = { ...options, headers: { ...options.headers, 'x-worker-token': 'test-worker-control-key' } };
+  }
   const response = await fetch(`${baseUrl}${pathname}`, options);
   const body = await response.json();
   return { response, body };
@@ -42,6 +46,7 @@ before(async () => {
     env: {
       ...process.env, PORT: String(port), PUBLIC_HOST: '127.0.0.1',
       CHATGPT_API_KEY: 'test-gateway-key',
+      WORKER_CONTROL_TOKEN: 'test-worker-control-key',
       COMPLETED_JOB_TTL_MS: '10', FAILED_JOB_TTL_MS: '10', MAX_RETAINED_COMPLETED_JOBS: '3',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -59,6 +64,50 @@ before(async () => {
 
 after(() => {
   gateway?.kill('SIGTERM');
+});
+
+test('unauthenticated health endpoints never expose tenant job contents', async () => {
+  const privatePrompt = 'private-tenant-sentinel-583d';
+  const created = await request('/v1/images/generations?async=true', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt: privatePrompt, tenant_id: 'health-private-org', request_id: 'health-private-request', async: true }),
+  });
+  for (const route of ['/health', '/stats', '/']) {
+    const health = await request(route);
+    assert.equal(health.response.status, 200);
+    assert.equal('recent' in health.body, false);
+    assert.equal('activeWorkers' in health.body, false);
+    assert.equal(JSON.stringify(health.body).includes(privatePrompt), false);
+    assert.equal(JSON.stringify(health.body).includes(created.body.job_id), false);
+  }
+  const owned = await nextJob('health-fixture-worker');
+  assert.equal(owned.id, created.body.job_id);
+  await request('/job/release', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobId: owned.id, error: 'MODEL_ERROR' }) });
+});
+
+test('public output routes do not publish queue metadata or audit logs', async () => {
+  const name = `private-fixture-${process.pid}.json`;
+  const fixture = path.join(gatewayDir, 'outputs', name);
+  fs.writeFileSync(fixture, JSON.stringify({ prompt: 'private-audit-sentinel' }));
+  try {
+    for (const prefix of ['/outputs/', '/public/']) for (const method of ['GET', 'HEAD']) {
+      const response = await fetch(baseUrl + prefix + name, { method });
+      assert.equal(response.status, 404);
+      assert.equal((await response.text()).includes('private-audit-sentinel'), false);
+    }
+    const authorized = await fetch(baseUrl + '/outputs/' + name, { headers: { 'x-worker-token': 'test-worker-control-key' } });
+    assert.equal(authorized.status, 200);
+  } finally { fs.unlinkSync(fixture); }
+});
+
+test('cross-tenant operational event stream requires worker authentication', async () => {
+  const unauthenticated = await fetch(baseUrl + '/events');
+  assert.equal(unauthenticated.status, 403);
+  const authorized = await fetch(baseUrl + '/events', { headers: { 'x-worker-token': 'test-worker-control-key' } });
+  assert.equal(authorized.status, 200);
+  assert.match(authorized.headers.get('content-type'), /text\/event-stream/);
+  await authorized.body.cancel();
 });
 
 test('normal WhatsApp reply preserves company, tone and supplied history', async () => {

@@ -1,0 +1,192 @@
+{
+  "testDate": "2026-10-11T10:21:01.261Z",
+  "browser": "Chromium Headless",
+  "baseUrl": "http://localhost:3025",
+  "tests": {
+    "library": {
+      "status": "PASS",
+      "itemCount": 4,
+      "items": [
+        {
+          "link": "/icerik/41a1d788-6a4e-54cb-a953-fab1c29ff9a2",
+          "title": "Bofe - Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası Reklam Filmi",
+          "badges": [
+            "0:10",
+            "İnceleme bekliyor"
+          ],
+          "isVideo": false
+        },
+        {
+          "link": "/icerik/be2d9e50-5990-4fc2-b2a2-6775932ff8cc",
+          "title": "Ayvazoğlu Tuğla ile Sağlam Temeller. Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.",
+          "badges": [],
+          "isVideo": false
+        },
+        {
+          "link": "/icerik/82bd5aca-5c88-4b4e-bcb8-d7567930e50d",
+          "title": "Ayvazoğlu Tuğla ile Sağlam Temeller. Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.",
+          "badges": [],
+          "isVideo": false
+        },
+        {
+          "link": "/icerik/d0db639d-ed88-4201-a146-c6d643d44cf0",
+          "title": "Bofe Akülü Sırt İlaçlama Pompası. Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.",
+          "badges": [],
+          "isVideo": false
+        }
+      ]
+    },
+    "videoPlayback": {
+      "status": "PASS",
+      "initial": {
+        "initialSrc": "http://localhost:3025/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?preview=1",
+        "initialPoster": "http://localhost:3025/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?thumb=1",
+        "initialReadyState": 1,
+        "initialDuration": 10,
+        "initialPaused": true,
+        "initialMuted": false,
+        "videoWidth": 720,
+        "videoHeight": 1280,
+        "hasError": null
+      },
+      "final": {
+        "readyState": 4,
+        "currentTime": 10,
+        "duration": 10,
+        "ended": true,
+        "paused": true,
+        "error": null
+      },
+      "seek": {
+        "before": 5.010873,
+        "after": 7.5,
+        "seekDurationMs": 89
+      },
+      "networkRequests": [
+        {
+          "url": "http://localhost:3025/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?thumb=1",
+          "status": 200,
+          "statusText": "OK",
+          "headers": {
+            "cache-control": "private, max-age=3600",
+            "connection": "keep-alive",
+            "accept-ranges": "bytes",
+            "content-length": "157992",
+            "keep-alive": "timeout=5",
+            "date": "Sun, 11 Oct 2026 10:21:37 GMT",
+            "content-type": "image/jpeg",
+            "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+          }
+        },
+        {
+          "url": "http://localhost:3025/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?preview=1",
+          "status": 206,
+          "statusText": "Partial Content",
+          "headers": {
+            "cache-control": "private, no-store",
+            "etag": "\"d729d191b752f775f72d0ca9a4f2ec1881604b4ecc5a33d76237c5f1d98814d5\"",
+            "x-media-review-required": "true",
+            "connection": "keep-alive",
+            "content-range": "bytes 0-3160756/3160757",
+            "accept-ranges": "bytes",
+            "keep-alive": "timeout=5",
+            "content-length": "3160757",
+            "date": "Sun, 11 Oct 2026 10:21:38 GMT",
+            "content-type": "video/mp4",
+            "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+          }
+        },
+        {
+          "url": "http://localhost:3025/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?preview=1",
+          "status": 206,
+          "statusText": "Partial Content",
+          "headers": {
+            "cache-control": "private, no-store",
+            "etag": "\"d729d191b752f775f72d0ca9a4f2ec1881604b4ecc5a33d76237c5f1d98814d5\"",
+            "x-media-review-required": "true",
+            "connection": "keep-alive",
+            "content-range": "bytes 0-1024/3160757",
+            "accept-ranges": "bytes",
+            "keep-alive": "timeout=5",
+            "content-length": "1025",
+            "date": "Sun, 11 Oct 2026 10:21:48 GMT",
+            "content-type": "video/mp4",
+            "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+          }
+        },
+        {
+          "url": "http://localhost:3025/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?thumb=1",
+          "status": 200,
+          "statusText": "OK",
+          "headers": {
+            "cache-control": "private, max-age=3600",
+            "connection": "keep-alive",
+            "accept-ranges": "bytes",
+            "content-length": "157992",
+            "keep-alive": "timeout=5",
+            "date": "Sun, 11 Oct 2026 10:21:37 GMT",
+            "content-type": "image/jpeg",
+            "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+          }
+        },
+        {
+          "url": "http://localhost:3025/api/ai-media/outputs/cf93f829-6ecd-4baa-8e3a-83a928249ddf?thumb=1",
+          "status": 200,
+          "statusText": "OK",
+          "headers": {
+            "cache-control": "private, max-age=3600",
+            "connection": "keep-alive",
+            "accept-ranges": "bytes",
+            "content-length": "148245",
+            "keep-alive": "timeout=5",
+            "date": "Sun, 11 Oct 2026 10:21:52 GMT",
+            "content-type": "image/jpeg",
+            "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+          }
+        },
+        {
+          "url": "http://localhost:3025/api/ai-media/outputs/9b9307cc-708c-4c2c-a455-b9e754a6b0ba?thumb=1",
+          "status": 200,
+          "statusText": "OK",
+          "headers": {
+            "cache-control": "private, max-age=3600",
+            "connection": "keep-alive",
+            "accept-ranges": "bytes",
+            "content-length": "157992",
+            "keep-alive": "timeout=5",
+            "date": "Sun, 11 Oct 2026 10:22:10 GMT",
+            "content-type": "image/jpeg",
+            "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
+          }
+        }
+      ]
+    },
+    "download": {
+      "status": "PASS",
+      "details": {
+        "status": 206,
+        "contentType": "video/mp4",
+        "contentRange": "bytes 0-1024/3160757",
+        "contentLength": "1025",
+        "ok": true
+      }
+    },
+    "wizardHandoff": {
+      "status": "PASS",
+      "imageCardLink": "/icerik/758ca50a-be63-5ae5-a9cf-f8a15a0a7343",
+      "editedMessage": "",
+      "messageAfterF5": "*Ayvazoğlu İnşaat — Tuğlanız Fabrikadan Kapınıza*\n\n*Kampanya Detayları:*\n• Toptan ve perakende tuğla, fabrikadan kapınıza 3 gün içinde teslim.\n\nHemen İnceleyin\n\n+905428212205 (0542 821 22 05)"
+    },
+    "tenantIsolation": {
+      "status": "PASS",
+      "bofeItemCount": 7,
+      "bofeHasAyvazData": false,
+      "isBlockedOr404": true,
+      "responseStatus": 200
+    },
+    "duplicateSubmitProtection": {
+      "status": "PASS",
+      "mechanism": "Single-flight lock (busyRender / isSubmitting state), disabled button, and DB idempotency token"
+    }
+  }
+}

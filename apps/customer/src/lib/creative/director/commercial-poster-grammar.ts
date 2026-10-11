@@ -206,6 +206,14 @@ export const COMMERCIAL_POSTER_GRAMMARS: Record<CommercialGrammarId, CommercialG
   },
 }
 
+// Static precompiled regexes to eliminate runtime allocation and meet <5ms ACK budget
+const FURNITURE_REGEX = /(?:mobilya|yemek masası|sandalye|koltuk|dolap|sehpa)/i
+const FOOD_REGEX = /(?<![a-z0-9ğüşıöç])(?:döner|kebap|dürüm|burger|pizza|pide|lahmacun|köfte|tavuk|et|yemek|tatlı|pasta|fırın|kahvaltı|kahve|menü|restoran|lokanta|cafe|kafe|lezzet|gıda|sos|ayran|patates|ızgara|öğün|porsiyon)(?![a-z0-9ğüşıöç])/i
+const MATERIAL_REGEX = /(?<![a-z0-9ğüşıöç])(?:tuğla|klinker|çimento|seramik|fayans|mermer|taş|harç|yalıtım|izolasyon|cephe|kaplama|profil|çelik|beton|inşaat|yapı malzemesi|çatı|kiremit|parke|granit)(?![a-z0-9ğüşıöç])/i
+const DIGITAL_REGEX = /(?:saas|yazılım|api|bulut|cloud|crm|panel|dashboard|otomasyon|entegrasyon|uygulama|app|web|platform|veri|data|yapay zeka|bot|whatsapp api|dijital)/i
+const RETAIL_PROMO_REGEX = /(?:katalog|broşür|toptan indirim|haftanın fırsatı)/i
+const LUXURY_REGEX = /(?:mücevher|takı|parfüm|kozmetik|lüks|luxury|saat|mobilya|dekorasyon|koltuk|tasarım|özel seri|premium)/i
+
 /**
  * Generic Automatic Routing:
  * Infers the ideal Commercial Poster Grammar based purely on product, category,
@@ -233,43 +241,19 @@ export function inferCommercialGrammar(params: {
     .join(' ')
     .toLowerCase()
 
-  const matchesKeyword = (kw: string) => {
-    if (kw.length <= 3) {
-      const regex = new RegExp(`(^|[^a-z0-9ğüşıöç])${kw}([^a-z0-9ğüşıöç]|$)`, 'i')
-      return regex.test(text)
-    }
-    return text.includes(kw)
-  }
-
   // 1. Food & Culinary (exclude furniture like 'yemek masası')
-  const isFurniture = ['mobilya', 'yemek masası', 'sandalye', 'koltuk', 'dolap', 'sehpa'].some((kw) => text.includes(kw))
-  const foodKeywords = [
-    'döner', 'kebap', 'dürüm', 'burger', 'pizza', 'pide', 'lahmacun',
-    'köfte', 'tavuk', 'et', 'yemek', 'tatlı', 'pasta', 'fırın', 'kahvaltı',
-    'kahve', 'menü', 'restoran', 'lokanta', 'cafe', 'kafe', 'lezzet', 'gıda',
-    'sos', 'ayran', 'patates', 'ızgara', 'öğün', 'porsiyon'
-  ]
-  if (!isFurniture && foodKeywords.some(matchesKeyword)) {
+  const isFurniture = FURNITURE_REGEX.test(text)
+  if (!isFurniture && FOOD_REGEX.test(text)) {
     return COMMERCIAL_POSTER_GRAMMARS.FOOD_COMMERCE
   }
 
   // 2. Construction & Building Materials
-  const materialKeywords = [
-    'tuğla', 'klinker', 'çimento', 'seramik', 'fayans', 'mermer', 'taş',
-    'harç', 'yalıtım', 'izolasyon', 'cephe', 'kaplama', 'profil', 'çelik',
-    'beton', 'inşaat', 'yapı malzemesi', 'çatı', 'kiremit', 'parke', 'granit'
-  ]
-  if (materialKeywords.some(matchesKeyword)) {
+  if (MATERIAL_REGEX.test(text)) {
     return COMMERCIAL_POSTER_GRAMMARS.MATERIAL_COMMERCE
   }
 
   // 3. SaaS, Software & Digital Interface
-  const digitalKeywords = [
-    'saas', 'yazılım', 'api', 'bulut', 'cloud', 'crm', 'panel', 'dashboard',
-    'otomasyon', 'entegrasyon', 'uygulama', 'app', 'web', 'platform',
-    'veri', 'data', 'yapay zeka', 'bot', 'whatsapp api', 'dijital'
-  ]
-  if (digitalKeywords.some((kw) => text.includes(kw))) {
+  if (DIGITAL_REGEX.test(text)) {
     return COMMERCIAL_POSTER_GRAMMARS.DIGITAL_PRODUCT_HERO
   }
 
@@ -277,23 +261,16 @@ export function inferCommercialGrammar(params: {
   if (
     params.stylePreset === 'DYNAMIC_OFFER' ||
     params.objective === 'CAMPAIGN' ||
-    text.includes('katalog') ||
-    text.includes('broşür') ||
-    text.includes('toptan indirim') ||
-    text.includes('haftanın fırsatı')
+    RETAIL_PROMO_REGEX.test(text)
   ) {
     return COMMERCIAL_POSTER_GRAMMARS.RETAIL_BROCHURE
   }
 
   // 5. Premium / Luxury Goods
-  const luxuryKeywords = [
-    'mücevher', 'takı', 'parfüm', 'kozmetik', 'lüks', 'luxury', 'saat',
-    'mobilya', 'dekorasyon', 'koltuk', 'tasarım', 'özel seri', 'premium'
-  ]
   if (
     params.stylePreset === 'PREMIUM' ||
     params.objective === 'BRAND_AWARENESS' ||
-    luxuryKeywords.some((kw) => text.includes(kw))
+    LUXURY_REGEX.test(text)
   ) {
     return COMMERCIAL_POSTER_GRAMMARS.PREMIUM_PRODUCT_HERO
   }

@@ -130,34 +130,47 @@ export function ProductionStageAnimation({
   lottieSrc,
   className = '',
 }: StageAnimationProps) {
-  const [isClient, setIsClient] = useState(false)
+  const [Player, setPlayer] = useState<React.ComponentType<any> | null>(null)
+  const [reducedMotion, setReducedMotion] = useState(true)
+  const [instance, setInstance] = useState<any>(null)
   const [lottieError, setLottieError] = useState(false)
 
+  const localSources: Record<string, string> = kind === 'image'
+    ? { REQUEST_ACCEPTED: 'image/product-upload', QUEUED: 'shared/loading', ASSETS_PREPARING: 'image/image-scan', GENERATING: 'image/creative-design', MEDIA_PROCESSING: 'image/image-render', QUALITY_CHECK: 'image/image-scan', READY: 'image/image-success' }
+    : { REQUEST_ACCEPTED: 'video/storyboard', QUEUED: 'shared/loading', ASSETS_PREPARING: 'video/reference-attach', GENERATING: 'video/video-render', MEDIA_PROCESSING: 'video/timeline-edit', QUALITY_CHECK: 'shared/loading', READY: 'video/video-success' }
+  const resolvedSource = lottieSrc || `/animations/${localSources[stageKey || 'QUEUED'] || 'shared/warning'}.json`
   useEffect(() => {
-    setIsClient(true)
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const update = () => setReducedMotion(query.matches)
+    update(); query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
   }, [])
+  useEffect(() => {
+    if (reducedMotion) return
+    let mounted = true
+    import('@lottiefiles/dotlottie-react').then(module => {
+      module.setWasmUrl('/animations/runtime/dotlottie-player.wasm')
+      if (mounted) setPlayer(() => module.DotLottieReact)
+    }).catch(() => { if (mounted) setLottieError(true) })
+    return () => { mounted = false }
+  }, [reducedMotion])
+  useEffect(() => { setLottieError(false) }, [resolvedSource])
+  useEffect(() => {
+    if (!instance) return
+    const fail = () => setLottieError(true)
+    instance.addEventListener('loadError', fail)
+    return () => instance.removeEventListener('loadError', fail)
+  }, [instance])
 
-  // If DotLottie URL is given and client is ready, dynamically render DotLottieReact
-  if (isClient && lottieSrc && !lottieError) {
-    try {
-      // Lazy load DotLottieReact component
-      const { DotLottieReact } = require('@lottiefiles/dotlottie-react')
-      return (
-        <div className={`mesajify-prod-visual-host ${className}`}>
-          <div className="mesajify-prod-visual-wrapper">
-            <DotLottieReact
-              src={lottieSrc}
-              loop
-              autoplay
-              onError={() => setLottieError(true)}
-              style={{ width: '100%', height: '100%' }}
-            />
-          </div>
+  if (Player && !reducedMotion && !lottieError) {
+    return (
+      <div className={`mesajify-prod-visual-host ${className}`} aria-hidden="true">
+        <div className="mesajify-prod-visual-wrapper">
+          <Player src={resolvedSource} loop autoplay dotLottieRefCallback={setInstance}
+            style={{ width: '100%', height: '100%' }} />
         </div>
-      )
-    } catch {
-      // Graceful fallback to SVG visual on any import or runtime issue
-    }
+      </div>
+    )
   }
 
   return (

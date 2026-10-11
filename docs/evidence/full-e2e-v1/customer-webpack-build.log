@@ -1,0 +1,38 @@
+
+> @wa/customer@0.0.0 build
+> next build --webpack
+
+▲ Next.js 16.3.4 (webpack)
+✓ Running next.config.ts took 451ms
+- Experiments (use with caution):
+  · serverActions
+  · staleTimes
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 3.3min
+  Running TypeScript ...
+  Finished TypeScript in 109s ...
+  Collecting page data using 7 workers ...
+Error: Failed to collect configuration for /auth/callback
+    at ignore-listed frames {
+  [cause]: Error: Ortam degiskeni eksik: NEXT_PUBLIC_SUPABASE_URL. apps/customer/.env.local dosyasini .env.example'a bakarak doldurun.
+      at g (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\auth\callback\route.js:1:1473)
+      at 25804 (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\auth\callback\route.js:1:1607)
+      at k (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\webpack-runtime.js:1:158)
+      at 44345 (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\auth\callback\route.js:1:10267)
+      at k (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\webpack-runtime.js:1:158)
+      at rB.userland [as load] (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\.next\server\app\auth\callback\route.js:1:4364)
+}
+
+> Build error occurred
+Error: Failed to collect page data for /auth/callback
+    at ignore-listed frames {
+  type: 'Error'
+}
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer
+npm error workspace @wa/customer@0.0.0
+npm error location C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next build --webpack

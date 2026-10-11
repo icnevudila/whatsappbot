@@ -1,0 +1,101 @@
+TAP version 13
+# Subtest: clean library requires owned decoded stored image; status alone cannot publish
+ok 1 - clean library requires owned decoded stored image; status alone cannot publish
+  ---
+  duration_ms: 5.0537
+  type: 'test'
+  ...
+# Subtest: unreviewed V3 bytes remain hidden; review of another SHA cannot release them
+ok 2 - unreviewed V3 bytes remain hidden; review of another SHA cannot release them
+  ---
+  duration_ms: 1.5507
+  type: 'test'
+  ...
+# Subtest: legacy MP4 and missing output state fail closed; approved owned output passes
+ok 3 - legacy MP4 and missing output state fail closed; approved owned output passes
+  ---
+  duration_ms: 3.3062
+  type: 'test'
+  ...
+# Subtest: decorative animation access uses a finite allowlist, not extension or directory bypass
+ok 4 - decorative animation access uses a finite allowlist, not extension or directory bypass
+  ---
+  duration_ms: 4.158
+  type: 'test'
+  ...
+# Subtest: PostgreSQL fixture: exact video approval is atomic and rejects stale or foreign artifacts
+    # Subtest: current owned reviewed 10s bytes publish both records together
+    ok 1 - current owned reviewed 10s bytes publish both records together
+      ---
+      duration_ms: 126.6218
+      type: 'test'
+      ...
+    # Subtest: raw 8s fails closed with neither record approved
+    ok 2 - raw 8s fails closed with neither record approved
+      ---
+      duration_ms: 151.2042
+      type: 'test'
+      ...
+    # Subtest: unverified fails closed with neither record approved
+    ok 3 - unverified fails closed with neither record approved
+      ---
+      duration_ms: 108.5809
+      type: 'test'
+      ...
+    # Subtest: foreign output fails closed with neither record approved
+    ok 4 - foreign output fails closed with neither record approved
+      ---
+      duration_ms: 70.195
+      type: 'test'
+      ...
+    # Subtest: old job fails closed with neither record approved
+    ok 5 - old job fails closed with neither record approved
+      ---
+      duration_ms: 151.8323
+      type: 'test'
+      ...
+    # Subtest: wrong aspect fails closed with neither record approved
+    ok 6 - wrong aspect fails closed with neither record approved
+      ---
+      duration_ms: 50.8803
+      type: 'test'
+      ...
+    # Subtest: old revision fails closed with neither record approved
+    ok 7 - old revision fails closed with neither record approved
+      ---
+      duration_ms: 51.0841
+      type: 'test'
+      ...
+    # Subtest: storage absent fails closed with neither record approved
+    ok 8 - storage absent fails closed with neither record approved
+      ---
+      duration_ms: 64.347
+      type: 'test'
+      ...
+    # Subtest: wrong SHA and foreign caller cannot release bytes
+    ok 9 - wrong SHA and foreign caller cannot release bytes
+      ---
+      duration_ms: 37.8564
+      type: 'test'
+      ...
+    1..9
+ok 5 - PostgreSQL fixture: exact video approval is atomic and rejects stale or foreign artifacts
+  ---
+  duration_ms: 11464.4849
+  type: 'test'
+  ...
+# Subtest: Flow RLS migration is repeatable, safe before schema and rejects global tenant reads
+ok 6 - Flow RLS migration is repeatable, safe before schema and rejects global tenant reads
+  ---
+  duration_ms: 10824.2152
+  type: 'test'
+  ...
+1..6
+# tests 15
+# suites 0
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13869.565

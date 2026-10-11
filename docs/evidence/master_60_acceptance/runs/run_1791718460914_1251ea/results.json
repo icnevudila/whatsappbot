@@ -1,0 +1,476 @@
+{
+  "runId": "run_1791718460914_1251ea",
+  "timestamp": "2026-10-11T11:36:41.319Z",
+  "baseUrl": "http://localhost:3025",
+  "totalTests": 60,
+  "passed": 45,
+  "failed": 15,
+  "blocked": 0,
+  "notTested": 0,
+  "matrix": {
+    "A01": {
+      "name": "Kullanıcı Oturum Açma (Login E2E)",
+      "status": "PASS",
+      "durationMs": 9376,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A01_login_success.png"
+      ]
+    },
+    "A02": {
+      "name": "İşletme Seçimi ve SwitchOrg Cookie Senkronizasyonu",
+      "status": "FAIL",
+      "durationMs": 2141,
+      "error": "Org mismatch: afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc != 4a58b0dd-0931-4901-880a-686457d15010",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A02_failure.png"
+      ]
+    },
+    "A03": {
+      "name": "Oturum Kalıcılığı (Yeni Sekme / Reload)",
+      "status": "PASS",
+      "durationMs": 13370,
+      "error": null,
+      "artifacts": []
+    },
+    "A04": {
+      "name": "Yetkisiz Rota Yönlendirmesi (/giris?devam=...)",
+      "status": "PASS",
+      "durationMs": 1701,
+      "error": null,
+      "artifacts": []
+    },
+    "A05": {
+      "name": "Kreatif Stüdyo (/icerik/yeni) Sayfa Yüklenmesi",
+      "status": "PASS",
+      "durationMs": 2505,
+      "error": null,
+      "artifacts": []
+    },
+    "A06": {
+      "name": "Logo Varlık Ön Koşul Denetimi",
+      "status": "FAIL",
+      "durationMs": 20,
+      "error": "Logo status strip missing",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A06_failure.png"
+      ]
+    },
+    "A07": {
+      "name": "Katalog Ürün Ön Koşul Denetimi",
+      "status": "FAIL",
+      "durationMs": 26,
+      "error": "Product selection section missing",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A07_failure.png"
+      ]
+    },
+    "A08": {
+      "name": "Adım 1 Eyleme Geçirilebilir Yönlendirme (Actionable UX)",
+      "status": "PASS",
+      "durationMs": 27,
+      "error": null,
+      "artifacts": []
+    },
+    "A09": {
+      "name": "Görsel Format Seçimi (1:1, 4:5, 9:16)",
+      "status": "PASS",
+      "durationMs": 28,
+      "error": null,
+      "artifacts": []
+    },
+    "A10": {
+      "name": "Video Format Seçimi (9:16 Sinematik Dikey)",
+      "status": "PASS",
+      "durationMs": 16,
+      "error": null,
+      "artifacts": []
+    },
+    "A11": {
+      "name": "Deterministik Yerel Metin Taslağı (Fallback)",
+      "status": "PASS",
+      "durationMs": 1324,
+      "error": null,
+      "artifacts": []
+    },
+    "A12": {
+      "name": "AI Yanıt Gecikmesinde Kullanıcı Metin Kilidi (headlineDirty)",
+      "status": "PASS",
+      "durationMs": 457,
+      "error": null,
+      "artifacts": []
+    },
+    "A13": {
+      "name": "Boş AI Yanıtı Reddi (Blank Output Gatekeeper)",
+      "status": "FAIL",
+      "durationMs": 7,
+      "error": "Cannot find module 'C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\apps\\customer\\src\\lib\\ai\\campaign-message.ts' imported from C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\master_60_acceptance_runner.mjs\nDid you mean to import \"../apps/customer/src/lib/ai/campaign-message.ts\"?",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A13_failure.png"
+      ]
+    },
+    "A14": {
+      "name": "AI Başlık ve Etiket Temizleme (cleanAiMessage)",
+      "status": "FAIL",
+      "durationMs": 3,
+      "error": "Cannot find module 'C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\apps\\customer\\src\\lib\\ai\\campaign-message.ts' imported from C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\master_60_acceptance_runner.mjs\nDid you mean to import \"../apps/customer/src/lib/ai/campaign-message.ts\"?",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A14_failure.png"
+      ]
+    },
+    "A15": {
+      "name": "Fiyat Koruma (Strict Price Preservation)",
+      "status": "FAIL",
+      "durationMs": 2,
+      "error": "Cannot find module 'C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\apps\\customer\\src\\lib\\ai\\campaign-message.ts' imported from C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\master_60_acceptance_runner.mjs\nDid you mean to import \"../apps/customer/src/lib/ai/campaign-message.ts\"?",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A15_failure.png"
+      ]
+    },
+    "A16": {
+      "name": "Fiyat Kayması Engeli (Price Drift Detection)",
+      "status": "FAIL",
+      "durationMs": 2,
+      "error": "Cannot find module 'C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\apps\\customer\\src\\lib\\ai\\campaign-message.ts' imported from C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\master_60_acceptance_runner.mjs\nDid you mean to import \"../apps/customer/src/lib/ai/campaign-message.ts\"?",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A16_failure.png"
+      ]
+    },
+    "A17": {
+      "name": "Türkçe Büyük/Küçük Harf (İ/i Unicode Case-Folding)",
+      "status": "FAIL",
+      "durationMs": 2,
+      "error": "Cannot find module 'C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\apps\\customer\\src\\lib\\ai\\campaign-message.ts' imported from C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\master_60_acceptance_runner.mjs\nDid you mean to import \"../apps/customer/src/lib/ai/campaign-message.ts\"?",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A17_failure.png"
+      ]
+    },
+    "A18": {
+      "name": "5 Ton Rewrite Desteği (Samimi, Profesyonel, Eğlenceli, vb.)",
+      "status": "FAIL",
+      "durationMs": 2,
+      "error": "Cannot find module 'C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\apps\\customer\\src\\lib\\ai\\campaign-message.ts' imported from C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\master_60_acceptance_runner.mjs\nDid you mean to import \"../apps/customer/src/lib/ai/campaign-message.ts\"?",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A18_failure.png"
+      ]
+    },
+    "A19": {
+      "name": "Tekil Uçuş Kilidi (Single-Flight Duplicate Submit Protection)",
+      "status": "PASS",
+      "durationMs": 6,
+      "error": null,
+      "artifacts": []
+    },
+    "A20": {
+      "name": "Idempotency RequestKey Üretimi",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A21": {
+      "name": "Video Üretim Kotası Gösterimi",
+      "status": "PASS",
+      "durationMs": 2421,
+      "error": null,
+      "artifacts": []
+    },
+    "A22": {
+      "name": "Arka Planda Devam Et Butonu",
+      "status": "PASS",
+      "durationMs": 8,
+      "error": null,
+      "artifacts": []
+    },
+    "A23": {
+      "name": "F5 İlerleme Kurtarma (Progress Recovery)",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A24": {
+      "name": "Sıfır Sahte ETA / Sayaç Güvencesi",
+      "status": "PASS",
+      "durationMs": 3,
+      "error": null,
+      "artifacts": []
+    },
+    "A25": {
+      "name": "HTML5 Video DOM Render Doğrulaması",
+      "status": "PASS",
+      "durationMs": 10237,
+      "error": null,
+      "artifacts": []
+    },
+    "A26": {
+      "name": "HTTP 206 Partial Content Range Akışı",
+      "status": "PASS",
+      "durationMs": 3954,
+      "error": null,
+      "artifacts": []
+    },
+    "A27": {
+      "name": "Video Play() Tetiklemesi ve readyState=4",
+      "status": "PASS",
+      "durationMs": 23,
+      "error": null,
+      "artifacts": []
+    },
+    "A28": {
+      "name": "Video 2. Saniye Kanca Sahnesi (Hook)",
+      "status": "PASS",
+      "durationMs": 56,
+      "error": null,
+      "artifacts": []
+    },
+    "A29": {
+      "name": "Video 5. Saniye Duraklatma (Pause)",
+      "status": "PASS",
+      "durationMs": 9,
+      "error": null,
+      "artifacts": []
+    },
+    "A30": {
+      "name": "Video 7.5 Saniye Hızlı Arama (Range Scrub / Seek)",
+      "status": "PASS",
+      "durationMs": 227,
+      "error": null,
+      "artifacts": []
+    },
+    "A31": {
+      "name": "Video 9. Saniye Markalı Kapanış Outro",
+      "status": "PASS",
+      "durationMs": 1525,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A31_video_outro.png"
+      ]
+    },
+    "A32": {
+      "name": "Video 10. Saniye Tamamlanma (Ended Event)",
+      "status": "PASS",
+      "durationMs": 951,
+      "error": null,
+      "artifacts": []
+    },
+    "A33": {
+      "name": "Video Doğrudan İndirme Erişimi",
+      "status": "PASS",
+      "durationMs": 2254,
+      "error": null,
+      "artifacts": []
+    },
+    "A34": {
+      "name": "Kütüphane (/icerik) Kart Listelemesi",
+      "status": "PASS",
+      "durationMs": 3867,
+      "error": null,
+      "artifacts": []
+    },
+    "A35": {
+      "name": "İnceleme Bekleyen Medya Rozeti (Needs Review)",
+      "status": "PASS",
+      "durationMs": 11,
+      "error": null,
+      "artifacts": []
+    },
+    "A36": {
+      "name": "Kalite Kusuru İşareti (Partial Voiceover Fragment)",
+      "status": "PASS",
+      "durationMs": 3,
+      "error": null,
+      "artifacts": []
+    },
+    "A37": {
+      "name": "Kütüphaneden \"Kampanyada Kullan\" Yönlendirmesi",
+      "status": "PASS",
+      "durationMs": 7458,
+      "error": null,
+      "artifacts": []
+    },
+    "A38": {
+      "name": "Handoff Sonrası URL Sorgu Temizleme (replaceState)",
+      "status": "PASS",
+      "durationMs": 0,
+      "error": null,
+      "artifacts": []
+    },
+    "A39": {
+      "name": "Kampanya Metin Editörü Düzenlenebilirliği",
+      "status": "FAIL",
+      "durationMs": 100,
+      "error": "Message editor not visible",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A39_failure.png"
+      ]
+    },
+    "A40": {
+      "name": "F5 Sonrası Benzersiz Sentinel Metin Kalıcılığı",
+      "status": "FAIL",
+      "durationMs": 4561,
+      "error": "Sentinel text NOT found after F5. Received: *Ayvazoğlu İnşaat — Tuğlanız Fabrikadan Kapınıza*\n\n*Kampanya Detayları:*\n• Toptan ve perakende tuğla...",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A40_failure.png"
+      ]
+    },
+    "A41": {
+      "name": "Kampanya Hedef Kitle Seçimi",
+      "status": "PASS",
+      "durationMs": 28,
+      "error": null,
+      "artifacts": []
+    },
+    "A42": {
+      "name": "Kampanya Hat Seçimi",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A43": {
+      "name": "Kampanya Taslak Kaydı",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A44": {
+      "name": "UI İşletme Değişimi (Ayvazoğlu -> Bofe Tarım)",
+      "status": "PASS",
+      "durationMs": 4222,
+      "error": null,
+      "artifacts": []
+    },
+    "A45": {
+      "name": "Bofe Kütüphanesinde Sıfır Çapraz Sızıntı",
+      "status": "FAIL",
+      "durationMs": 3169,
+      "error": "Ayvazoğlu brick media leaked into Bofe library!",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A45_failure.png"
+      ]
+    },
+    "A46": {
+      "name": "Bofe Oturumunda Ayvazoğlu Varlığına 404 Blokajı",
+      "status": "FAIL",
+      "durationMs": 5859,
+      "error": "Cross-tenant media access was NOT blocked!",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A46_failure.png"
+      ]
+    },
+    "A47": {
+      "name": "Mesajify İşletmesine Geçiş ve Varlık Ayrımı",
+      "status": "PASS",
+      "durationMs": 4264,
+      "error": null,
+      "artifacts": []
+    },
+    "A48": {
+      "name": "Desktop 1440x900 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "PASS",
+      "durationMs": 9229,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A48_vp_desktop_1440.png"
+      ]
+    },
+    "A49": {
+      "name": "Tablet 768x1024 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "PASS",
+      "durationMs": 9533,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A49_vp_tablet_768.png"
+      ]
+    },
+    "A50": {
+      "name": "Mobile 430x932 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "PASS",
+      "durationMs": 8598,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A50_vp_mobile_430.png"
+      ]
+    },
+    "A51": {
+      "name": "Mobile 390x844 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "PASS",
+      "durationMs": 10486,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A51_vp_mobile_390.png"
+      ]
+    },
+    "A52": {
+      "name": "Mobile 375x812 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "PASS",
+      "durationMs": 9210,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A52_vp_mobile_375.png"
+      ]
+    },
+    "A53": {
+      "name": "Mobil Navigasyon Buton Dokunmatik Alanları (Min 44px)",
+      "status": "PASS",
+      "durationMs": 84,
+      "error": null,
+      "artifacts": []
+    },
+    "A54": {
+      "name": "Modal Kapatma ve Odak Yönetimi",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A55": {
+      "name": "Creative DNA Bayrak Kontrolü (Varsayılan Kapalı)",
+      "status": "FAIL",
+      "durationMs": 6,
+      "error": "Cannot find module 'C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\apps\\customer\\src\\lib\\creative\\v2\\creative-dna-adapter.ts' imported from C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\scripts\\master_60_acceptance_runner.mjs\nDid you mean to import \"../apps/customer/src/lib/creative/v2/creative-dna-adapter.ts\"?",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A55_failure.png"
+      ]
+    },
+    "A56": {
+      "name": "Sıfır Kaçak Harici API (OmniStudio Gateway Tek Kaynak)",
+      "status": "FAIL",
+      "durationMs": 7,
+      "error": "Provider order must be omnistudio only",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791718460914_1251ea\\screenshots\\A56_failure.png"
+      ]
+    },
+    "A57": {
+      "name": "Sır ve Parola Sızıntı Taraması (Secret Scan)",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A58": {
+      "name": "Sıfır Yetkisiz Canlı WhatsApp Gönderimi",
+      "status": "PASS",
+      "durationMs": 4,
+      "error": null,
+      "artifacts": []
+    },
+    "A59": {
+      "name": "Sıfır Yetkisiz Canlı Stripe Çekimi",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A60": {
+      "name": "Sıfır Ücretli Yeni AI Üretimi (Varlık Tasarrufu)",
+      "status": "PASS",
+      "durationMs": 0,
+      "error": null,
+      "artifacts": []
+    }
+  }
+}

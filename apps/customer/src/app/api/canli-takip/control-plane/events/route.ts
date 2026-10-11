@@ -16,26 +16,45 @@ export async function GET(request: Request) {
   let closeTimer: ReturnType<typeof setTimeout> | null = null
   let lastEventId = new URL(request.url).searchParams.get('after') || ''
 
+  let isClosed = false
   const stream = new ReadableStream({
     async start(controller) {
       const send = async () => {
+        if (isClosed || request.signal.aborted) return
         try {
           const snapshot = await getControlPlaneSnapshot()
+          if (isClosed || request.signal.aborted) return
           const unseen = snapshot.events
             .filter(event => !lastEventId || event.id !== lastEventId)
             .slice(0, lastEventId ? 30 : 60)
           if (snapshot.events[0]) lastEventId = snapshot.events[0].id
           controller.enqueue(encoder.encode(`event: operations\ndata: ${JSON.stringify({ events: unseen, overview: snapshot.overview, generatedAt: snapshot.generatedAt })}\n\n`))
         } catch (error) {
-          controller.enqueue(encoder.encode(`event: degraded\ndata: ${JSON.stringify({ message: error instanceof Error ? error.message : 'Akış yenilenemedi' })}\n\n`))
+          if (isClosed || request.signal.aborted) return
+          try {
+            controller.enqueue(encoder.encode(`event: degraded\ndata: ${JSON.stringify({ message: error instanceof Error ? error.message : 'Akış yenilenemedi' })}\n\n`))
+          } catch {}
         }
       }
 
       await send()
       timer = setInterval(send, 5_000)
-      closeTimer = setTimeout(() => controller.close(), 55_000)
+      closeTimer = setTimeout(() => {
+        if (!isClosed) {
+          isClosed = true
+          try { controller.close() } catch {}
+        }
+      }, 55_000)
+
+      request.signal.addEventListener('abort', () => {
+        isClosed = true
+        if (timer) clearInterval(timer)
+        if (closeTimer) clearTimeout(closeTimer)
+        try { controller.close() } catch {}
+      })
     },
     cancel() {
+      isClosed = true
       if (timer) clearInterval(timer)
       if (closeTimer) clearTimeout(closeTimer)
     },

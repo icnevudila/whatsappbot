@@ -91,9 +91,11 @@ class DistributedLeaseStore {
           const { createClient } = require('@supabase/supabase-js');
           this.supabase = createClient(url, key);
         } catch {
+          if (process.env.NODE_ENV === 'production') throw new Error('DISTRIBUTED_LEASE_STORE_UNAVAILABLE');
           this.simulator = new SharedDatabaseSimulator();
         }
       } else {
+        if (process.env.NODE_ENV === 'production') throw new Error('DISTRIBUTED_LEASE_STORE_REQUIRED');
         this.simulator = new SharedDatabaseSimulator();
       }
     }
@@ -115,29 +117,9 @@ class DistributedLeaseStore {
       });
 
       if (error) {
-        // Fallback to table upsert if RPC is pending migration
-        const now = new Date().toISOString();
-        const expiresAt = new Date(Date.now() + ttlSeconds * 1000).toISOString();
-        const { data: upsertData, error: upsertErr } = await this.supabase
-          .from('browser_account_leases')
-          .upsert({
-            provider,
-            account_id: accountId,
-            worker_id: workerId,
-            job_id: jobId,
-            lease_token: leaseToken,
-            acquired_at: now,
-            heartbeat_at: now,
-            expires_at: expiresAt,
-            released_at: null,
-          }, { onConflict: 'provider,account_id' })
-          .select()
-          .single();
-
-        if (upsertErr) {
-          return { acquired: false, message: 'ACCOUNT_BUSY' };
-        }
-        return { acquired: true, currentLeaseToken: leaseToken, message: 'LEASE_ACQUIRED' };
+        // An upsert can overwrite another host's live lease. Only the atomic RPC
+        // may grant ownership; unavailable migrations/database must fail closed.
+        return { acquired: false, message: 'LEASE_STORE_UNAVAILABLE' };
       }
 
       const result = Array.isArray(data) ? data[0] : data;

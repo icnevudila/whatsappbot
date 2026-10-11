@@ -32,6 +32,7 @@ import { adaptLegacyDraftToV2, mapPresetToLegacyVideoFormat } from '@/lib/creati
 import { resolveSubmissionIdentity } from '@/lib/creative/submission-identity'
 import { campaignFactsError } from '@/lib/creative/campaign-facts'
 import { ownsStudioDraft } from '@/lib/creative/draft-ownership'
+import { BRAND_VIDEO_UNAVAILABLE, promotionMode as parsePromotionMode, offeringKind as parseOfferingKind, type PromotionMode, type OfferingKind } from '@/lib/creative/promotion-policy'
 import {
   MAX_SPOKEN_WORDS,
   VIDEO_ENGINE_MODE,
@@ -43,8 +44,8 @@ import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
-export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 35000
-export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 35000
+export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 125000
+export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 125000
 
 export { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
 import { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
@@ -94,6 +95,9 @@ export function CreativeStudioV2({
 
   // Step 1: Product & Goal
   const [mediaType, setMediaType] = useState<MediaType>(initialMediaType)
+  const [promotionMode, setPromotionMode] = useState<PromotionMode>('offering')
+  const [offeringKind, setOfferingKind] = useState<OfferingKind>('physical')
+  const brandOnly = promotionMode === 'brand'
   const [heroProductId, setHeroProductId] = useState<string>(() => data.products[0]?.id || '')
   const [objective, setObjective] = useState<CampaignObjective>('PRODUCT_INTRO')
   const [campaignDetail, setCampaignDetail] = useState('')
@@ -159,8 +163,8 @@ export function CreativeStudioV2({
   const [sector, setSector] = useState('')
   const [deliveryInfo, setDeliveryInfo] = useState('')
 
-  // Quality Mode: STANDARD (default production) vs DESIGNER (art-directed)
-  const [qualityMode, setQualityMode] = useState<'STANDARD' | 'DESIGNER'>('STANDARD')
+  // Quality Mode: Internal AUTO_PROFESSIONAL policy (backward-compatible with STANDARD / DESIGNER drafts)
+  const [qualityMode, setQualityMode] = useState<'AUTO_PROFESSIONAL' | 'STANDARD' | 'DESIGNER'>('AUTO_PROFESSIONAL')
 
   // Video Advanced Options
   const [environmentPreset, setEnvironmentPreset] = useState('auto')
@@ -239,16 +243,16 @@ export function CreativeStudioV2({
   const hasLogo = logoPreflightState === 'READY'
 
   const selectedProduct = useMemo(
-    () => productsList.find((p) => p.id === heroProductId) || null,
-    [productsList, heroProductId],
+    () => brandOnly ? null : productsList.find((p) => p.id === heroProductId) || null,
+    [productsList, heroProductId, brandOnly],
   )
   const rawProductImagePath = selectedProduct?.images?.[0]?.url || ''
   const productImageUrl = resolvePreviewUrl(rawProductImagePath, 'creatives') || ''
   const productPreflightState: 'SELECTED' | 'RESOLVING' | 'READY' | 'INVALID' = !selectedProduct
     ? 'SELECTED'
     : (!rawProductImagePath ? 'INVALID' : (!productImageUrl ? 'INVALID' : 'READY'))
-  const hasProduct = productPreflightState === 'READY'
-  const allAssetsReady = hasLogo && hasProduct
+  const hasProduct = productPreflightState === 'READY' && productImageUrl !== canonicalLogoUrl && !/^\/?(?:brand|logos)\//i.test(rawProductImagePath)
+  const allAssetsReady = hasLogo && (brandOnly ? mediaType === 'IMAGE' : hasProduct)
 
   // Quota status
   const quotaUsed = data.org.monthlyVideoUsed ?? 0
@@ -283,6 +287,9 @@ export function CreativeStudioV2({
           setHeroProductId(adapted.heroProductId)
         }
         setMediaType(adapted.mediaType)
+        setPromotionMode(parsePromotionMode(parsed.promotionMode))
+        setOfferingKind(parseOfferingKind(parsed.offeringKind))
+        if (parsed.promotionMode === 'brand') setHeroProductId('')
         setObjective(adapted.objective)
         setStylePreset(adapted.stylePreset)
         setCampaignDetail(adapted.campaignDetail)
@@ -331,7 +338,8 @@ export function CreativeStudioV2({
         version: 2,
         orgId: data.org.id,
         mediaType,
-        heroProductId,
+        promotionMode, offeringKind,
+        heroProductId: brandOnly ? '' : heroProductId,
         objective,
         stylePreset,
         campaignDetail,
@@ -356,6 +364,7 @@ export function CreativeStudioV2({
     orgKey,
     data.org.id,
     mediaType,
+    promotionMode, offeringKind, brandOnly,
     heroProductId,
     objective,
     stylePreset,
@@ -377,7 +386,7 @@ export function CreativeStudioV2({
     qualityMode, templateFamily, textDensity, sector, deliveryInfo,
   ])
 
-  // Call Custom AI Planner (non-blocking, advisory with 5s timeout)
+  // Keep the editor usable while the planner completes its bounded request.
   const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset) => {
     if (previewOnly) return
     if (!selectedProduct) return
@@ -393,7 +402,7 @@ export function CreativeStudioV2({
     setIsPlanning(true)
     setPlanError(null)
 
-    // Hard client-side timeout: 5 seconds maximum
+    // Allow the server's 110s provider deadline plus request/response overhead.
     const timeoutId = setTimeout(() => {
       controller.abort()
     }, mediaType === 'VIDEO' ? VIDEO_PLANNER_TIMEOUT_MS : AI_PLANNER_TIMEOUT_MS)
@@ -451,7 +460,7 @@ export function CreativeStudioV2({
     } catch (err: unknown) {
       if (activePlanControllerRef.current !== controller) return
       if ((err instanceof Error && err.name === 'AbortError') || controller.signal.aborted) {
-        console.warn('[CreativeStudioV2] Plan request timed out or cancelled (>5s budget)')
+        console.warn('[CreativeStudioV2] Plan request timed out or cancelled')
         setPlanError('AI_TIMEOUT')
       } else {
         console.warn('[CreativeStudioV2] Plan error:', err)
@@ -468,7 +477,7 @@ export function CreativeStudioV2({
 
   // Generate Plan on entering Step 2 if not planned yet
   const handleGoToStep2 = () => {
-    if (!hasProduct || !hasLogo) return
+    if (!allAssetsReady) return
 
     // Immediately provide deterministic local copy if fields are empty
     const local = generateDeterministicLocalCopy({
@@ -479,6 +488,11 @@ export function CreativeStudioV2({
       offer,
       mediaType,
     })
+    if (brandOnly) {
+      local.headline = data.org.name
+      local.supportingLine = data.org.about || 'Markamız hakkında bilgi almak için bizimle iletişime geçin.'
+      local.cta = 'Bizimle İletişime Geçin'
+    }
 
     if (!headline && !headlineDirty) setHeadline(local.headline)
     if (!supportingLine && !supportingLineDirty) setSupportingLine(local.supportingLine)
@@ -496,10 +510,15 @@ export function CreativeStudioV2({
     if (!activeJobId) return
 
     let isMounted = true
+    let syncing = false
+    let terminal = false
+    const controller = new AbortController()
 
     const syncStatus = async () => {
+      if (!isMounted || syncing || terminal) return
+      syncing = true
       try {
-        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`)
+        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`, { signal: controller.signal })
         if (!res.ok) return
         const resData = await res.json()
         const vm = resData.job as JobUserViewModel
@@ -508,12 +527,15 @@ export function CreativeStudioV2({
         setJobViewModel(vm)
         setJobState(vm.state)
         setJobFailureMessage(vm.failure_user_message || null)
+        terminal = vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW' || vm.state === 'FAILED'
 
         if ((vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW') && vm.playback_url) {
           setCompletedVideoUrl(vm.playback_url)
         }
       } catch (e) {
-        console.error('Job sync error:', e)
+        if (!controller.signal.aborted) console.error('Job sync error:', e)
+      } finally {
+        syncing = false
       }
     }
 
@@ -538,6 +560,7 @@ export function CreativeStudioV2({
 
     return () => {
       isMounted = false
+      controller.abort()
       clearInterval(interval)
       void supabase.removeChannel(channel)
     }
@@ -546,7 +569,7 @@ export function CreativeStudioV2({
   // SUBMIT HANDLER: Image or Video
   const handleCreateCreative = async () => {
     if (previewOnly) { setSubmitError('Yerel arayüz testinde üretim ve kayıt işlemleri kapalıdır.'); return }
-    if (submissionLockRef.current || !selectedProduct || !hasProduct || !hasLogo) return
+    if (submissionLockRef.current || !allAssetsReady || (!brandOnly && !selectedProduct)) return
     const factsError = campaignFactsError({ objective, headline, cta: ctaText, price, oldPrice, offer })
     if (factsError) { setSubmitError(factsError); return }
     submissionLockRef.current = true
@@ -559,18 +582,19 @@ export function CreativeStudioV2({
       try {
         const payloadDraft = {
           version: 2,
+          promotionMode, offeringKind,
           requestKey: '',
-          generationType: initialDerivedCreativeId ? 'derived' : 'new',
-          baseCreativeId: initialDerivedCreativeId || null,
+          generationType: !brandOnly && initialDerivedCreativeId ? 'derived' : 'new',
+          baseCreativeId: brandOnly ? null : initialDerivedCreativeId || null,
           brief: headline
             ? `${headline}. ${supportingLine}`
-            : `${data.org.name} için ${selectedProduct.name} reklam görseli`,
+            : brandOnly ? `${data.org.name} marka tanıtımı` : `${data.org.name} için ${selectedProduct!.name} reklam görseli`,
           formatId: imageFormat,
           style: stylePreset.toLowerCase(),
-          heroProductId: selectedProduct.id,
-          productIds: [selectedProduct.id],
-          productExtras: {
-            [selectedProduct.id]: {
+          heroProductId: brandOnly ? null : selectedProduct!.id,
+          productIds: brandOnly ? [] : [selectedProduct!.id],
+          productExtras: brandOnly ? {} : {
+            [selectedProduct!.id]: {
               imageUrl: productImageUrl,
               price: price || '',
               oldPrice: oldPrice || '',
@@ -590,7 +614,7 @@ export function CreativeStudioV2({
           customHeadline: headline,
           customSupporting: supportingLine,
           stylePreset,
-          objective,
+          objective: brandOnly ? 'BRAND_AWARENESS' : objective,
           creativePlan,
           qualityMode,
           templateFamily,
@@ -620,6 +644,12 @@ export function CreativeStudioV2({
       }
     } else {
       // VIDEO PIPELINE
+      if (brandOnly || !selectedProduct) {
+        setSubmitError(BRAND_VIDEO_UNAVAILABLE)
+        setIsSubmitting(false)
+        submissionLockRef.current = false
+        return
+      }
       if (voWords === 0 || voWords > MAX_SPOKEN_WORDS) {
         setSubmitError(`Türkçe seslendirme metni 1–${MAX_SPOKEN_WORDS} kelime olmalıdır.`)
         setIsSubmitting(false)
@@ -756,14 +786,13 @@ export function CreativeStudioV2({
             }`}
           >
             <p className={`text-[13.5px] font-bold ${jobState === 'FAILED' ? 'text-rose-800' : 'text-amber-900'}`}>
-              {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video İnceleme Bekliyor'}
+              {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video Kullanıma Hazır Değil'}
             </p>
             <p className="mt-1 text-[12px] leading-relaxed text-[#667781]">
               {jobState === 'FAILED'
                 ? videoFailureUserMessage(jobFailureMessage)
-                : 'Videonuz üretildi ancak otomatik kalite kontrolü inceleme gerektiriyor.'}
+                : 'Videoda bir sorun tespit edildi veya dosya doğrulaması tamamlanamadı. Yeniden oluşturmayı deneyin.'}
             </p>
-            <p className="mt-2 break-all text-[11px] text-[#667781]">İş kimliği: {activeJobId}</p>
           </div>
 
           {/* Show the video preview even in NEEDS_REVIEW if playback URL exists */}
@@ -896,6 +925,28 @@ export function CreativeStudioV2({
             {/* STEP 1: PRODUCT & GOAL */}
             {step === 'product_goal' && (
               <div className="space-y-6">
+                <fieldset>
+                  <legend className="text-[15px] font-bold text-[#111b21]">Tanıtım biçimi</legend>
+                  <div className="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+                    {([{id:'offering',label:'Ürün / Hizmet Tanıtımı',detail:'Gerçek ürün fotoğrafı, arayüz ekranı veya hizmet/çalışma görseliyle tanıtım.'},
+                      {id:'brand',label:'Marka Tanıtımı',detail:'Yalnız işletme logosu ve doğrulanmış marka bilgileriyle tanıtım. Ürün eklemeniz gerekmez.'}] as const).map(mode => (
+                      <button type="button" key={mode.id} aria-pressed={promotionMode === mode.id}
+                        className={`rounded-xl border p-3.5 text-left ${promotionMode === mode.id ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]' : 'border-[#e9edef] bg-white'}`}
+                        onClick={() => {
+                          if (mode.id === promotionMode) return
+                          resetProductCopy()
+                          setPromotionMode(mode.id)
+                          setHeroProductId(mode.id === 'brand' ? '' : productsList[0]?.id || '')
+                          setObjective(mode.id === 'brand' ? 'BRAND_AWARENESS' : 'PRODUCT_INTRO')
+                          setPrice(''); setOldPrice(''); setOffer('')
+                        }}>
+                        <span className="block text-[13.5px] font-bold">{mode.label}</span>
+                        <span className="mt-1 block text-[12px] text-[#667781]">{mode.detail}</span>
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                {brandOnly && mediaType === 'VIDEO' ? <Notice tone="warn">{BRAND_VIDEO_UNAVAILABLE}</Notice> : null}
                 {/* 1. Medya Türü Seçimi */}
                 <div>
                   <h2 className="text-[15px] font-bold text-[#111b21]">1. Medya Türü</h2>
@@ -960,11 +1011,19 @@ export function CreativeStudioV2({
                 ) : null}
 
                 {/* 3. Hero Ürün Seçimi */}
-                <div>
+                {!brandOnly ? <div>
+                  <Field label="Ne tanıtıyorsunuz?">
+                    <select aria-label="Tanıtılan ürün veya hizmet türü" value={offeringKind} onChange={event => setOfferingKind(parseOfferingKind(event.target.value))}
+                      className="mb-3 w-full rounded-lg border border-hairline bg-white p-2 text-sm">
+                      <option value="physical">Fiziksel ürün — gerçek ürün fotoğrafı</option>
+                      <option value="software">Yazılım — gerçek arayüz ekran görüntüsü</option>
+                      <option value="service">Hizmet — hizmet, mekân veya çalışma görseli</option>
+                    </select>
+                  </Field>
                   <div className="flex items-center justify-between">
                     <div>
-                      <h2 className="text-[15px] font-bold text-[#111b21]">3. Tanıtılacak Ürün</h2>
-                      <p className="text-[12px] text-[#667781] mt-0.5">Reklamda öne çıkarılacak ana ürünü seçin.</p>
+                      <h2 className="text-[15px] font-bold text-[#111b21]">3. Tanıtılacak Ürün / Hizmet</h2>
+                      <p className="text-[12px] text-[#667781] mt-0.5">{offeringKind === 'software' ? 'Gerçek arayüz ekran görüntüsü olan yazılımınızı seçin.' : offeringKind === 'service' ? 'Hizmetin, mekânın veya çalışmanın gerçek görselini seçin.' : 'Gerçek ürün fotoğrafı olan ürünü seçin. Logo ürün fotoğrafı yerine kullanılamaz.'}</p>
                     </div>
                     <Button
                       type="button"
@@ -972,19 +1031,19 @@ export function CreativeStudioV2({
                       className="h-8 text-[12px] font-semibold text-[#008069]"
                       onClick={() => setAddProductOpen(true)}
                     >
-                      + Yeni Ürün Ekle
+                      + Yeni Ürün / Hizmet Ekle
                     </Button>
                   </div>
 
                   {productsList.length === 0 ? (
                     <div className="mt-2.5 rounded-xl border border-dashed border-[#d1d7db] p-6 text-center">
-                      <p className="text-[13px] text-[#667781]">Henüz kayıtlı ürününüz yok.</p>
+                      <p className="text-[13px] text-[#667781]">Henüz kayıtlı ürün veya hizmetiniz yok.</p>
                       <Button
                         type="button"
                         className="mt-3 !bg-[#008069] text-white text-[12.5px]"
                         onClick={() => setAddProductOpen(true)}
                       >
-                        + İlk Ürününüzü Ekleyin
+                        + İlk Ürün / Hizmetinizi Ekleyin
                       </Button>
                     </div>
                   ) : (
@@ -1026,13 +1085,13 @@ export function CreativeStudioV2({
                       })}
                     </div>
                   )}
-                </div>
+                </div> : <p className="rounded-xl border border-hairline bg-white p-4 text-sm text-[#667781]">Marka tanıtımında ürün kataloğu kullanılmaz. Logonuz, marka kitiniz ve kayıtlı işletme bilgileriniz bağlanır.</p>}
 
                 {/* 4. Kampanya Amacı */}
                 <div>
                   <h2 className="text-[15px] font-bold text-[#111b21]">4. Kampanya Amacı</h2>
                   <div className="mt-2.5 grid gap-2 sm:grid-cols-2">
-                    {CAMPAIGN_OBJECTIVES.map((obj) => (
+                    {CAMPAIGN_OBJECTIVES.filter(obj => !brandOnly || obj.id === 'BRAND_AWARENESS').map((obj) => (
                       <button
                         key={obj.id}
                         type="button"
@@ -1063,11 +1122,20 @@ export function CreativeStudioV2({
                 </div>
 
                 {/* Footer Nav */}
-                <div className="flex justify-end pt-3 border-t border-hairline">
+                <div className="flex flex-col gap-2 pt-3 border-t border-hairline sm:flex-row sm:items-center sm:justify-between">
+                  {!allAssetsReady ? (
+                    <p className="text-[12px] font-medium text-amber-700 bg-amber-50 rounded-lg p-2 border border-amber-200">
+                      {brandOnly ? (mediaType === 'VIDEO' ? BRAND_VIDEO_UNAVAILABLE : 'Marka tanıtımı için işletme logosunu ekleyin.') : !hasLogo && !hasProduct
+                        ? 'Devam etmek için önce işletme logonuzu ve en az bir ürününüzü ekleyin.'
+                        : !hasLogo
+                          ? 'Devam etmek için Ayarlar > Marka Kiti sayfasından işletme logonuzu ekleyin.'
+                          : 'Devam etmek için en az bir katalog ürünü seçin veya yeni ürün ekleyin.'}
+                    </p>
+                  ) : <div />}
                   <Button
                     type="button"
-                    className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-7 shadow-sm"
-                    disabled={!hasProduct || !hasLogo}
+                    className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-7 shadow-sm shrink-0"
+                    disabled={!allAssetsReady}
                     onClick={handleGoToStep2}
                   >
                     Devam Et (Görsel ve Reklam Metni) →
@@ -1104,7 +1172,7 @@ export function CreativeStudioV2({
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11.5px] text-[#667781] mt-1 leading-snug">{fam.description}</p>
+                            <p className="text-[11.5px] text-[#667781] mt-1 leading-snug">{brandOnly ? 'Logonuz ve kayıtlı marka bilgilerinizle bu görsel dili kullanın.' : fam.description}</p>
                           </button>
                         ))}
                       </div>
@@ -1170,48 +1238,7 @@ export function CreativeStudioV2({
                   </div>
                 )}
 
-                {/* Quality Mode (Özel Tasarım vs Hızlı Tasarım) */}
-                {mediaType === 'IMAGE' && (
-                  <div className="rounded-xl border border-hairline bg-surface p-3.5 flex items-center justify-between">
-                    <div>
-                      <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
-                        <span>Tasarım Seçimi</span>
-                        <span className="rounded bg-[#008069] text-white px-2 py-0.5 text-[10px] font-bold">
-                          {qualityMode === 'DESIGNER' ? 'Özel Tasarım' : 'Sade Tasarım'}
-                        </span>
-                      </p>
-                      <p className="text-[11px] text-[#667781] mt-0.5">
-                        {qualityMode === 'DESIGNER'
-                          ? 'Ürüne ve sektöre göre ek kompozisyon planı hazırlanır. Aynı görsel sağlayıcısı kullanılır; kalite ve süre garanti edilmez.'
-                          : 'Mevcut sade reklam yönergeleri kullanılır. Aynı görsel sağlayıcısı ve tek üretim; süre veya kredi avantajı garanti edilmez.'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-canvas p-1 rounded-lg border border-hairline">
-                      <button
-                        type="button"
-                        onClick={() => setQualityMode('DESIGNER')}
-                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-                          qualityMode === 'DESIGNER'
-                            ? 'bg-[#008069] text-white shadow-2xs'
-                            : 'text-[#667781] hover:text-[#111b21]'
-                        }`}
-                      >
-                        Özel Tasarım
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setQualityMode('STANDARD')}
-                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition-all ${
-                          qualityMode === 'STANDARD'
-                            ? 'bg-[#008069] text-white shadow-2xs'
-                            : 'text-[#667781] hover:text-[#111b21]'
-                        }`}
-                      >
-                        Sade Tasarım
-                      </button>
-                    </div>
-                  </div>
-                )}
+
 
                 {/* AI Plan Review Box */}
                 <div className="rounded-xl border border-hairline bg-surface p-4 space-y-3.5 shadow-2xs">
@@ -1250,7 +1277,7 @@ export function CreativeStudioV2({
                       type="button"
                       variant="quiet"
                       className="h-8 text-[12px] font-semibold text-[#008069] border border-[#008069]/30 hover:bg-[#e7f8f2]"
-                      disabled={isPlanning}
+                      disabled={isPlanning || brandOnly}
                       onClick={() => void requestCreativePlan(true)}
                     >
                       {isPlanning
@@ -1334,7 +1361,7 @@ export function CreativeStudioV2({
                 </div>
 
                 {/* Fiyat & Kampanya Teklifi (Satış ve Kampanya Odaklı - Doğrudan Erişilebilir) */}
-                {mediaType === 'IMAGE' && (
+                {mediaType === 'IMAGE' && !brandOnly && (
                   <div className="rounded-xl border border-hairline bg-surface p-3.5 space-y-2.5 shadow-2xs">
                     <div>
                       <p className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
@@ -1495,8 +1522,8 @@ export function CreativeStudioV2({
                       <p className="font-semibold text-[#111b21]">{data.org.name}</p>
                     </div>
                     <div>
-                      <span className="text-[#667781]">Ürün:</span>
-                      <p className="font-semibold text-[#111b21]">{selectedProduct?.name}</p>
+                      <span className="text-[#667781]">Tanıtım:</span>
+                      <p className="font-semibold text-[#111b21]">{brandOnly ? 'Marka Tanıtımı — ürün gerektirmez' : selectedProduct?.name}</p>
                     </div>
                     <div>
                       <span className="text-[#667781]">Reklam Tarzı:</span>
@@ -1506,7 +1533,7 @@ export function CreativeStudioV2({
                     </div>
                     <div>
                       <span className="text-[#667781]">Marka Koruması:</span>
-                      <p className="font-semibold text-[#008069]">Kanonik Logo + 1/1 Ürün (2/2 Ref Kilitli)</p>
+                      <p className="font-semibold text-[#008069]">{brandOnly ? 'İşletme logosu ve marka bilgileri bağlandı' : 'Logo ve gerçek ürün/hizmet görseli seçildi'}</p>
                     </div>
                   </div>
 
@@ -1521,28 +1548,35 @@ export function CreativeStudioV2({
 
                   {/* Asset Preflight Health Check */}
                   <dl className="grid gap-2 rounded-lg border bg-white p-3 text-sm sm:grid-cols-2">
-                    {price && <div><dt>Fiyat</dt><dd className="font-semibold">{price}</dd></div>}
-                    {oldPrice && <div><dt>Eski fiyat</dt><dd>{oldPrice}</dd></div>}
-                    {offer && <div><dt>Teklif / indirim</dt><dd>{offer}</dd></div>}
-                    <div><dt>Çağrı</dt><dd className="font-semibold">{ctaText}</dd></div>
-                    {dateRange && <div><dt>Kampanya tarihi</dt><dd>{dateRange}</dd></div>}
-                    {deliveryInfo && <div><dt>Teslimat</dt><dd>{deliveryInfo}</dd></div>}
+                    {price && <div><dt className="text-xs text-[#667781]">Fiyat</dt><dd className="font-semibold">{/(\d+)/.test(price) && !/(tl|₺|\$|€)/i.test(price) ? `${price} TL` : price}</dd></div>}
+                    {oldPrice && <div><dt className="text-xs text-[#667781]">Eski fiyat</dt><dd className="line-through text-[#667781]">{/(\d+)/.test(oldPrice) && !/(tl|₺|\$|€)/i.test(oldPrice) ? `${oldPrice} TL` : oldPrice}</dd></div>}
+                    {offer && <div><dt className="text-xs text-[#667781]">Teklif / indirim</dt><dd>{offer}</dd></div>}
+                    <div><dt className="text-xs text-[#667781]">Çağrı</dt><dd className="font-semibold">{ctaText}</dd></div>
+                    {dateRange && <div><dt className="text-xs text-[#667781]">Kampanya tarihi</dt><dd>{dateRange}</dd></div>}
+                    {deliveryInfo && (
+                      <div>
+                        <dt className="text-xs text-[#667781]">
+                          {/taksit|kredi\s*kart|kart|peşin|havale|ödeme/i.test(deliveryInfo) ? 'Ödeme / Taksit' : 'Teslimat'}
+                        </dt>
+                        <dd>{deliveryInfo}</dd>
+                      </div>
+                    )}
                   </dl>
                   <div className="rounded-lg border border-[#e9edef] bg-white p-3 space-y-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#667781]">Logo ve Ürün Kontrolü</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#667781]">{brandOnly ? 'Marka Kimliği Kontrolü' : 'Logo ve Tanıtım Görseli Kontrolü'}</span>
                     <div className="grid grid-cols-2 gap-2 text-[12px]">
                       <div className="flex items-center gap-2">
                         <span className={`inline-block size-2 rounded-full ${hasLogo ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                         <span className="text-[#667781]">Kurumsal Logo:</span>
                         <span className={`font-semibold ${hasLogo ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {hasLogo ? '✓ Bağlandı' : 'Eksik'}
+                          {hasLogo ? '✓ Seçildi' : 'Eksik'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`inline-block size-2 rounded-full ${hasProduct ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                        <span className="text-[#667781]">Ürün:</span>
-                        <span className={`font-semibold ${hasProduct ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {hasProduct ? '✓ Seçildi' : 'Eksik'}
+                        <span className={`inline-block size-2 rounded-full ${brandOnly || hasProduct ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                        <span className="text-[#667781]">Tanıtım görseli:</span>
+                        <span className={`font-semibold ${brandOnly || hasProduct ? 'text-emerald-700' : 'text-rose-700'}`}>
+                          {brandOnly ? 'Marka tanıtımında gerekmez' : hasProduct ? '✓ Seçildi' : 'Eksik'}
                         </span>
                       </div>
                     </div>
@@ -1551,7 +1585,7 @@ export function CreativeStudioV2({
 
                 {!allAssetsReady ? (
                   <Notice tone="danger">
-                    Görsel veya video üretimi için işletme logosu ve seçilen ürünün kanonik referans görseli hazır olmalıdır.
+                    {brandOnly ? (mediaType === 'VIDEO' ? BRAND_VIDEO_UNAVAILABLE : 'Marka tanıtımı için işletme logosu hazır olmalıdır.') : 'İşletme logosu ve gerçek ürün, arayüz veya hizmet görseli hazır olmalıdır.'}
                   </Notice>
                 ) : null}
 

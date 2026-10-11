@@ -1,9 +1,9 @@
 import { createHash } from 'node:crypto'
 import { isUncertainImageFailure } from './detail-render-state'
 
-export function quickImageIdentity(input: { brief: string; brand?: string; style?: string; brandKitId?: string | null }) {
+export function quickImageIdentity(input: { brief: string; brand?: string; style?: string; brandKitId?: string | null; productId?: string | null }) {
   return createHash('sha256').update(JSON.stringify([
-    input.brief.trim(), (input.brand || '').trim(), (input.style || 'duyuru').trim(), input.brandKitId || null,
+    input.brief.trim(), (input.brand || '').trim(), (input.style || 'duyuru').trim(), input.brandKitId || null, input.productId || null,
   ])).digest('hex')
 }
 

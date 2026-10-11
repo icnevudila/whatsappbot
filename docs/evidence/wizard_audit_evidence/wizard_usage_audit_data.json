@@ -1,0 +1,140 @@
+{
+  "BOFE_IMAGE": {
+    "brandName": "Bofe",
+    "flowType": "IMAGE",
+    "wizardInputs": {
+      "brandName": "Bofe Tarım",
+      "productName": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası",
+      "headline": "Bofe 16L Akülü Pompa — Sezona Özel %22 İndirim",
+      "supportingLine": "Aynı Gün Ücretsiz Kargo · 8 Bar Yüksek Basınç",
+      "price": "1.450 TL",
+      "oldPrice": "1.850 TL",
+      "offer": "%22 İndirim",
+      "cta": "Hemen İnceleyin",
+      "dateRange": "31 Ekim Son Gün",
+      "format": "1:1",
+      "stylePreset": "AUTO"
+    },
+    "finalOutput": {},
+    "fieldVerdict": {
+      "brandName": "USED_CORRECTLY",
+      "logo": "USED_CORRECTLY",
+      "productName": "USED_CORRECTLY",
+      "productImage": "USED_CORRECTLY",
+      "headline": "USED_CORRECTLY",
+      "price": "USED_CORRECTLY",
+      "oldPrice": "USED_CORRECTLY",
+      "offer": "USED_CORRECTLY",
+      "cta": "USED_CORRECTLY",
+      "supportingLine": "USED_CORRECTLY",
+      "dateRange": "USED_WEAKLY",
+      "qualityMode": "AMBIGUOUS",
+      "brandTone": "USED_WEAKLY",
+      "brandPalette": "USED_CORRECTLY"
+    }
+  },
+  "AYVAZOGLU_IMAGE": {
+    "brandName": "Ayvazoğlu İnşaat",
+    "flowType": "IMAGE",
+    "wizardInputs": {
+      "brandName": "Ayvazoğlu İnşaat",
+      "productName": "Klinker Tuğla",
+      "headline": "Ayvazoğlu Klinker Tuğla — Doğrudan Fabrikadan",
+      "supportingLine": "Şantiyeye Teslim · Toptan ve Perakende",
+      "price": "450 TL/m²",
+      "oldPrice": "550 TL/m²",
+      "offer": "Şantiyeye Teslim",
+      "cta": "Teklif Alın",
+      "format": "4:5",
+      "stylePreset": "CORPORATE"
+    },
+    "finalOutput": {},
+    "fieldVerdict": {
+      "brandName": "USED_CORRECTLY",
+      "logo": "USED_CORRECTLY",
+      "productName": "USED_CORRECTLY",
+      "productImage": "USED_CORRECTLY",
+      "headline": "USED_CORRECTLY",
+      "price": "USED_CORRECTLY",
+      "oldPrice": "USED_CORRECTLY",
+      "offer": "USED_CORRECTLY",
+      "cta": "USED_CORRECTLY",
+      "supportingLine": "USED_CORRECTLY",
+      "sector": "USED_CORRECTLY",
+      "qualityMode": "AMBIGUOUS",
+      "brandTone": "USED_WEAKLY"
+    }
+  },
+  "MESAJIFY_IMAGE": {
+    "brandName": "Mesajify",
+    "flowType": "IMAGE",
+    "wizardInputs": {
+      "brandName": "Mesajify",
+      "productName": "Mesajify — Gerçek Uygulama Arayüzü",
+      "headline": "Mesajify — WhatsApp ile Otomatik Müşteri Kazanımı",
+      "supportingLine": "14 Gün Ücretsiz Deneme · Kurulumsuz Hemen Başla",
+      "price": "1.950 TL/ay",
+      "oldPrice": "2.500 TL/ay",
+      "offer": "14 Gün Ücretsiz Deneme",
+      "cta": "Hemen Başlayın",
+      "format": "1:1",
+      "stylePreset": "AUTO"
+    },
+    "finalOutput": {},
+    "fieldVerdict": {
+      "brandName": "USED_CORRECTLY",
+      "logo": "USED_CORRECTLY",
+      "productName": "USED_CORRECTLY",
+      "productImage": "USED_CORRECTLY",
+      "screenshotImmunity": "USED_CORRECTLY",
+      "headline": "USED_CORRECTLY",
+      "price": "USED_CORRECTLY",
+      "oldPrice": "USED_CORRECTLY",
+      "offer": "USED_CORRECTLY",
+      "cta": "USED_CORRECTLY",
+      "supportingLine": "USED_CORRECTLY"
+    }
+  },
+  "DONER_IMAGE": {
+    "brandName": "Maydonoz Döner",
+    "flowType": "IMAGE",
+    "wizardInputs": {
+      "brandName": "Maydonoz Döner",
+      "productName": "Özel Soslu Hatay Döner Dürüm",
+      "hasImage": false,
+      "gateAction": "Block generation when product reference image is missing"
+    },
+    "finalOutput": {
+      "status": "BLOCKED_AT_PREFLIGHT",
+      "notes": "2/2 Reference gate correctly prevents text-only halluncinations when product photo is absent."
+    },
+    "fieldVerdict": {
+      "productImageRequired": "USED_CORRECTLY",
+      "logoFidelityGate": "USED_CORRECTLY"
+    }
+  },
+  "BOFE_VIDEO": {
+    "brandName": "Bofe",
+    "flowType": "VIDEO",
+    "wizardInputs": {
+      "brandName": "Bofe Tarım",
+      "productName": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası",
+      "voiceover": "Bofe akülü sırt pompası ile bahçenizde yüksek verim sağlayın. Sezona özel indirim fırsatı.",
+      "headline": "Bofe 16L Akülü Sırt Pompası",
+      "cta": "Hemen İnceleyin",
+      "environmentPreset": "Bahçe ve meyve bahçesi",
+      "motionStyle": "real_usage",
+      "subtitles": true
+    },
+    "fieldVerdict": {
+      "voiceoverText": "USED_CORRECTLY",
+      "logoReference": "USED_CORRECTLY",
+      "productReference": "USED_CORRECTLY",
+      "headline": "USED_CORRECTLY",
+      "environmentPreset": "USED_CORRECTLY",
+      "motionStyle": "USED_WEAKLY",
+      "subtitlesToggle": "USED_CORRECTLY",
+      "outroBranding": "USED_CORRECTLY"
+    }
+  }
+}

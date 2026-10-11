@@ -1,0 +1,262 @@
+{
+  "environment": "local optimized webpack build; not deployed production baseline",
+  "inp": "not measured: no qualifying interaction",
+  "runs": [
+    {
+      "mobile": false,
+      "cache": "cold",
+      "observationSeconds": 5,
+      "throttled": false,
+      "requests": [
+        "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+        "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+      ],
+      "videoTransfers": [
+        {
+          "url": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "status": 206,
+          "encodedBytesDuringWindow": 2042423
+        },
+        {
+          "url": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "status": 206,
+          "encodedBytesDuringWindow": 0
+        }
+      ],
+      "videoEncodedBytesDuringWindow": 2042423,
+      "totalNetworkEncodedBytes": 3222593,
+      "errors": [],
+      "paint": [
+        {
+          "name": "first-paint",
+          "startTime": 2260
+        },
+        {
+          "name": "first-contentful-paint",
+          "startTime": 2260
+        }
+      ],
+      "ttfb": 254,
+      "lcp": 2260,
+      "cls": 0,
+      "video": [
+        {
+          "url": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "transferSize": 2042723,
+          "encodedBodySize": 2042423,
+          "duration": 51.60000002384186
+        },
+        {
+          "url": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "duration": 31.599999964237213
+        }
+      ],
+      "videos": [
+        {
+          "src": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "readyState": 4,
+          "paused": false
+        },
+        {
+          "src": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "readyState": 4,
+          "paused": true
+        },
+        {
+          "src": "",
+          "readyState": 0,
+          "paused": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "mobile": false,
+      "cache": "warm",
+      "observationSeconds": 5,
+      "throttled": false,
+      "requests": [
+        "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+        "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+      ],
+      "videoTransfers": [
+        {
+          "url": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "status": 206,
+          "encodedBytesDuringWindow": 0
+        },
+        {
+          "url": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "status": 206,
+          "encodedBytesDuringWindow": 0
+        }
+      ],
+      "videoEncodedBytesDuringWindow": 0,
+      "totalNetworkEncodedBytes": 8361,
+      "errors": [],
+      "paint": [
+        {
+          "name": "first-paint",
+          "startTime": 352
+        },
+        {
+          "name": "first-contentful-paint",
+          "startTime": 352
+        }
+      ],
+      "ttfb": 14.800000011920929,
+      "lcp": 352,
+      "cls": 0,
+      "video": [
+        {
+          "url": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "transferSize": 2042723,
+          "encodedBodySize": 2042423,
+          "duration": 14.899999976158142
+        },
+        {
+          "url": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "duration": 19.30000001192093
+        }
+      ],
+      "videos": [
+        {
+          "src": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "readyState": 4,
+          "paused": false
+        },
+        {
+          "src": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "readyState": 4,
+          "paused": true
+        },
+        {
+          "src": "",
+          "readyState": 0,
+          "paused": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "mobile": true,
+      "cache": "cold",
+      "observationSeconds": 5,
+      "throttled": true,
+      "requests": [
+        "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+        "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+      ],
+      "videoTransfers": [
+        {
+          "url": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "status": 206,
+          "encodedBytesDuringWindow": 224258
+        }
+      ],
+      "videoEncodedBytesDuringWindow": 207758,
+      "totalNetworkEncodedBytes": 1040500,
+      "errors": [],
+      "paint": [
+        {
+          "name": "first-paint",
+          "startTime": 1868
+        },
+        {
+          "name": "first-contentful-paint",
+          "startTime": 1868
+        }
+      ],
+      "ttfb": 22.900000035762787,
+      "lcp": 2484,
+      "cls": 0,
+      "video": [],
+      "videos": [
+        {
+          "src": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "readyState": 3,
+          "paused": false
+        },
+        {
+          "src": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "readyState": 0,
+          "paused": true
+        },
+        {
+          "src": "",
+          "readyState": 0,
+          "paused": true
+        }
+      ],
+      "overflow": false
+    },
+    {
+      "mobile": true,
+      "cache": "warm",
+      "observationSeconds": 5,
+      "throttled": true,
+      "requests": [
+        "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+        "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+      ],
+      "videoTransfers": [
+        {
+          "url": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "status": 206,
+          "encodedBytesDuringWindow": 917596
+        },
+        {
+          "url": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "status": 206,
+          "encodedBytesDuringWindow": 130096
+        }
+      ],
+      "videoEncodedBytesDuringWindow": 956192,
+      "totalNetworkEncodedBytes": 8116,
+      "errors": [],
+      "paint": [
+        {
+          "name": "first-paint",
+          "startTime": 620
+        },
+        {
+          "name": "first-contentful-paint",
+          "startTime": 620
+        }
+      ],
+      "ttfb": 17,
+      "lcp": 636,
+      "cls": 0,
+      "video": [
+        {
+          "url": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "transferSize": 300,
+          "encodedBodySize": 0,
+          "duration": 1648.300000011921
+        }
+      ],
+      "videos": [
+        {
+          "src": "http://localhost:3018/landing/infographics/01-ana-urun-veo-i2v.mp4",
+          "readyState": 2,
+          "paused": false
+        },
+        {
+          "src": "http://localhost:3018/landing/infographics/04-ortak-inbox-veo-i2v.mp4",
+          "readyState": 4,
+          "paused": true
+        },
+        {
+          "src": "",
+          "readyState": 0,
+          "paused": true
+        }
+      ],
+      "overflow": false
+    }
+  ]
+}

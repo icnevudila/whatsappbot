@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 import { AccentLink, Badge, Button, Field, Notice, Textarea } from '@/components/ui'
 import { Icon, type IconName } from '@/components/icon'
 import { CreativeGenerating } from '@/components/creative-generating'
+import { CreativeDownload } from '@/components/creative-download'
+import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -16,6 +18,7 @@ import {
   deleteCreative,
   renameCreative,
   retryCreative,
+  reconcileCreative,
   startCreativeGeneration,
   approveReviewedImage,
 } from './actions'
@@ -42,6 +45,7 @@ export { getSafeMediaUrl }
 
 export type DetailCreative = {
   imageReviewRequired?: boolean
+  imageReconciliationRequired?: boolean
   submissionRequestKey?: string | null
   id: string
   title: string | null
@@ -142,16 +146,11 @@ export function CreativeMoreMenu({
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
           {publicUrl ? (
-            <a
-              role="menuitem"
-              href={publicUrl}
-              download=""
+            <CreativeDownload
+              creativeId={creativeId} role="menuitem"
               className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-              onClick={() => setOpen(false)}
-            >
-              <Icon name="download" className="size-4 text-ink-muted" />
-              İndir
-            </a>
+              onStarted={() => setOpen(false)}
+            />
           ) : null}
           {canManage ? (
             <button
@@ -367,7 +366,7 @@ export function CreativeDetail({
       error?: string
     } | null
     if (!response.ok || json?.ok === false || json?.error) {
-      return { error: json?.error ?? 'Görsel üretilemedi.', pending: false }
+      return { error: isVideo ? videoFailureUserMessage(json?.error) : json?.error ?? 'Görsel üretilemedi.', pending: false }
     }
     if (json?.pending || response.status === 202) {
       return {
@@ -377,7 +376,9 @@ export function CreativeDetail({
         progressInfo: json?.progressInfo ?? null,
       }
     }
-    if (json?.needsReview) return { error: null, pending: false, publicUrl: json.publicUrl }
+    if (json?.needsReview) return isVideo
+      ? {error:'Video dosyası doğrulanamadı veya bir sorun tespit edildi. Kampanyada kullanmadan önce yeniden oluşturun.',pending:false}
+      : { error: null, pending: false, publicUrl: json.publicUrl }
     if (!hasConfirmedRenderResult({ ready: json?.ready, publicUrl: json?.publicUrl })) {
       return { error: null, pending: true, retryAfterSeconds: 5 }
     }
@@ -422,7 +423,6 @@ export function CreativeDetail({
   useEffect(() => {
     if (!canManage || !shouldObserveRender) return
     if (kicked.current) return
-    kicked.current = true
     setBusyRender(true)
     setLocalError(null)
 
@@ -459,6 +459,12 @@ export function CreativeDetail({
         }
 
         if (res.pending) {
+          if (!isVideo && Date.now() - startTime > 5 * 60 * 1000) {
+            setBusyRender(false)
+            setLocalError('Görsel üretimi durumu doğrulanamıyor, işlem inceleniyor. Çift ücretlendirme yapılmadı.')
+            router.refresh()
+            return
+          }
           const delay = (res.retryAfterSeconds || 3) * 1000
           pollTimer = setTimeout(pollLoop, Math.max(Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 2500, delay))
         } else {
@@ -470,20 +476,29 @@ export function CreativeDetail({
       } catch (err: unknown) {
         if (!isMounted) return
         console.warn('[detail-view] poll error:', err)
-        // A lost observation is not a failed production. Keep observing this job;
-        // requestRender's persisted identity prevents another provider submission.
+        if (!isVideo && Date.now() - startTime > 5 * 60 * 1000) {
+          setBusyRender(false)
+          setLocalError('Görsel üretimi durumu doğrulanamıyor, işlem inceleniyor. Çift ücretlendirme yapılmadı.')
+          router.refresh()
+          return
+        }
         pollTimer = setTimeout(pollLoop, Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 4000)
       }
     }
 
-    void pollLoop()
+    queueMicrotask(() => {
+      if (!isMounted) return
+      kicked.current = true
+      void pollLoop()
+    })
 
     return () => {
       isMounted = false
+      kicked.current = false
       if (pollTimer) clearTimeout(pollTimer)
     }
   // A pending -> rendering refresh must not tear down the owning poll loop.
-  // kicked remains true after cleanup, so a status dependency silently stopped recovery.
+  // Cleanup releases ownership so a replay can resume the same job.
   }, [canManage, creative.id, router, shouldObserveRender])
 
   useEffect(() => {
@@ -504,10 +519,10 @@ export function CreativeDetail({
   // Realtime yayını kapalı/gecikmiş olsa dahi Flow sonucu DB'ye yazıldığında
   // ekran kendini yeniler; kullanıcı manuel yenilemeye bağlı kalmaz.
   useEffect(() => {
-    if (!running) return
+    if (!running || (canManage && shouldObserveRender)) return
     const timer = window.setInterval(() => router.refresh(), 5_000)
     return () => window.clearInterval(timer)
-  }, [running, router])
+  }, [running, canManage, shouldObserveRender, router])
 
   const spawn = (draft: Record<string, unknown>) => {
     const form = new FormData()
@@ -548,6 +563,7 @@ export function CreativeDetail({
   }
 
   const remainingText = `Geçen süre: ${tick} sn`
+  const imageStageIndex = tick < 8 ? 1 : tick < 20 ? 2 : tick < 40 ? 3 : 4
 
   return (
     <div className="space-y-3">
@@ -555,6 +571,7 @@ export function CreativeDetail({
         <div className="wb-craft-panel">
           <CreativeGenerating
             kind={isVideo ? 'video' : 'image'}
+            stageIndex={isVideo ? undefined : imageStageIndex}
             title={isVideo ? 'Sinematik kampanya videonuz hazırlanıyor' : 'Görseliniz hazırlanıyor'}
             line={stageLabel}
             detail={`${stageDetail} · ${remainingText}`}
@@ -573,7 +590,7 @@ export function CreativeDetail({
 
       {shownError && !spinning ? (
         <Notice tone="danger">
-          <p className="text-[13.5px] font-semibold">Görsel oluşturulamadı</p>
+          <p className="text-[13.5px] font-semibold">{isVideo ? 'Video kullanıma hazır değil' : 'Görsel oluşturulamadı'}</p>
           <p className="mt-1 whitespace-pre-wrap break-words text-[13px]">{shownError}</p>
           {canManage ? (
             <Button
@@ -581,9 +598,22 @@ export function CreativeDetail({
               variant="accent"
               className="wb-wa-submit mt-3"
               disabled={pending || busyRender}
-              onClick={retryNow}
+              onClick={async () => {
+                if (creative.imageReconciliationRequired) {
+                  setBusyRender(true)
+                  const res = await reconcileCreative(creative.id)
+                  if (res?.error) toast(res.error, 'danger')
+                  else {
+                    toast('Üretim durumu doğrulandı. Yeniden deneniyor...', 'success')
+                    await retryNow()
+                  }
+                  setBusyRender(false)
+                } else {
+                  await retryNow()
+                }
+              }}
             >
-              Tekrar dene
+              {creative.imageReconciliationRequired ? 'Durumu Doğrula ve Tekrar Dene' : 'Tekrar dene'}
             </Button>
           ) : null}
           <QuietLibrary />
@@ -592,9 +622,8 @@ export function CreativeDetail({
 
       {creative.status === 'needs_review' ? (
         <Notice tone="warn">
-          <p className="text-[13.5px] font-semibold">{isVideo ? 'Video' : 'Görsel'} inceleme bekliyor</p>
-          <p className="mt-1 text-[13px]">Dosya oluşturuldu. Gerçek ürün, logo, metin ve ticari bilgilerin doğruluğu onaylanmadan kampanyada kullanılamaz.</p>
-          {isVideo && <Link href={`/icerik/yeni?job_id=${creative.id}`} className="mt-3 inline-block text-[13px] font-semibold underline">Üretim sonucunu görüntüle</Link>}
+          <p className="text-[13.5px] font-semibold">{isVideo ? 'Video kullanıma hazır değil' : 'Görsel inceleme bekliyor'}</p>
+          <p className="mt-1 text-[13px]">{isVideo ? 'Videoda bir sorun tespit edildi veya dosya doğrulaması tamamlanamadı. Kampanyada kullanmadan önce yeniden oluşturun.' : 'Dosya oluşturuldu. Gerçek ürün, logo, metin ve ticari bilgilerin doğruluğu onaylanmadan kampanyada kullanılamaz.'}</p>
           {!isVideo && creative.imageReviewRequired && canManage && <form className="mt-3 space-y-2" action={async (form) => {
             form.set('id',creative.id)
             const result = await approveReviewedImage(form)
@@ -608,7 +637,7 @@ export function CreativeDetail({
         </Notice>
       ) : null}
 
-      {displayPublicUrl && (isReady || (!isVideo && creative.status === 'needs_review')) ? (
+      {displayPublicUrl && (isReady || creative.status === 'needs_review') ? (
         <div className="relative overflow-visible">
           {isVideo ? (
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">
@@ -637,7 +666,7 @@ export function CreativeDetail({
                   className="w-full rounded-[var(--radius-card)] object-contain"
                 />
               </button>
-              <DetailImageMenu publicUrl={getSafeMediaUrl(displayPublicUrl) || displayPublicUrl} />
+              <DetailImageMenu creativeId={creative.id} />
               <ImageLightbox
                 open={lightboxOpen}
                 src={getSafeMediaUrl(displayPublicUrl) || displayPublicUrl}
@@ -670,8 +699,74 @@ export function CreativeDetail({
               Metni Kopyala
             </button>
           </div>
-          <div className="whitespace-pre-wrap font-sans leading-relaxed text-[#111b21] bg-white p-3 rounded-lg border border-[#d1ebd9]">
-            {creative.campaignMessage}
+          <div className="font-sans leading-relaxed text-[#111b21] bg-white p-3.5 rounded-lg border border-[#d1ebd9] space-y-1">
+            {creative.campaignMessage.split('\n').map((line, idx) => {
+              const trimmed = line.trim()
+              if (!trimmed) return <div key={idx} className="h-1.5" />
+              // Main header: *Title*
+              if (trimmed.startsWith('*') && trimmed.endsWith('*') && !trimmed.slice(1, -1).includes('*')) {
+                return (
+                  <div key={idx} className="font-bold text-[14px] text-[#006b58] pb-0.5">
+                    {trimmed.slice(1, -1)}
+                  </div>
+                )
+              }
+              // Bullet item: • *Label:* Value
+              if (trimmed.startsWith('•')) {
+                const rest = trimmed.slice(1).trim()
+                const labelMatch = rest.match(/^\*([^*]+):\*\s*(.*)$/)
+                if (labelMatch) {
+                  let [, label, value] = labelMatch
+                  if (label === 'Teslimat' && /taksit|kredi\s*kart|kart|peşin|havale|ödeme/i.test(value)) {
+                    label = 'Ödeme/Taksit'
+                  }
+                  if (label === 'Fiyat') {
+                    value = value.replace(/(?:^|\s)(\d+)(?=\s*(?:_|\(|$))/g, (match, digits) => {
+                      const num = Number(digits)
+                      return ` ${num >= 1000 ? num.toLocaleString('tr-TR') : digits} TL`
+                    }).replace(/\s+/g, ' ').trim()
+                  }
+                  const parts = value.split(/(_[^_]+_|\([^\)]+\))/g)
+                  return (
+                    <div key={idx} className="flex items-start gap-2 py-0.5 text-[13px]">
+                      <span className="text-[#00a884] font-bold select-none">•</span>
+                      <div>
+                        <span className="font-semibold text-[#111b21]">{label}: </span>
+                        <span className="text-[#3b4a54]">
+                          {parts.map((p, pIdx) => {
+                            const trimmedPart = p.trim()
+                            if ((trimmedPart.startsWith('_') && trimmedPart.endsWith('_')) || (trimmedPart.startsWith('(') && trimmedPart.endsWith(')'))) {
+                              const inner = trimmedPart.replace(/[_()]/g, '').trim()
+                              return <span key={pIdx} className="text-[#667781] text-[12px] italic"> ({inner})</span>
+                            }
+                            return p
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                }
+                return (
+                  <div key={idx} className="flex items-start gap-2 py-0.5 text-[13px] text-[#3b4a54]">
+                    <span className="text-[#00a884] font-bold select-none">•</span>
+                    <span>{rest}</span>
+                  </div>
+                )
+              }
+              // Subheading: *Kampanya Detayları:*
+              if (trimmed.startsWith('*') && trimmed.endsWith('*')) {
+                return (
+                  <div key={idx} className="font-semibold text-[13px] text-[#006b58] pt-1.5">
+                    {trimmed.slice(1, -1)}
+                  </div>
+                )
+              }
+              return (
+                <div key={idx} className="text-[13px] text-[#3b4a54]">
+                  {trimmed}
+                </div>
+              )
+            })}
           </div>
         </div>
       ) : null}
@@ -896,7 +991,7 @@ function ImageLightbox({
   )
 }
 
-function DetailImageMenu({ publicUrl }: { publicUrl: string }) {
+function DetailImageMenu({ creativeId }: { creativeId: string }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -933,16 +1028,11 @@ function DetailImageMenu({ publicUrl }: { publicUrl: string }) {
           role="menu"
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
-          <a
-            role="menuitem"
-            href={publicUrl}
-            download=""
+          <CreativeDownload
+            creativeId={creativeId} role="menuitem"
             className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-            onClick={() => setOpen(false)}
-          >
-            <Icon name="download" className="size-4 text-ink-muted" />
-            İndir
-          </a>
+            onStarted={() => setOpen(false)}
+          />
         </div>
       ) : null}
     </div>

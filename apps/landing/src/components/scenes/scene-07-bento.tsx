@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import { Sparkles, Users, Network, MessageSquare } from 'lucide-react'
+import { LazyVideo } from '@/components/visuals/lazy-video'
 
 const INFRASTRUCTURE_MODULES = [
   {
@@ -51,19 +52,10 @@ export function Scene07Bento() {
         {/* Big Crisp Architecture Infographic Showcase */}
         <div className="relative max-w-5xl mx-auto rounded-3xl border border-slate-200/90 bg-white p-3 sm:p-5 shadow-2xl shadow-slate-900/5 mb-10">
           <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full rounded-2xl overflow-hidden bg-slate-950 border border-slate-100 shadow-inner">
-            <video
-              ref={(el) => {
-                if (el) {
-                  el.muted = true
-                  el.defaultMuted = true
-                }
-              }}
+            <LazyVideo
               src="/landing/infographics/01-ana-urun-veo-i2v.mp4"
-              autoPlay
-              muted
-              loop
-              playsInline
-              preload="auto"
+              poster="/landing/infographics/01-ana-urun-veo-i2v-poster.webp"
+              alt="Mesajify Platform Mimarisi"
               className="w-full h-full object-cover"
             />
           </div>

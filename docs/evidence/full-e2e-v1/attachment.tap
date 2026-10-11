@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: two references skip an unrelated first chooser and single-file image widget
+ok 1 - two references skip an unrelated first chooser and single-file image widget
+  ---
+  duration_ms: 9.0227
+  type: 'test'
+  ...
+# Subtest: composer-owned chooser wins over another image-upload feature
+ok 2 - composer-owned chooser wins over another image-upload feature
+  ---
+  duration_ms: 2.3311
+  type: 'test'
+  ...
+# Subtest: real ChatGPT DOM with camera capture, photos/videos, and photos choosers selects Attach photos
+ok 3 - real ChatGPT DOM with camera capture, photos/videos, and photos choosers selects Attach photos
+  ---
+  duration_ms: 5.4853
+  type: 'test'
+  ...
+# Subtest: ambiguous portals, disabled chooser and absent composer fail closed
+ok 4 - ambiguous portals, disabled chooser and absent composer fail closed
+  ---
+  duration_ms: 11.247
+  type: 'test'
+  ...
+# Subtest: one unambiguous portal image chooser remains supported
+ok 5 - one unambiguous portal image chooser remains supported
+  ---
+  duration_ms: 2.7188
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 639.6362

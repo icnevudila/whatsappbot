@@ -1,0 +1,464 @@
+{
+  "runId": "run_1791719514701_ffd949",
+  "timestamp": "2026-10-11T11:53:58.796Z",
+  "baseUrl": "http://localhost:3025",
+  "totalTests": 60,
+  "passed": 46,
+  "failed": 14,
+  "blocked": 0,
+  "notTested": 0,
+  "matrix": {
+    "A01": {
+      "name": "Kullanıcı Oturum Açma (Login E2E)",
+      "status": "PASS",
+      "durationMs": 8085,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A01_login_success.png"
+      ]
+    },
+    "A02": {
+      "name": "İşletme Seçimi ve SwitchOrg Cookie Senkronizasyonu",
+      "status": "FAIL",
+      "durationMs": 4050,
+      "error": "Org mismatch: afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc != 4a58b0dd-0931-4901-880a-686457d15010",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A02_failure.png"
+      ]
+    },
+    "A03": {
+      "name": "Oturum Kalıcılığı (Yeni Sekme / Reload)",
+      "status": "PASS",
+      "durationMs": 2247,
+      "error": null,
+      "artifacts": []
+    },
+    "A04": {
+      "name": "Yetkisiz Rota Yönlendirmesi (/giris?devam=...)",
+      "status": "PASS",
+      "durationMs": 5700,
+      "error": null,
+      "artifacts": []
+    },
+    "A05": {
+      "name": "Kreatif Stüdyo (/icerik/yeni) Sayfa Yüklenmesi",
+      "status": "PASS",
+      "durationMs": 3656,
+      "error": null,
+      "artifacts": []
+    },
+    "A06": {
+      "name": "Logo Varlık Ön Koşul Denetimi",
+      "status": "PASS",
+      "durationMs": 15,
+      "error": null,
+      "artifacts": []
+    },
+    "A07": {
+      "name": "Katalog Ürün Ön Koşul Denetimi",
+      "status": "PASS",
+      "durationMs": 35,
+      "error": null,
+      "artifacts": []
+    },
+    "A08": {
+      "name": "Adım 1 Eyleme Geçirilebilir Yönlendirme (Actionable UX)",
+      "status": "PASS",
+      "durationMs": 55,
+      "error": null,
+      "artifacts": []
+    },
+    "A09": {
+      "name": "Görsel Format Seçimi (1:1, 4:5, 9:16)",
+      "status": "PASS",
+      "durationMs": 43,
+      "error": null,
+      "artifacts": []
+    },
+    "A10": {
+      "name": "Video Format Seçimi (9:16 Sinematik Dikey)",
+      "status": "PASS",
+      "durationMs": 16,
+      "error": null,
+      "artifacts": []
+    },
+    "A11": {
+      "name": "Deterministik Yerel Metin Taslağı (Fallback)",
+      "status": "PASS",
+      "durationMs": 1230,
+      "error": null,
+      "artifacts": []
+    },
+    "A12": {
+      "name": "AI Yanıt Gecikmesinde Kullanıcı Metin Kilidi (headlineDirty)",
+      "status": "PASS",
+      "durationMs": 7,
+      "error": null,
+      "artifacts": []
+    },
+    "A13": {
+      "name": "Boş AI Yanıtı Reddi (Blank Output Gatekeeper)",
+      "status": "PASS",
+      "durationMs": 252,
+      "error": null,
+      "artifacts": []
+    },
+    "A14": {
+      "name": "AI Başlık ve Etiket Temizleme (cleanAiMessage)",
+      "status": "PASS",
+      "durationMs": 12,
+      "error": null,
+      "artifacts": []
+    },
+    "A15": {
+      "name": "Fiyat Koruma (Strict Price Preservation)",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A16": {
+      "name": "Fiyat Kayması Engeli (Price Drift Detection)",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A17": {
+      "name": "Türkçe Büyük/Küçük Harf (İ/i Unicode Case-Folding)",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A18": {
+      "name": "5 Ton Rewrite Desteği (Samimi, Profesyonel, Eğlenceli, vb.)",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A19": {
+      "name": "Tekil Uçuş Kilidi (Single-Flight Duplicate Submit Protection)",
+      "status": "PASS",
+      "durationMs": 17,
+      "error": null,
+      "artifacts": []
+    },
+    "A20": {
+      "name": "Idempotency RequestKey Üretimi",
+      "status": "PASS",
+      "durationMs": 12,
+      "error": null,
+      "artifacts": []
+    },
+    "A21": {
+      "name": "Video Üretim Kotası Gösterimi",
+      "status": "FAIL",
+      "durationMs": 1828,
+      "error": "Quota strip missing",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A21_failure.png"
+      ]
+    },
+    "A22": {
+      "name": "Arka Planda Devam Et Butonu",
+      "status": "PASS",
+      "durationMs": 4,
+      "error": null,
+      "artifacts": []
+    },
+    "A23": {
+      "name": "F5 İlerleme Kurtarma (Progress Recovery)",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A24": {
+      "name": "Sıfır Sahte ETA / Sayaç Güvencesi",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A25": {
+      "name": "HTML5 Video DOM Render Doğrulaması",
+      "status": "FAIL",
+      "durationMs": 21546,
+      "error": "page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('video') to be visible\u001b[22m\n\u001b[2m    31 × locator resolved to hidden <video controls=\"\" autoplay=\"\" playsinline=\"\" preload=\"auto\" class=\"max-h-[640px] w-full object-contain\" src=\"/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?preview=1\" poster=\"/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?thumb=1\"></video>\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A25_failure.png"
+      ]
+    },
+    "A26": {
+      "name": "HTTP 206 Partial Content Range Akışı",
+      "status": "PASS",
+      "durationMs": 8388,
+      "error": null,
+      "artifacts": []
+    },
+    "A27": {
+      "name": "Video Play() Tetiklemesi ve readyState=4",
+      "status": "PASS",
+      "durationMs": 14,
+      "error": null,
+      "artifacts": []
+    },
+    "A28": {
+      "name": "Video 2. Saniye Kanca Sahnesi (Hook)",
+      "status": "PASS",
+      "durationMs": 449,
+      "error": null,
+      "artifacts": []
+    },
+    "A29": {
+      "name": "Video 5. Saniye Duraklatma (Pause)",
+      "status": "PASS",
+      "durationMs": 6,
+      "error": null,
+      "artifacts": []
+    },
+    "A30": {
+      "name": "Video 7.5 Saniye Hızlı Arama (Range Scrub / Seek)",
+      "status": "PASS",
+      "durationMs": 230,
+      "error": null,
+      "artifacts": []
+    },
+    "A31": {
+      "name": "Video 9. Saniye Markalı Kapanış Outro",
+      "status": "PASS",
+      "durationMs": 1614,
+      "error": null,
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A31_video_outro.png"
+      ]
+    },
+    "A32": {
+      "name": "Video 10. Saniye Tamamlanma (Ended Event)",
+      "status": "PASS",
+      "durationMs": 842,
+      "error": null,
+      "artifacts": []
+    },
+    "A33": {
+      "name": "Video Doğrudan İndirme Erişimi",
+      "status": "PASS",
+      "durationMs": 2044,
+      "error": null,
+      "artifacts": []
+    },
+    "A34": {
+      "name": "Kütüphane (/icerik) Kart Listelemesi",
+      "status": "PASS",
+      "durationMs": 20862,
+      "error": null,
+      "artifacts": []
+    },
+    "A35": {
+      "name": "İnceleme Bekleyen Medya Rozeti (Needs Review)",
+      "status": "PASS",
+      "durationMs": 13,
+      "error": null,
+      "artifacts": []
+    },
+    "A36": {
+      "name": "Kalite Kusuru İşareti (Partial Voiceover Fragment)",
+      "status": "PASS",
+      "durationMs": 9,
+      "error": null,
+      "artifacts": []
+    },
+    "A37": {
+      "name": "Kütüphaneden \"Kampanyada Kullan\" Yönlendirmesi",
+      "status": "PASS",
+      "durationMs": 16963,
+      "error": null,
+      "artifacts": []
+    },
+    "A38": {
+      "name": "Handoff Sonrası URL Sorgu Temizleme (replaceState)",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A39": {
+      "name": "Kampanya Metin Editörü Düzenlenebilirliği",
+      "status": "PASS",
+      "durationMs": 13976,
+      "error": null,
+      "artifacts": []
+    },
+    "A40": {
+      "name": "F5 Sonrası Benzersiz Sentinel Metin Kalıcılığı",
+      "status": "FAIL",
+      "durationMs": 185,
+      "error": "page.reload: net::ERR_CONNECTION_REFUSED\nCall log:\n\u001b[2m  - waiting for navigation until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A40_failure.png"
+      ]
+    },
+    "A41": {
+      "name": "Kampanya Hedef Kitle Seçimi",
+      "status": "FAIL",
+      "durationMs": 55,
+      "error": "Audience picker / wizard steps missing",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A41_failure.png"
+      ]
+    },
+    "A42": {
+      "name": "Kampanya Hat Seçimi",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A43": {
+      "name": "Kampanya Taslak Kaydı",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A44": {
+      "name": "UI İşletme Değişimi (Ayvazoğlu -> Bofe Tarım)",
+      "status": "FAIL",
+      "durationMs": 56,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/ozet\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/ozet\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A44_failure.png"
+      ]
+    },
+    "A45": {
+      "name": "Bofe Kütüphanesinde Sıfır Çapraz Sızıntı",
+      "status": "FAIL",
+      "durationMs": 51,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/icerik\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/icerik\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A45_failure.png"
+      ]
+    },
+    "A46": {
+      "name": "Bofe Oturumunda Ayvazoğlu Varlığına 404 Blokajı",
+      "status": "FAIL",
+      "durationMs": 57,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/icerik/2b1e7b35-8a73-55b8-a047-a507577d1ab6\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/icerik/2b1e7b35-8a73-55b8-a047-a507577d1ab6\", waiting until \"load\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A46_failure.png"
+      ]
+    },
+    "A47": {
+      "name": "Mesajify İşletmesine Geçiş ve Varlık Ayrımı",
+      "status": "FAIL",
+      "durationMs": 52,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/ozet\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/ozet\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A47_failure.png"
+      ]
+    },
+    "A48": {
+      "name": "Desktop 1440x900 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "FAIL",
+      "durationMs": 593,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/giris\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/giris\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A48_failure.png"
+      ]
+    },
+    "A49": {
+      "name": "Tablet 768x1024 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "FAIL",
+      "durationMs": 517,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/giris\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/giris\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A49_failure.png"
+      ]
+    },
+    "A50": {
+      "name": "Mobile 430x932 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "FAIL",
+      "durationMs": 451,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/giris\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/giris\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A50_failure.png"
+      ]
+    },
+    "A51": {
+      "name": "Mobile 390x844 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "FAIL",
+      "durationMs": 458,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/giris\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/giris\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A51_failure.png"
+      ]
+    },
+    "A52": {
+      "name": "Mobile 375x812 Sıfır Yatay Kaydırma & Tam Etkileşim",
+      "status": "FAIL",
+      "durationMs": 460,
+      "error": "page.goto: net::ERR_CONNECTION_REFUSED at http://localhost:3025/giris\nCall log:\n\u001b[2m  - navigating to \"http://localhost:3025/giris\", waiting until \"domcontentloaded\"\u001b[22m\n",
+      "artifacts": [
+        "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\master_60_acceptance\\runs\\run_1791719514701_ffd949\\screenshots\\A52_failure.png"
+      ]
+    },
+    "A53": {
+      "name": "Mobil Navigasyon Buton Dokunmatik Alanları (Min 44px)",
+      "status": "PASS",
+      "durationMs": 7,
+      "error": null,
+      "artifacts": []
+    },
+    "A54": {
+      "name": "Modal Kapatma ve Odak Yönetimi",
+      "status": "PASS",
+      "durationMs": 3,
+      "error": null,
+      "artifacts": []
+    },
+    "A55": {
+      "name": "Creative DNA Bayrak Kontrolü (Varsayılan Kapalı)",
+      "status": "PASS",
+      "durationMs": 39,
+      "error": null,
+      "artifacts": []
+    },
+    "A56": {
+      "name": "Sıfır Kaçak Harici API (OmniStudio Gateway Tek Kaynak)",
+      "status": "PASS",
+      "durationMs": 2,
+      "error": null,
+      "artifacts": []
+    },
+    "A57": {
+      "name": "Sır ve Parola Sızıntı Taraması (Secret Scan)",
+      "status": "PASS",
+      "durationMs": 1,
+      "error": null,
+      "artifacts": []
+    },
+    "A58": {
+      "name": "Sıfır Yetkisiz Canlı WhatsApp Gönderimi",
+      "status": "PASS",
+      "durationMs": 4,
+      "error": null,
+      "artifacts": []
+    },
+    "A59": {
+      "name": "Sıfır Yetkisiz Canlı Stripe Çekimi",
+      "status": "PASS",
+      "durationMs": 0,
+      "error": null,
+      "artifacts": []
+    },
+    "A60": {
+      "name": "Sıfır Ücretli Yeni AI Üretimi (Varlık Tasarrufu)",
+      "status": "PASS",
+      "durationMs": 0,
+      "error": null,
+      "artifacts": []
+    }
+  }
+}

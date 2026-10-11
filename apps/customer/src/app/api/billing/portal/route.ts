@@ -12,8 +12,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Oturum bulunamadı.' }, { status: 401 })
   }
 
-  if (org.role !== 'owner' && org.role !== 'admin') {
-    return NextResponse.json({ error: 'Yalnızca admin.' }, { status: 403 })
+  // V1 Policy Gate: Automated Stripe portal is disabled for V1 pilot release
+  const enableStripeV2 = process.env.ENABLE_STRIPE_BILLING_V2 === 'true'
+  if (!enableStripeV2) {
+    return NextResponse.json(
+      { error: 'V1 sürümünde faturalama portalı kapalıdır.', status: 'v1_disabled' },
+      { status: 503 }
+    )
   }
 
   const secret = process.env.STRIPE_SECRET_KEY?.trim()

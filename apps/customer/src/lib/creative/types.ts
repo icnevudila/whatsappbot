@@ -134,6 +134,8 @@ export type CreativeSnapshotProduct = {
 }
 
 export type CreativeSnapshot = {
+  promotionMode?: import('./promotion-policy').PromotionMode
+  offeringKind?: import('./promotion-policy').OfferingKind
   creativeDirectorVersion?: 'V3'
   brandName?: string | null
   companyName?: string | null
@@ -221,14 +223,15 @@ export type CreativePayload = CreativeSnapshot & {
     redirect_ready_ms: number;
     art_direction_source: string;
   } | null;
-  qualityMode?: 'STANDARD' | 'DESIGNER';
+  qualityMode?: 'AUTO_PROFESSIONAL' | 'STANDARD' | 'DESIGNER';
   imageAttempt?: string
   imageAttemptStartedAt?: string
   imageSubmissionUncertain?: boolean
   imageSubmitIntent?: { requestId: string; gatewayUrl: string; startedAt: string } | null
   imageDirectIntent?: { requestId: string; provider: string; storagePath: string; startedAt: string } | null
   imageReconciliationRequired?: boolean
-  imageTerminalFailure?: { kind: 'PROVIDER_FAILED' | 'OUTPUT_INVALID'; jobId: string; gatewayUrl: string }
+  lastImageJob?: import('../ai/omnistudio-image-job').ImageJobReceipt | null
+  imageTerminalFailure?: { kind: string; jobId?: string | null; gatewayUrl?: string | null; error?: string; queuedAt?: string } | null
   title?: string
   requestKey?: string
   generatedPrompt?: string | null

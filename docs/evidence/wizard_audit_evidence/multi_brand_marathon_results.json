@@ -1,0 +1,955 @@
+[
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "sector": "Tarım / Makine",
+    "productName": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "tone": "samimi",
+    "inputBrief": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! 2.450 TL yerine tanıtıma özel 1.850 TL. Güçlü akü ve ayarlanabilir nozul ile tarla ve bahçe ilaçlamasında pratik kullanım.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_a9b2deb753bfab64",
+    "latencyMs": 18187,
+    "output": "🌿 Tarla ve bahçe ilaçlamasında işinizi kolaylaştıralım!\n\nDeğerli üreticimiz, ilaçlama yaparken rahat çalışmak sizin için de önemli, biliyoruz. 😊\n\nBofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\n✅ Güçlü aküsüyle pratik kullanım\n✅ Ayarlanabilir nozul ile ihtiyacınıza uygun ilaçlama\n✅ 16 litre depo kapasitesi\n\n💥 Üstelik tanıtıma özel fiyatımız:\n\nEski fiyat: 2.450 TL\nŞimdi: 1.850 TL!\n\nTarla ve bahçe işlerinizde kullanabileceğiniz bu ürünü avantajlı fiyatıyla sizlere sunuyoruz.\n\n📍 Demirci Mahallesi, Nilüfer / Bursa\n\nSipariş vermek için bize yazın, yardımcı olalım!\n\n📞 Bofe Tarım: +90 542 821 22 05",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "2.450 TL",
+        "1.850 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "sector": "Tarım / Makine",
+    "productName": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "tone": "profesyonel",
+    "inputBrief": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! 2.450 TL yerine tanıtıma özel 1.850 TL. Güçlü akü ve ayarlanabilir nozul ile tarla ve bahçe ilaçlamasında pratik kullanım.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_fd8146f18ec9032f",
+    "latencyMs": 8470,
+    "output": "🌿 Tarla ve bahçe ilaçlamasında pratik ve güçlü çözüm!\n\nBofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L, Bofe Tarım güvencesiyle stoklarımızda.\n\n✅ Güçlü akü: İlaçlama çalışmalarında pratik kullanım.\n✅ Ayarlanabilir nozul: İhtiyaca göre püskürtme ayarı.\n✅ 16 litre depo: Tarla ve bahçe uygulamalarına uygun kapasite.\n\n💰 Tanıtıma Özel Fiyat\n\nEski fiyat: 2.450 TL\nYeni fiyat: 1.850 TL\n\nTarımsal ilaçlama ekipmanlarında ihtiyaçlarınıza uygun çözümler sunuyoruz.\n\n📍 Demirci Mahallesi, Nilüfer / Bursa\n📞 +90 542 821 22 05\n\nBofe Tarım | Tarımsal Ekipman ve İlaçlama Çözümleri\n\nSipariş ve detaylı ürün bilgisi için bizimle iletişime geçin.",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "2.450 TL",
+        "1.850 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "sector": "Tarım / Makine",
+    "productName": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "tone": "eglenceli",
+    "inputBrief": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! 2.450 TL yerine tanıtıma özel 1.850 TL. Güçlü akü ve ayarlanabilir nozul ile tarla ve bahçe ilaçlamasında pratik kullanım.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_d545a7b638279ae6",
+    "latencyMs": 11778,
+    "output": "🌿 Tarla büyük, bahçe geniş… İlaçlama işi gözünüzde büyümesin! 😄\n\nBofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\n🔋 Güçlü aküsüyle pratik kullanım\n💧 Ayarlanabilir nozuluyla ihtiyacınıza uygun püskürtme\n🌱 16 litrelik deposuyla tarla ve bahçe işlerinize yardımcı!\n\nÜstelik fiyatı da yüz güldürüyor!\n\nEski fiyat: 2.450 TL\nTanıtıma özel: 1.850 TL!\n\nİlaçlama işini kolaylaştıralım, bütçenizi de düşünelim. 😊\n\n📍 Demirci Mahallesi, Nilüfer / Bursa\n📞 +90 542 821 22 05\n\nBofe Tarım – İşiniz tarlada, aklımız kolaylığınızda!\n\nSipariş vermek için bize WhatsApp'tan yazın!",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "2.450 TL",
+        "1.850 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "sector": "Tarım / Makine",
+    "productName": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "tone": "enerjik",
+    "inputBrief": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! 2.450 TL yerine tanıtıma özel 1.850 TL. Güçlü akü ve ayarlanabilir nozul ile tarla ve bahçe ilaçlamasında pratik kullanım.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_0383e97ec7158129",
+    "latencyMs": 10063,
+    "output": "🌿 Şarjını doldur, pompanı tak, ilaçlamaya başla!\n\nTarla ve bahçede iş çok, vakit değerli!\n\nBofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\n🔋 Güçlü akü ile pratik çalışın.\n💧 Ayarlanabilir nozul ile püskürtmeyi ihtiyacınıza göre ayarlayın.\n✅ 16L depo ile ilaçlama işlerinize odaklanın.\n\n💥 FİYATTA GÜZEL HABER!\n\n2.450 TL yerine\nTanıtıma özel 1.850 TL!\n\n600 TL cebinizde kalsın, işleriniz hız kazansın!\n\n📍 Demirci Mahallesi, Nilüfer / Bursa\n📞 +90 542 821 22 05\n\nBofe Tarım | Tarlada güç, işinizde kolaylık!\n\n📲 Sipariş için hemen WhatsApp'tan yazın!",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "2.450 TL",
+        "1.850 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "sector": "Tarım / Makine",
+    "productName": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L",
+    "tone": "satis",
+    "inputBrief": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! 2.450 TL yerine tanıtıma özel 1.850 TL. Güçlü akü ve ayarlanabilir nozul ile tarla ve bahçe ilaçlamasında pratik kullanım.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_2e4f9179fbc7c8c0",
+    "latencyMs": 7898,
+    "output": "🌿 Tarla ve bahçe ilaçlamasında işinizi kolaylaştırın, 600 TL cebinizde kalsın!\n\nBofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\n🔋 Güçlü akü: Pratik ilaçlama imkânı.\n💧 Ayarlanabilir nozul: İhtiyacınıza uygun püskürtme kontrolü.\n✅ 16L depo: Tarla ve bahçe çalışmalarınıza uygun kapasite.\n\n💰 TANITIMA ÖZEL FİYAT!\n\nEski fiyat: 2.450 TL\nŞimdi: 1.850 TL!\n\n600 TL fiyat avantajıyla ilaçlama ekipmanınızı yenileyin!\n\n📍 Demirci Mahallesi, Nilüfer / Bursa\n\n📲 Siparişinizi oluşturmak için Bofe Tarım'a hemen yazın!\n\n📞 +90 542 821 22 05",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "2.450 TL",
+        "1.850 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "sector": "İnşaat / Yapı Malzemeleri",
+    "productName": "13.5 Standart İnşaat Tuğlası",
+    "tone": "samimi",
+    "inputBrief": "Ayvazoğlu İnşaat fabrikadan toptan 13.5 tuğla satışımız devam ediyor. Şantiye teslimi tır bazında siparişlerde net iskonto avantajı sunuyoruz.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_711e17c6b25c5c3d",
+    "latencyMs": 12743,
+    "output": "Writing\n\n🧱 Şantiyenizin tuğla ihtiyacını doğrudan fabrikadan karşılayın!\n\nAyvazoğlu İnşaat olarak 13,5 standart tuğla toptan satışlarımız devam ediyor.\n\nSiz projenize odaklanın, biz de malzeme tedariğinizde yanınızda olalım.\n\n✅ Fabrikadan doğrudan satış\n✅ Tır bazında şantiye teslimi\n✅ Toptan siparişlerde net iskonto avantajı\n\nİhtiyacınız olan tuğla miktarını birlikte değerlendirelim, projenize uygun teklifimizi paylaşalım.\n\n📞 Fiyat teklifi almak için bizi arayın: +90 462 325 10 20\n\nAyvazoğlu İnşaat\n📍 Organize Sanayi Bölgesi, Trabzon",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "sector": "İnşaat / Yapı Malzemeleri",
+    "productName": "13.5 Standart İnşaat Tuğlası",
+    "tone": "profesyonel",
+    "inputBrief": "Ayvazoğlu İnşaat fabrikadan toptan 13.5 tuğla satışımız devam ediyor. Şantiye teslimi tır bazında siparişlerde net iskonto avantajı sunuyoruz.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_3740689ed59d6bc2",
+    "latencyMs": 10252,
+    "output": "Writing\n\n🧱 Projeleriniz İçin Doğrudan Fabrikadan Tuğla Tedariği\n\nAyvazoğlu İnşaat olarak 13,5 standart tuğla toptan satışlarımız devam etmektedir.\n\nŞantiye ihtiyaçlarınıza yönelik avantajlarımız:\n\n✅ Doğrudan fabrikadan tedarik\n✅ Tır bazında şantiye teslimi\n✅ Tır bazlı siparişlerde net iskonto avantajı\n\nİnşaat projelerinizin malzeme tedariğinde, üreticiden doğrudan alım ve avantajlı ticari koşullar sunuyoruz.\n\n📍 Organize Sanayi Bölgesi, Trabzon\n\n📞 Sipariş miktarınıza özel fiyat teklifi almak için bizimle iletişime geçin: +90 462 325 10 20\n\nAYVAZOĞLU İNŞAAT",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "sector": "İnşaat / Yapı Malzemeleri",
+    "productName": "13.5 Standart İnşaat Tuğlası",
+    "tone": "eglenceli",
+    "inputBrief": "Ayvazoğlu İnşaat fabrikadan toptan 13.5 tuğla satışımız devam ediyor. Şantiye teslimi tır bazında siparişlerde net iskonto avantajı sunuyoruz.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_16d189899e350c78",
+    "latencyMs": 10099,
+    "output": "Writing\n\n🧱 Şantiyede tuğlalar üst üste, avantajlar yan yana!\n\nİnşaatın temeli sağlam planlama, malzeme tedariği ise doğru hesap işi. 😊\n\nAyvazoğlu İnşaat olarak fabrikadan toptan 13.5 standart tuğla satışlarımız devam ediyor.\n\n🚛 Tır bazında şantiye teslimi siparişlerinizde net iskonto avantajı sunuyoruz.\n\nTuğlalar şantiyeye, fabrika avantajı bütçenize yansısın!\n\nAyvazoğlu İnşaat\n📍 Organize Sanayi Bölgesi, Trabzon\n\n📞 Projenize özel fiyat teklifi için bizi arayın: +90 462 325 10 20",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "sector": "İnşaat / Yapı Malzemeleri",
+    "productName": "13.5 Standart İnşaat Tuğlası",
+    "tone": "enerjik",
+    "inputBrief": "Ayvazoğlu İnşaat fabrikadan toptan 13.5 tuğla satışımız devam ediyor. Şantiye teslimi tır bazında siparişlerde net iskonto avantajı sunuyoruz.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_fe22f16d7a3a3542",
+    "latencyMs": 9720,
+    "output": "Writing\n\n🧱 Tuğlanızı Fabrikadan Alın, Şantiyenize Avantaj Taşıyın!\n\nAyvazoğlu İnşaat'ta 13.5 standart tuğla toptan satışlarımız hız kesmeden devam ediyor!\n\n🚛 Fabrikadan alın, tırla şantiyenize teslim edelim!\n\n✅ Doğrudan fabrikadan tedarik\n✅ Tır bazında şantiye teslimi\n✅ Tır bazlı siparişlerde NET İSKONTO!\n\nSiz projenizi büyütün, biz tedarikte yanınızda olalım!\n\n📍 Organize Sanayi Bölgesi, Trabzon\n\n📞 Hemen arayın, sipariş miktarınıza özel fiyat teklifinizi alın: +90 462 325 10 20\n\nAYVAZOĞLU İNŞAAT",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "sector": "İnşaat / Yapı Malzemeleri",
+    "productName": "13.5 Standart İnşaat Tuğlası",
+    "tone": "satis",
+    "inputBrief": "Ayvazoğlu İnşaat fabrikadan toptan 13.5 tuğla satışımız devam ediyor. Şantiye teslimi tır bazında siparişlerde net iskonto avantajı sunuyoruz.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_a1744759e28943ee",
+    "latencyMs": 8839,
+    "output": "Writing\n\n🧱 13.5 Standart Tuğlada Fabrikadan Toptan Alım Avantajı!\n\nAyvazoğlu İnşaat olarak toptan tuğla satışlarımız devam ediyor.\n\n🚛 Tır bazında sipariş verin, şantiyenize teslim edelim!\n\n✅ Doğrudan fabrikadan tedarik\n✅ Tır bazında şantiye teslimi\n✅ Tır bazlı siparişlerde NET İSKONTO\n\nKazancınız net: Aracı olmadan fabrikadan alım, toptan siparişlerde fiyat avantajı ve doğrudan şantiyeye teslimat.\n\n📍 Organize Sanayi Bölgesi, Trabzon\n\n📞 Hemen arayın, ihtiyacınız olan miktara göre iskontolu fiyat teklifinizi alın: +90 462 325 10 20\n\nAYVAZOĞLU İNŞAAT",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "sector": "B2B SaaS / Müşteri İletişimi",
+    "productName": "Mesajify WhatsApp Tanıtım & Kitle Platformu",
+    "tone": "samimi",
+    "inputBrief": "Mesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetin. Toplu kampanya gönderimi, ortak gelen kutusu ve anında müşteri takibi.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_2951518e54f36622",
+    "latencyMs": 13116,
+    "output": "Mesajify WhatsApp Kampanya Mesajı\n\nWhatsApp trafiği arttıkça işleri takip etmek zorlaşıyor mu? Mesajify ile tüm WhatsApp hatlarınızı tek panelden yönetebilirsiniz. 💬\n\nToplu kampanya gönderimleri yapın, ekibinizle ortak gelen kutusundan çalışın ve müşterilerinizi anında takip edin.\n\nDaha az dağınıklık, daha hızlı iletişim, daha kontrollü bir süreç.\n\nMesajify’ı yakından tanımak için bize yazın: +90 545 365 13 19\n\nİlk cümleyi daha çarpıcı yap",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "sector": "B2B SaaS / Müşteri İletişimi",
+    "productName": "Mesajify WhatsApp Tanıtım & Kitle Platformu",
+    "tone": "profesyonel",
+    "inputBrief": "Mesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetin. Toplu kampanya gönderimi, ortak gelen kutusu ve anında müşteri takibi.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_81e15425d6058c87",
+    "latencyMs": 16882,
+    "output": "Writing\n\nTüm WhatsApp hatlarınız, tek panelde.\n\nİşletmenizin müşteri iletişimini Mesajify ile daha hızlı, düzenli ve verimli yönetin.\n\n✅ Çoklu Hat Yönetimi: Tüm WhatsApp hatlarınızı tek panelden kontrol edin.\n\n✅ Toplu Kampanya Gönderimi: Kampanya mesajlarınızı müşterilerinize toplu olarak ulaştırın.\n\n✅ Ortak Gelen Kutusu: Ekibinizle müşteri mesajlarını merkezi bir noktadan yönetin.\n\n✅ Anında Müşteri Takibi: Gelen talepleri takip edin, iletişim süreçlerinizi hızlandırın.\n\nMesajify ile dağınık mesaj trafiğini merkezi bir iletişim sürecine dönüştürün.\n\nİşletmenize uygun çözümlerimiz hakkında bilgi almak için bizimle iletişime geçin.\n\n📞 +90 545 365 13 19",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "sector": "B2B SaaS / Müşteri İletişimi",
+    "productName": "Mesajify WhatsApp Tanıtım & Kitle Platformu",
+    "tone": "eglenceli",
+    "inputBrief": "Mesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetin. Toplu kampanya gönderimi, ortak gelen kutusu ve anında müşteri takibi.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_c5d9f5b87d21ed15",
+    "latencyMs": 10038,
+    "output": "Writing\n\n📱 WhatsApp hatlarınız çoğaldı, mesajlar birbirine mi karıştı?\n\nBir hat orada, bir müşteri burada, kampanya mesajları ayrı yerde… İşletme yönetmek zaten yeterince yoğun! 😄\n\nMesajify ile WhatsApp trafiğini düzene sokuyoruz!\n\n✅ Tüm hatlar tek panelde: WhatsApp hesaplarınız arasında mekik dokumaya son.\n\n📢 Toplu kampanya gönderimi: Kampanyalarınızı müşterilerinize kolayca ulaştırın.\n\n💬 Ortak gelen kutusu: Ekibiniz aynı yerden çalışsın, mesajlar arasında kaybolmasın.\n\n⚡ Anında müşteri takibi: Kim ne yazmış, hangi müşteri ilgi bekliyor? Hepsi gözünüzün önünde.\n\nSiz işinizi büyütmeye odaklanın, WhatsApp trafiğini Mesajify ile yönetin.\n\nİşletmenizde nasıl kullanabileceğinizi öğrenmek için bize yazın.\n\n📞 +90 545 365 13 19",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "sector": "B2B SaaS / Müşteri İletişimi",
+    "productName": "Mesajify WhatsApp Tanıtım & Kitle Platformu",
+    "tone": "enerjik",
+    "inputBrief": "Mesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetin. Toplu kampanya gönderimi, ortak gelen kutusu ve anında müşteri takibi.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_7105f67e2242fbdc",
+    "latencyMs": 8493,
+    "output": "Writing\n\n🚀 Mesajlar artsın, karmaşa değil!\n\nWhatsApp hatları arasında geçiş yapmayın. Mesajify ile tüm iletişimi tek panelden yönetin!\n\n📱 Hatları birleştirin! Tüm WhatsApp hatlarınızı tek ekrandan kontrol edin.\n\n📢 Kampanyaları başlatın! Toplu mesajlarla müşterilerinize ulaşın.\n\n💬 Ekibinizi hızlandırın! Ortak gelen kutusuyla mesajları birlikte yönetin, müşterilerinizi anında takip edin.\n\nDaha az karmaşa. Daha hızlı iletişim. Daha güçlü müşteri yönetimi.\n\nWhatsApp trafiğiniz büyüsün, kontrol hep sizde kalsın!\n\nMesajify'ı işletmenizde kullanmaya başlamak için bize yazın!\n\n📞 +90 545 365 13 19",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "sector": "B2B SaaS / Müşteri İletişimi",
+    "productName": "Mesajify WhatsApp Tanıtım & Kitle Platformu",
+    "tone": "satis",
+    "inputBrief": "Mesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetin. Toplu kampanya gönderimi, ortak gelen kutusu ve anında müşteri takibi.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_7524419bceb6b456",
+    "latencyMs": 10826,
+    "output": "Writing\n\n📱 Müşteri mesajlarını yönetirken zaman kaybetmeyin, satış fırsatlarını gözden kaçırmayın!\n\nMesajify ile tüm WhatsApp hatlarınızı tek panelde toplayın, müşteri iletişiminizi hızlandırın.\n\n✅ Tek Panel: Farklı WhatsApp hatları arasında geçiş yapmadan tüm mesajları yönetin.\n\n✅ Toplu Kampanya: Tek tek mesaj göndermek yerine kampanyalarınızı toplu olarak ulaştırın.\n\n✅ Ortak Gelen Kutusu: Ekibinizle aynı panelden çalışın, müşteri taleplerini daha hızlı karşılayın.\n\n✅ Anında Takip: Gelen mesajları ve müşteri taleplerini tek noktadan izleyin.\n\n🎯 Kazancınız net: Daha az operasyonel yük, daha verimli ekip çalışması ve satış görüşmelerine daha fazla zaman!\n\nİşletmenize uygun Mesajify çözümünü ve fiyatlandırma seçeneklerini öğrenmek için hemen iletişime geçin.\n\n📞 +90 545 365 13 19",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "sector": "Restoran / Gıda",
+    "productName": "Özel Soslu Hatay Döner Dürüm",
+    "tone": "samimi",
+    "inputBrief": "Maydonoz Döner’de Özel Soslu Hatay Döner Dürüm 195 TL yerine 165 TL! Tereyağlı çıtır lavaş ve enfes Hatay sosuyla sıcacık kapınızda.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_6db6d613c8bfd9d0",
+    "latencyMs": 15440,
+    "output": "Maydonoz Döner Kampanya Mesajı\n\nCanınız şöyle sıcacık, sosu bol bir Hatay dürüm çektiyse tam zamanı 🌯\n\nMaydonoz Döner’de Özel Soslu Hatay Döner Dürüm şimdi 195 TL yerine 165 TL!\n\nTereyağlı çıtır lavaşı, enfes Hatay sosu ve sıcacık lezzetiyle kapınıza geliyor. 😋\n\nSipariş için bize yazın: +90 224 451 00 20",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "195 TL",
+        "165 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "sector": "Restoran / Gıda",
+    "productName": "Özel Soslu Hatay Döner Dürüm",
+    "tone": "profesyonel",
+    "inputBrief": "Maydonoz Döner’de Özel Soslu Hatay Döner Dürüm 195 TL yerine 165 TL! Tereyağlı çıtır lavaş ve enfes Hatay sosuyla sıcacık kapınızda.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_7737f1e8b0911db6",
+    "latencyMs": 8999,
+    "output": "Writing\n\n🌯 Maydonoz Döner’de Özel Soslu Hatay Döner Dürüm 195 TL yerine 165 TL!\n\nÖzenle hazırlanan, tereyağlı çıtır lavaşı ve enfes Hatay sosuyla lezzetini tamamlayan dürümümüz, sıcacık kapınıza geliyor.\n\nLezzetli bir öğün, avantajlı bir fiyatla!\n\n📍 Cumhuriyet Caddesi No:42, Nilüfer / Bursa\n\n📞 Sipariş vermek için bizimle iletişime geçin: +90 224 451 00 20\n\nMaydonoz Döner",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "195 TL",
+        "165 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "sector": "Restoran / Gıda",
+    "productName": "Özel Soslu Hatay Döner Dürüm",
+    "tone": "eglenceli",
+    "inputBrief": "Maydonoz Döner’de Özel Soslu Hatay Döner Dürüm 195 TL yerine 165 TL! Tereyağlı çıtır lavaş ve enfes Hatay sosuyla sıcacık kapınızda.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_c8b7b98aa49fd616",
+    "latencyMs": 18699,
+    "output": "Writing\n\n🌯 Bu dürümün sosu da güzel, fiyatı da!\n\nMaydonoz Döner’de işler biraz lezzetlendi, fiyatlar biraz hafifledi! 😋\n\nÖzel Soslu Hatay Döner Dürüm, 195 TL yerine 165 TL!\n\nTereyağlı çıtır lavaş, enfes Hatay sosu ve sıcacık bir dürüm… Üçü bir araya gelince açlık fazla direnemiyor! 🔥\n\nÜstelik bu lezzet kapınıza kadar geliyor.\n\n📞 +90 224 451 00 20 numarasından siparişinizi verin, gerisini bize bırakın!",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "195 TL",
+        "165 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "sector": "Restoran / Gıda",
+    "productName": "Özel Soslu Hatay Döner Dürüm",
+    "tone": "enerjik",
+    "inputBrief": "Maydonoz Döner’de Özel Soslu Hatay Döner Dürüm 195 TL yerine 165 TL! Tereyağlı çıtır lavaş ve enfes Hatay sosuyla sıcacık kapınızda.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_c18bb5a9a2fe7df4",
+    "latencyMs": 7711,
+    "output": "Writing\n\n🌯 Lavaş çıtır, sos nefis, fiyat şahane! 🔥\n\nMaydonoz Döner’de lezzetin temposu yükseldi, fiyatı düştü!\n\nÖzel Soslu Hatay Döner Dürüm, 195 TL yerine 165 TL!\n\n🧈 Tereyağlı çıtır lavaşı ısır, enfes Hatay sosunun tadını çıkar!\n\nSen acık, biz hazırlayalım! Sıcacık dürümün kapına gelsin.\n\n📞 +90 224 451 00 20 numarasını ara, siparişini ver, lezzeti yakala!",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "195 TL",
+        "165 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_1_TONES",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "sector": "Restoran / Gıda",
+    "productName": "Özel Soslu Hatay Döner Dürüm",
+    "tone": "satis",
+    "inputBrief": "Maydonoz Döner’de Özel Soslu Hatay Döner Dürüm 195 TL yerine 165 TL! Tereyağlı çıtır lavaş ve enfes Hatay sosuyla sıcacık kapınızda.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_c53eac84ef5a4659",
+    "latencyMs": 9525,
+    "output": "Writing\n\n🌯 Sevdiğiniz Hatay lezzetine şimdi 30 TL daha az ödeyin!\n\nMaydonoz Döner’de Özel Soslu Hatay Döner Dürüm, 195 TL yerine 165 TL!\n\n🔥 Tereyağlı çıtır lavaş, enfes Hatay sosu ve iştah açan lezzet bir arada!\n\nHem 30 TL cebinizde kalsın hem de sıcacık dürümünüz kapınıza gelsin.\n\n📞 +90 224 451 00 20 numarasından siparişinizi verin, bu lezzeti avantajlı fiyatıyla sofranıza taşıyın!",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "195 TL",
+        "165 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "Gerçekçi, sektöre uygun dil, ticari bilgiler korundu."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "action": "shorten",
+    "baseMessage": "Değerli üreticimiz, Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda! Güçlü aküsü ve ayarlanabilir nozuluyla tarla işlerinizi kolaylaştırın. Tanıtıma özel 2.450 TL yerine 1.850 TL. Bize hemen ulaşın: 0542 821 22 05.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_75c7ccb6b86e1b5b",
+    "latencyMs": 14802,
+    "output": "🌿 Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L stoklarımızda!\n\nGüçlü akü ve ayarlanabilir nozul ile tarla işlerinizi kolaylaştırın.\n\n💰 Tanıtıma özel: 2.450 TL yerine 1.850 TL!\n\n📞 Sipariş için: 0542 821 22 05",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "2.450 TL",
+        "1.850 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PARTIAL",
+    "reasoning": "Yeterince kısaltılmadı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "action": "expand",
+    "baseMessage": "Bofe 16L Akülü Sırt Pompası stokta! Tanıtıma özel 2.450 TL yerine 1.850 TL.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_737d8eaa11f45a1e",
+    "latencyMs": 9237,
+    "output": "🌿 Bofe 16L Akülü Sırt Pompası stokta!\n\n16 litrelik kapasitesi ve akülü yapısıyla ilaçlama işlerinizde pratik kullanım sunar. Sırtta taşınabilen tasarımıyla tarla ve bahçe çalışmalarınızda size yardımcı olur.\n\n💰 Tanıtıma özel fiyat!\n\n2.450 TL yerine 1.850 TL!\n\n📞 Detaylı bilgi ve sipariş için Bofe Tarım'a ulaşın: 0542 821 22 05",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "2.450 TL",
+        "1.850 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'expand' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "action": "fix_grammar",
+    "baseMessage": "degerli uretici bofe 16L akulu pompa 2450 tl yerine 1850 tl dir siparis icin arayiniz",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_b2fd7ae3a7f1c7e8",
+    "latencyMs": 7405,
+    "output": "Değerli üretici, Bofe 16L akülü pompa 2.450 TL yerine 1.850 TL'dir. Sipariş için arayınız.",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'fix_grammar' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "action": "professional",
+    "baseMessage": "Selamlar, toptan tuğlalar geldi, tırla şantiyeye teslim yapıyoruz, iskonto var arayın.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_d72f5302f2f03bd1",
+    "latencyMs": 13978,
+    "output": "Writing\n\nSayın Yetkili,\n\nAyvazoğlu İnşaat olarak toptan tuğla satışlarımız başlamıştır.\n\nTır bazında şantiye teslimi hizmetimiz ve özel iskonto avantajlarımız ile siparişlerinizi karşılıyoruz.\n\nDetaylı bilgi ve fiyat teklifi almak için bizimle iletişime geçebilirsiniz.\n\n📞 +90 462 325 10 20\n\nAyvazoğlu İnşaat\nOrganize Sanayi Bölgesi, Trabzon",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'professional' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "action": "cta",
+    "baseMessage": "Ayvazoğlu İnşaat fabrikadan toptan 13.5 standart tuğla satışı devam ediyor. Tır bazında şantiye teslimi iskonto avantajı sunuyoruz.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_bc6a6565213487d4",
+    "latencyMs": 7935,
+    "output": "Writing\n\n🧱 Ayvazoğlu İnşaat olarak fabrikadan toptan 13.5 standart tuğla satışlarımız devam ediyor.\n\n🚛 Tır bazında şantiye teslimi siparişlerinizde iskonto avantajı sunuyoruz.\n\n📞 İskontolu fiyat teklifinizi almak için hemen arayın: +90 462 325 10 20",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'cta' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "action": "sales_focused",
+    "baseMessage": "Ayvazoğlu İnşaat olarak fabrikadan toptan 13.5 tuğla satışımız devam etmektedir. Tır bazlı teslimat imkanı.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_225e0c5fb1986eae",
+    "latencyMs": 10138,
+    "output": "Writing\n\n🧱 13.5 Tuğlada Doğrudan Fabrikadan Toptan Alım Avantajı!\n\nAyvazoğlu İnşaat olarak fabrikadan toptan 13.5 tuğla satışlarımız devam ediyor.\n\n🚛 Tır bazlı teslimat imkânımızla toplu tuğla ihtiyacınızı tek siparişte karşılayın.\n\nAracıya ihtiyaç duymadan doğrudan fabrikadan tedarik sağlayın, projelerinizin malzeme alımını kolaylaştırın.\n\n📞 Siparişinizi oluşturmak ve fiyat teklifi almak için hemen arayın: +90 462 325 10 20\n\nAYVAZOĞLU İNŞAAT",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'sales_focused' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "action": "attention_grabbing",
+    "baseMessage": "Mesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetebilirsiniz. Toplu kampanya gönderimi yapabilirsiniz.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_e98e20e8b681ae17",
+    "latencyMs": 18091,
+    "output": "Writing\n\n📱 Birden fazla WhatsApp hattı, tek panel! İşletmenizin iletişim yönetimini kolaylaştırın.\n\nMesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetebilir, toplu kampanya gönderimi yapabilirsiniz.",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'attention_grabbing' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "action": "whatsapp",
+    "baseMessage": "Mesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetin. Müşterilerinizi etiketleyin, otomatik karşılayın ve satışlarınızı artırın.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_b0f3b79967f701f2",
+    "latencyMs": 12932,
+    "output": "Writing\n\nMesajify ile işletmenizin tüm WhatsApp hatlarını tek panelden yönetin.\n\nMüşterilerinizi etiketleyin, otomatik karşılayın.\n\nSatışlarınızı artırın.",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'whatsapp' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "action": "original",
+    "baseMessage": "Mesajify çoklu hat WhatsApp platformudur. Gelen mesajları tek yerden cevaplayın.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_dcd090661317d130",
+    "latencyMs": 7883,
+    "output": "Writing\n\n📱 WhatsApp hatlarınız ayrı ayrı, kontrol neden ayrı olsun?\n\nMesajify ile tüm WhatsApp hatlarınızı tek noktada buluşturun.\n\n💬 Mesaj hangi hattan gelirse gelsin, siz tek yerden yanıtlayın.\n\nÇok hat, tek ekran, daha düzenli iletişim.\n\nMesajify ile WhatsApp yönetiminizi tek noktaya taşıyın!",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'original' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "action": "friendly",
+    "baseMessage": "Özel Soslu Hatay Döner Dürüm 195 TL yerine 165 TL. Sipariş veriniz: 0224 451 00 20.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_d8d8c68b32d581b5",
+    "latencyMs": 13194,
+    "output": "Writing\n\nMerhaba! 😊🌯\n\nMaydonoz Döner’den size lezzetli bir haberimiz var!\n\nÖzel Soslu Hatay Döner Dürüm, 195 TL yerine sadece 165 TL! 😋\n\nCanınız güzel bir dürüm çektiyse biz buradayız!\n\n📞 0224 451 00 20 numarasını arayın, siparişinizi hemen hazırlayalım!",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "195 TL",
+        "165 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'friendly' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "action": "urgency",
+    "baseMessage": "Bugün öğle saatine özel Maydonoz Döner’de Özel Soslu Hatay Döner Dürüm 195 TL yerine 165 TL! Hemen arayın sıcacık gelsin.",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_44a184d15f4e48e1",
+    "latencyMs": 7933,
+    "output": "Writing\n\n🌯 Öğle yemeğinizde lezzet bol, hesap 30 TL daha az!\n\nBugün öğle saatine özel Maydonoz Döner’de Özel Soslu Hatay Döner Dürüm, 195 TL yerine 165 TL! 🔥\n\nAynı lezzete 30 TL daha az ödemek varken neden bekleyesiniz?\n\n📞 Hemen arayın, sıcacık dürümünüz gelsin!",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "195 TL",
+        "165 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'urgency' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_2_REWRITES",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "action": "remove_emoji",
+    "baseMessage": "🌯🔥 Enfes tereyağlı çıtır lavaşlı Hatay Dürüm 195 TL yerine 165 TL! 🛵 Hemen sipariş verin! 📞 0224 451 00 20",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_972ed06c42f2a7ac",
+    "latencyMs": 5895,
+    "output": "Writing\n\nEnfes tereyağlı çıtır lavaşlı Hatay Dürüm 195 TL yerine 165 TL!\n\nHemen sipariş verin!\n\n0224 451 00 20",
+    "integrityCheck": {
+      "valid": true,
+      "drifts": [],
+      "preservedPrices": [
+        "195 TL",
+        "165 TL"
+      ],
+      "missingPrices": [],
+      "hallucinatedTerms": []
+    },
+    "verdict": "PASS",
+    "reasoning": "İşlem 'remove_emoji' amacına uygun tamamlandı."
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "category": "İndirim kampanyası",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_101fbd56bd8b97b6",
+    "latencyMs": 14595,
+    "source": "gpt",
+    "output": "Yeşil bir tarlanın ortasında, 16L açık mavi deposuyla Bofe Akülü Sırt İlaçlama Pompası ön planda; güçlü bataryası, ayarlanabilir pirinç nozulu ve ergonomik askısı zarif detaylarla vurgulanıyor. Görselin odağında: “Tarlada İşiniz Kolay, Bofe ile Yükünüz Hafif!”",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "category": "Yeni ürün",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_cea3f350c51d1d23",
+    "latencyMs": 11375,
+    "source": "gpt",
+    "output": "Güneş ışığıyla aydınlanan yemyeşil bir tarlada, açık mavi 16L deposuyla Bofe Akülü Sırt İlaçlama Pompası ön planda; lityum-iyon bataryası, ayarlanabilir pirinç nozulu ve ergonomik askısı detaylarda vurgulanıyor. “Tarlada Yeni Güç: Bofe 16L!”",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "category": "Sezon kampanyası",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_18e4135a503aab8a",
+    "latencyMs": 11424,
+    "source": "gpt",
+    "output": "Yeni sezonun canlı yeşil tarlaları arasında, açık mavi 16L deposuyla Bofe Akülü Sırt İlaçlama Pompası öne çıkıyor; güçlü lityum-iyon bataryası, ayarlanabilir pirinç nozulu ve ergonomik askısı yakın plan detaylarla vurgulanıyor. “Sezon Başlasın, Bofe İş Başında!”",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "category": "Özel gün",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_ac409b6ade3685a2",
+    "latencyMs": 8911,
+    "source": "gpt",
+    "output": "Gün doğumunda bereketli bir tarlada çalışan üretici, sırtında açık mavi 16L Bofe Akülü İlaçlama Pompası ile resmediliyor; pirinç nozul ve ergonomik askı detayları öne çıkıyor. “Toprağa Emek Veren Ellere Saygıyla, Bofe Tarım!”",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "category": "Fiyat duyurusu",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_4a70adaef8d046f8",
+    "latencyMs": 6514,
+    "source": "gpt",
+    "output": "Yeşil tarla fonunda, açık mavi 16L deposuyla Bofe Akülü Sırt İlaçlama Pompası ön planda; lityum-iyon batarya, pirinç nozul ve ergonomik askı detayları vurgulanıyor. “Bofe 16L ile İlaçlamada Pratik Çözüm!” başlığının altında fiyat duyurusu için dikkat çekici bir alan yer alıyor.",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "category": "Mağaza duyurusu",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_eeaf88c6041ce847",
+    "latencyMs": 19174,
+    "source": "gpt",
+    "output": "Bofe Tarım mağazasında, açık mavi 16L akülü sırt ilaçlama pompası ön planda; lityum-iyon batarya, pirinç nozul ve ergonomik askı detayları doğal yeşil tonlarla vurgulanıyor. “Tarlanızın İhtiyaçları Bofe Tarım’da!” başlığı mağaza duyurusuna eşlik ediyor.",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "category": "İndirim kampanyası",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_858fae176b0fe1da",
+    "latencyMs": 15984,
+    "source": "gpt",
+    "output": "Altın renginde çıtır tereyağlı lavaşa sarılmış Hatay usulü yaprak döner, üzerinden süzülen domates sosuyla iştah açıcı bir yakın planda sunulur. Sıcak kırmızı ve turuncu tonların hâkim olduğu görselde “Sosu Bol, Keyfi Büyük! İndirim Maydonoz Döner’de!” mesajı öne çıkar.",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "category": "Yeni ürün",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_bd6062d6ce0cf571",
+    "latencyMs": 6996,
+    "source": "gpt",
+    "output": "Tereyağlı çıtır lavaşın arasından taşan Hatay usulü yaprak döner ve iştah açan domates sosu, sıcak bir atmosferde yakın plan sergilenir. Maydonoz Döner’in yeni lezzeti, “Çıtır Lavaş, Bol Sos, Tam Hatay Havası!” sloganıyla sahneye çıkar.",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "category": "Sezon kampanyası",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_148e525ed676c3a2",
+    "latencyMs": 10515,
+    "source": "gpt",
+    "output": "Sonbaharın sıcak tonları arasında, tereyağlı çıtır lavaştan yükselen buhar, Hatay usulü yaprak döner ve nefis domates sosuyla buluşur. Maydonoz Döner’in sezon kampanyası, “Havalar Serinlesin, Dürüm Keyfi Isınsın!” sloganıyla iştahları kabartır.",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "category": "Özel gün",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_5adfe208cdfd46b6",
+    "latencyMs": 13249,
+    "source": "gpt",
+    "output": "Özel günün neşesini yansıtan, sıcak ışıklar ve zarif kutlama süsleri arasında, tereyağlı çıtır lavaşı, Hatay usulü yaprak döneri ve nefis domates sosuyla dürüm yakın planda sunulur. “Bugünün En Lezzetli Kutlaması Maydonoz’da!” sloganı görsele eşlik eder.",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "category": "Fiyat duyurusu",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_176ec67f4b883b91",
+    "latencyMs": 9163,
+    "source": "gpt",
+    "output": "Tereyağlı çıtır lavaş, Hatay usulü yaprak döner ve nefis domates sosuyla hazırlanan dürüm, sıcak ışıklar altında yakın planda sunulur. Yanındaki dikkat çekici fiyat etiketi ve “Lezzetin Adı Belli, Fiyatı da Net!” sloganıyla Maydonoz Döner’in fiyat duyurusu öne çıkar.",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_3_IDEA_CHIPS",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "category": "Mağaza duyurusu",
+    "gatewayStatus": 200,
+    "gatewayJobId": "chatcmpl-job_220545f347294d1a",
+    "latencyMs": 7710,
+    "source": "gpt",
+    "output": "Maydonoz Döner’in sıcak ve davetkâr mağaza atmosferi önünde, tereyağlı çıtır lavaşı, Hatay usulü yaprak döneri ve nefis domates sosuyla Özel Soslu Hatay Döner Dürüm ön plana çıkarılır. “Dönerin Kokusu Buradan Geliyor!” sloganıyla mağazaya davet edilir.",
+    "verdict": "REAL_AI_PASS"
+  },
+  {
+    "part": "PART_4_CREATIVE_PLANS",
+    "businessKey": "BOFE",
+    "businessName": "Bofe Tarım",
+    "plan1": {
+      "headline": "İlaçlamada Güç, Fiyatta Avantaj!",
+      "supporting": "16L geniş depo, güçlü akü ve ayarlanabilir pirinç nozulla pratik ilaçlama, 1.850 TL!",
+      "cta": "Fırsatı Değerlendir",
+      "jobId": "chatcmpl-job_ae7aa5fe427040ac",
+      "latencyMs": 19432
+    },
+    "plan2": {
+      "headline": "Sırtınızda Rahatlık, Elinizde Kontrol!",
+      "supporting": "Ergonomik sırt askısı ve ayarlanabilir pirinç nozulla ilaçlama işlerinizi rahatça yönetin.",
+      "cta": "Ürünü İncele",
+      "jobId": "chatcmpl-job_ececf3c73730c7dd",
+      "latencyMs": 12686
+    },
+    "areDistinct": true,
+    "verdict": "PASS"
+  },
+  {
+    "part": "PART_4_CREATIVE_PLANS",
+    "businessKey": "AYVAZOGLU",
+    "businessName": "Ayvazoğlu İnşaat",
+    "plan1": {
+      "headline": "Tuğlanız Fabrikadan, Teslimat Kapınıza!",
+      "supporting": "13,5 standart tuğlada toptan ve perakende satış, tır bazında şantiye teslimi avantajı.",
+      "cta": "Teklif Alın",
+      "jobId": "chatcmpl-job_329131a92d17742d",
+      "latencyMs": 20470
+    },
+    "plan2": {
+      "headline": "Tuğla Tedariğinde İşinizi Kolaylaştırın",
+      "supporting": "13,5 standart tuğlada toptan veya perakende sipariş verin, teslimatla uğraşmayın.",
+      "cta": "Siparişinizi Planlayın",
+      "jobId": "chatcmpl-job_1be3165a65f7ea4d",
+      "latencyMs": 12424
+    },
+    "areDistinct": true,
+    "verdict": "PASS"
+  },
+  {
+    "part": "PART_4_CREATIVE_PLANS",
+    "businessKey": "MESAJIFY",
+    "businessName": "Mesajify",
+    "plan1": {
+      "headline": "Yeni Müşteriler Bir Mesaj Uzağınızda",
+      "supporting": "Çevrenizdeki işletmeleri keşfedin, hedef listenizi oluşturun, tanıtımlarınızı gönderin ve yanıtları tek panelden yönetin.",
+      "cta": "Teklif İsteyin",
+      "jobId": "chatcmpl-job_74c53cd491eb53e8",
+      "latencyMs": 21001
+    },
+    "plan2": {
+      "headline": "Hatlar Çoğalsın, İş Yükünüz Değil",
+      "supporting": "İşletme listelerinizi hazırlayın, tanıtımlarınızı farklı hatlardan gönderin, tüm yanıtları tek yerden yönetin.",
+      "cta": "İşinizi Kolaylaştırın",
+      "jobId": "chatcmpl-job_6b57c7acf070e41e",
+      "latencyMs": 11851
+    },
+    "areDistinct": true,
+    "verdict": "PASS"
+  },
+  {
+    "part": "PART_4_CREATIVE_PLANS",
+    "businessKey": "MAYDONOZ",
+    "businessName": "Maydonoz Döner",
+    "plan1": {
+      "headline": "Çıtır Lavaş, Bol Sos, 165 TL!",
+      "supporting": "Tereyağlı çıtır lavaş, dinlendirilmiş Hatay usulü yaprak döner ve nefis domates sosu bir arada!",
+      "cta": "Hemen Sipariş Ver",
+      "jobId": "chatcmpl-job_25254a924b7451b7",
+      "latencyMs": 22887
+    },
+    "plan2": {
+      "headline": "Öğle Molasının Lezzetli Kısa Yolu",
+      "supporting": "Yemek planını düşünmekle uğraşma, tereyağlı lavaşta Hatay usulü döner keyfine odaklan.",
+      "cta": "Siparişini Hemen Ver",
+      "jobId": "chatcmpl-job_9ffb3384d5b19073",
+      "latencyMs": 11143
+    },
+    "areDistinct": true,
+    "verdict": "PASS"
+  }
+]

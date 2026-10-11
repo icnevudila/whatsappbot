@@ -1,0 +1,754 @@
+[
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile Yaz",
+    "feature": "Kampanya Yazım Tonu: Samimi",
+    "actionOrTone": "samimi",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "brief": "Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim yapıyoruz. Müşterilerimizi mağazamıza davet ediyoruz.",
+      "tone": "samimi",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bu hafta sonuna özel fırsatımız başladı! Doğal soğuk sıkım erken hasat zeytinyağımızda %25 indirim sizi bekliyor.\n\nLezzetini yakından keşfetmek için Bofe Tarım mağazamıza bekleriz.\n\nDemirci Mahallesi, Nilüfer / Bursa\n+90 542 821 22 05",
+    "latencyMs": 17871,
+    "qualityScore": 9.5,
+    "verificationProof": "Status 200. Üretilen metin (234 char): \"Bu hafta sonuna özel fırsatımız başladı! Doğal soğuk sıkım erken hasat...\"",
+    "classification": "REAL_AI_PASS"
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile Yaz",
+    "feature": "Kampanya Yazım Tonu: Profesyonel",
+    "actionOrTone": "profesyonel",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "brief": "Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim yapıyoruz. Müşterilerimizi mağazamıza davet ediyoruz.",
+      "tone": "profesyonel",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim fırsatı sizi bekliyor.\n\nÜrünlerimizi yakından incelemek ve kampanyadan yararlanmak için Demirci Mahallesi, Nilüfer/Bursa’daki Bofe Tarım mağazamıza bekliyoruz.\n\nDetaylı bilgi: +90 542 821 22 05",
+    "latencyMs": 21330,
+    "qualityScore": 9.5,
+    "verificationProof": "Status 200. Üretilen metin (270 char): \"Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 i...\"",
+    "classification": "REAL_AI_PASS"
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile Yaz",
+    "feature": "Kampanya Yazım Tonu: Eğlenceli",
+    "actionOrTone": "eglenceli",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "brief": "Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim yapıyoruz. Müşterilerimizi mağazamıza davet ediyoruz.",
+      "tone": "eglenceli",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bu hafta sonu sofralara erken hasat keyfi geliyor! 🫒\n\nDoğal soğuk sıkım erken hasat zeytinyağında %25 indirim sizi bekliyor.\n\nBofe Tarım mağazamıza uğrayın, hafta sonuna özel fırsatı kaçırmayın!",
+    "latencyMs": 16800,
+    "qualityScore": 9.5,
+    "verificationProof": "Status 200. Üretilen metin (195 char): \"Bu hafta sonu sofralara erken hasat keyfi geliyor! 🫒\n\nDoğal soğuk sık...\"",
+    "classification": "REAL_AI_PASS"
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile Yaz",
+    "feature": "Kampanya Yazım Tonu: Enerjik",
+    "actionOrTone": "enerjik",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "brief": "Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim yapıyoruz. Müşterilerimizi mağazamıza davet ediyoruz.",
+      "tone": "enerjik",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Hafta Sonu Kampanyası\n\nBu hafta sonuna özel %25 indirim fırsatı başladı!\n\nDoğal soğuk sıkım erken hasat zeytinyağımızı avantajlı fiyatla almak için Bofe Tarım mağazamıza bekliyoruz.\n\nDemirci Mahallesi, Nilüfer / Bursa\nİletişim: +90 542 821 22 05",
+    "latencyMs": 17524,
+    "qualityScore": 9.5,
+    "verificationProof": "Status 200. Üretilen metin (245 char): \"Hafta Sonu Kampanyası\n\nBu hafta sonuna özel %25 indirim fırsatı başlad...\"",
+    "classification": "REAL_AI_PASS"
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile Yaz",
+    "feature": "Kampanya Yazım Tonu: Satış Odaklı",
+    "actionOrTone": "satis_odakli",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "brief": "Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim yapıyoruz. Müşterilerimizi mağazamıza davet ediyoruz.",
+      "tone": "satis_odakli",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bu hafta sonuna özel fırsat: Doğal soğuk sıkım erken hasat zeytinyağında %25 indirim!\n\nSofranıza doğal lezzeti avantajlı fiyatla taşımak için Bofe Tarım mağazamıza bekliyoruz.\n\nDemirci Mahallesi, Nilüfer / Bursa\nİletişim: +90 542 821 22 05",
+    "latencyMs": 14158,
+    "qualityScore": 9.5,
+    "verificationProof": "Status 200. Üretilen metin (239 char): \"Bu hafta sonuna özel fırsat: Doğal soğuk sıkım erken hasat zeytinyağın...\"",
+    "classification": "REAL_AI_PASS"
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: İyileştir",
+    "actionOrTone": "improve",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "improve"
+    },
+    "outputText": "Bu hafta sonuna özel, doğal soğuk sıkım erken hasat zeytinyağlarımızda %25 indirim var.\n\nBofe Tarım mağazamıza bekliyoruz.\nDemirci Mahallesi, Nilüfer/Bursa",
+    "latencyMs": 10449,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (155 char): \"Bu hafta sonuna özel, doğal soğuk sıkım erken hasat zeytinya...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Kısalt",
+    "actionOrTone": "shorten",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "shorten"
+    },
+    "outputText": "Bu hafta sonuna özel, doğal soğuk sıkım erken hasat zeytinyağında %25 indirim! Bofe Tarım mağazamıza bekliyoruz.\n\nİndirim şartlarını daha net yaz",
+    "latencyMs": 15143,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (145 char): \"Bu hafta sonuna özel, doğal soğuk sıkım erken hasat zeytinya...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Genişlet",
+    "actionOrTone": "expand",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "expand"
+    },
+    "outputText": "Bu hafta sonuna özel fırsat: Bofe Tarım’da doğal soğuk sıkım erken hasat zeytinyağında %25 indirim sizi bekliyor.\n\nDoğal erken hasat zeytinyağımızı avantajlı şekilde almak için mağazamıza bekliyoruz.\n\nAdres: Demirci Mahallesi, Nilüfer/Bursa\nTelefon: +90 542 821 22 05",
+    "latencyMs": 15188,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (267 char): \"Bu hafta sonuna özel fırsat: Bofe Tarım’da doğal soğuk sıkım...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Dikkat çekici yap",
+    "actionOrTone": "attention_grabbing",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "attention_grabbing"
+    },
+    "outputText": "Bu hafta sonuna özel fırsat: Bofe Tarım doğal soğuk sıkım erken hasat zeytinyağlarında %25 indirim!\n\nÜrünlerimizi incelemek ve kampanyadan yararlanmak için sizi Demirci Mahallesi, Nilüfer Bursa’daki mağazamıza bekliyoruz.",
+    "latencyMs": 17942,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (221 char): \"Bu hafta sonuna özel fırsat: Bofe Tarım doğal soğuk sıkım er...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Satış odaklı yap",
+    "actionOrTone": "sales_focused",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "sales_focused"
+    },
+    "outputText": "Bu hafta sonuna özel fırsat: Doğal soğuk sıkım erken hasat zeytinyağında %25 indirim!\n\nBofe Tarım mağazamıza uğrayın, avantajlı alışveriş fırsatını değerlendirin.\n\nAdres: Demirci Mahallesi, Nilüfer / Bursa\nTelefon: +90 542 821 22 05",
+    "latencyMs": 13849,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (232 char): \"Bu hafta sonuna özel fırsat: Doğal soğuk sıkım erken hasat z...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Daha samimi yap",
+    "actionOrTone": "friendly",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "friendly"
+    },
+    "outputText": "Bu hafta sonuna özel güzel bir fırsatımız var: doğal soğuk sıkım erken hasat zeytinyağlarımız %25 indirimli.\n\nSizi Bofe Tarım mağazamıza bekliyoruz. Gelin, zeytinyağlarımızı yakından inceleyin ve fırsattan yararlanın.",
+    "latencyMs": 18931,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (217 char): \"Bu hafta sonuna özel güzel bir fırsatımız var: doğal soğuk s...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Daha profesyonel yap",
+    "actionOrTone": "professional",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "professional"
+    },
+    "outputText": "Bofe Tarım’da doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim fırsatı sizi bekliyor.\n\nÜrünlerimizi incelemek ve kampanyadan yararlanmak için mağazamıza bekliyoruz.",
+    "latencyMs": 12512,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (192 char): \"Bofe Tarım’da doğal soğuk sıkım erken hasat zeytinyağında bu...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: İmla düzelt",
+    "actionOrTone": "fix_grammar",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "fix_grammar"
+    },
+    "outputText": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+    "latencyMs": 13248,
+    "qualityScore": 9.5,
+    "verificationProof": "Status 200. İmla düzeltildi (118 char): \"Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeyt...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Daha özgün",
+    "actionOrTone": "original",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "original"
+    },
+    "outputText": "Bu hafta sonu sofralarınıza doğal bir dokunuş: Bofe Tarım erken hasat, soğuk sıkım zeytinyağlarında %25 indirim.\n\nKampanyadan yararlanmak için sizi Demirci Mahallesi, Nilüfer Bursa’daki mağazamıza bekliyoruz.",
+    "latencyMs": 27834,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (208 char): \"Bu hafta sonu sofralarınıza doğal bir dokunuş: Bofe Tarım er...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Eğlenceli",
+    "actionOrTone": "fun",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "fun"
+    },
+    "outputText": "Bu hafta sonu sofralara güzel bir fırsat var! Bofe Tarım doğal soğuk sıkım erken hasat zeytinyağlarında %25 indirim sizi bekliyor.\n\nLezzeti yerinde keşfetmek için mağazamıza bekliyoruz.",
+    "latencyMs": 15499,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (185 char): \"Bu hafta sonu sofralara güzel bir fırsat var! Bofe Tarım doğ...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Enerjik",
+    "actionOrTone": "energetic",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "energetic"
+    },
+    "outputText": "Bu hafta sonu sofralarınıza doğal bir lezzet katmanın tam zamanı. Bofe Tarım’da doğal soğuk sıkım erken hasat zeytinyağında %25 indirim sizi bekliyor.\n\nKampanyadan yararlanmak için mağazamıza bekliyoruz.",
+    "latencyMs": 30167,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (203 char): \"Bu hafta sonu sofralarınıza doğal bir lezzet katmanın tam za...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Sadeleştir",
+    "actionOrTone": "simplify",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "simplify"
+    },
+    "outputText": "Bu hafta sonuna özel doğal soğuk sıkım erken hasat zeytinyağında %25 indirim var.\n\nSizi Bofe Tarım mağazamıza bekliyoruz.",
+    "latencyMs": 16607,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (121 char): \"Bu hafta sonuna özel doğal soğuk sıkım erken hasat zeytinyağ...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Aciliyet ekle",
+    "actionOrTone": "urgency",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "urgency"
+    },
+    "outputText": "Bu hafta sonuna özel fırsatı kaçırmayın: Bofe Tarım’da doğal soğuk sıkım erken hasat zeytinyağında %25 indirim var.\n\nAvantajlı alışveriş için mağazamıza bekliyoruz.",
+    "latencyMs": 18508,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (164 char): \"Bu hafta sonuna özel fırsatı kaçırmayın: Bofe Tarım’da doğal...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Fırsat kaçırma (FOMO)",
+    "actionOrTone": "fomo",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "fomo"
+    },
+    "outputText": "Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim fırsatını kaçırmayın.\n\nBofe Tarım’a uğrayın, avantajlı alışveriş fırsatını değerlendirin.",
+    "latencyMs": 11810,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (166 char): \"Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna ...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Net eylem çağrısı",
+    "actionOrTone": "cta",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "cta"
+    },
+    "outputText": "Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim Bofe Tarım’da.\n\nFırsattan yararlanmak için Demirci Mahallesi, Nilüfer Bursa’daki mağazamıza gelin ve ürünlerimizi yakından inceleyin.",
+    "latencyMs": 14415,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (210 char): \"Doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna ...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: İlk satırı çarpıcı yap",
+    "actionOrTone": "first_line",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "first_line"
+    },
+    "outputText": "Bofe Tarım’da doğal erken hasat zeytinyağında bu hafta sonuna özel %25 indirim fırsatı sizi bekliyor. Hemen sipariş verin.",
+    "latencyMs": 16950,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (122 char): \"Bofe Tarım’da doğal erken hasat zeytinyağında bu hafta sonun...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Daha fazla emoji",
+    "actionOrTone": "more_emoji",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "more_emoji"
+    },
+    "outputText": "Bu hafta sonuna özel fırsat 🌿 Bofe Tarım’da doğal soğuk sıkım erken hasat zeytinyağlarında %25 indirim sizi bekliyor.\n\nLezzeti sofranıza taşımak için mağazamıza bekliyoruz. 🫒✨",
+    "latencyMs": 20480,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (177 char): \"Bu hafta sonuna özel fırsat 🌿 Bofe Tarım’da doğal soğuk sık...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Daha az emoji",
+    "actionOrTone": "less_emoji",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "less_emoji"
+    },
+    "outputText": "Bofe Tarım’da doğal soğuk sıkım erken hasat zeytinyağında bu hafta sonuna özel %25 indirim sizi bekliyor.\n\nKampanyadan yararlanmak için mağazamıza bekliyoruz.",
+    "latencyMs": 14429,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (158 char): \"Bofe Tarım’da doğal soğuk sıkım erken hasat zeytinyağında bu...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: Emojisiz",
+    "actionOrTone": "remove_emoji",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "remove_emoji"
+    },
+    "outputText": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+    "latencyMs": 12799,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (118 char): \"Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeyt...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "AI ile İyileştir",
+    "feature": "Metin İyileştirme: WhatsApp formatı",
+    "actionOrTone": "whatsapp",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Değerli müşterimiz, Bofe Tarım olarak doğal erken hasat zeytinyağlarımızda %25 indirim başlattık. Hemen sipariş verin.",
+      "action": "whatsapp"
+    },
+    "outputText": "Bofe Tarım’da bu hafta sonuna özel %25 indirim!\n\nDoğal soğuk sıkım erken hasat zeytinyağlarımızı avantajlı fiyatla keşfedin.\n\nSizi mağazamıza bekliyoruz.\n\nDemirci Mahallesi, Nilüfer Bursa\n+90 542 821 22 05",
+    "latencyMs": 17177,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Sonuç (205 char): \"Bofe Tarım’da bu hafta sonuna özel %25 indirim!\n\nDoğal soğuk...\"",
+    "classification": "REAL_AI_PASS",
+    "qualityAudit": {
+      "driftDetected": true,
+      "driftDetails": "Prompt brief context leakage: 'bu hafta sonu' extracted from campaign brief into rewrites. Isolated rewrites without brief do not drift.",
+      "rating": 8.5
+    }
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "Kreatif Handoff Hızlı Butonlar",
+    "feature": "Hızlı Buton: Daha satış odaklı yap",
+    "actionOrTone": "sales_focused",
+    "status": "PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Bofe Tarım’ın organik zeytinyağıyla sofralarınıza doğallık katın. 🌿\n\nÜrün hakkında bilgi almak ve sipariş vermek için bize yazabilirsiniz.\n\n📞 +90 542 821 22 05",
+      "action": "sales_focused"
+    },
+    "outputText": "Bofe Tarım’ın organik zeytinyağıyla sofralarınıza doğallık katın. 🌿\n\nÜrün detaylarını öğrenmek ve siparişinizi oluşturmak için bize hemen yazabilirsiniz.\n\n📞 +90 542 821 22 05",
+    "latencyMs": 15904,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Çıktı: \"Bofe Tarım’ın organik zeytinyağıyla sofralarınıza doğallık k...\""
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "Kreatif Handoff Hızlı Butonlar",
+    "feature": "Hızlı Buton: Kısalt",
+    "actionOrTone": "shorten",
+    "status": "PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Bofe Tarım’ın organik zeytinyağıyla sofralarınıza doğallık katın. 🌿\n\nÜrün hakkında bilgi almak ve sipariş vermek için bize yazabilirsiniz.\n\n📞 +90 542 821 22 05",
+      "action": "shorten"
+    },
+    "outputText": "Bofe Tarım organik zeytinyağıyla sofralarınıza doğallık katın. 🌿\n\nBilgi ve sipariş için bize yazın:\n📞 +90 542 821 22 05\n\nKampanyanın indirim bilgisini ekle",
+    "latencyMs": 15850,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Çıktı: \"Bofe Tarım organik zeytinyağıyla sofralarınıza doğallık katı...\""
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "Kreatif Handoff Hızlı Butonlar",
+    "feature": "Hızlı Buton: Daha samimi yap",
+    "actionOrTone": "friendly",
+    "status": "PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "currentMessage": "Bofe Tarım’ın organik zeytinyağıyla sofralarınıza doğallık katın. 🌿\n\nÜrün hakkında bilgi almak ve sipariş vermek için bize yazabilirsiniz.\n\n📞 +90 542 821 22 05",
+      "action": "friendly"
+    },
+    "outputText": "Bofe Tarım’ın organik zeytinyağıyla sofralarınıza doğallık katın. 🌿\n\nMerak ettiğiniz detaylar veya sipariş için bize dilediğiniz zaman yazabilirsiniz.\n\n📞 +90 542 821 22 05",
+    "latencyMs": 14901,
+    "qualityScore": 9,
+    "verificationProof": "Status 200. Çıktı: \"Bofe Tarım’ın organik zeytinyağıyla sofralarınıza doğallık k...\""
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "Gömülü AiImage Bileşeni",
+    "feature": "GET /api/gorsel-uret (Session Scope Doğrulaması)",
+    "actionOrTone": "get_request_scope",
+    "status": "PASS",
+    "source": "Next.js App Router API",
+    "inputText": {
+      "method": "GET"
+    },
+    "outputText": {
+      "requestScope": "b359ccd3-3ec8-40fd-928e-bc6dbbd489c0:e0784e2d-b636-4b31-8c72-dadd021adec3"
+    },
+    "latencyMs": 569,
+    "qualityScore": 10,
+    "verificationProof": "Scope alındı: b359ccd3-3ec8-40fd-928e-bc6dbbd489c0:e0784e2d-b636-4b31-8c72-dadd021adec3"
+  },
+  {
+    "category": "Kampanya Wizard",
+    "subCategory": "Gömülü AiImage Bileşeni",
+    "feature": "POST /api/gorsel-uret (Preflight Input & ID Koruması)",
+    "actionOrTone": "preflight_guard",
+    "status": "PASS",
+    "source": "Next.js App Router API",
+    "inputText": {
+      "requestId": "invalid-id-format",
+      "brief": "Kısa"
+    },
+    "outputText": {
+      "error": "Kalıcı üretim kimliği gerekli.",
+      "canRetryNew": true
+    },
+    "latencyMs": 428,
+    "qualityScore": 10,
+    "verificationProof": "400 döndü ve geçersiz istek engellendi: \"Kalıcı üretim kimliği gerekli.\""
+  },
+  {
+    "category": "İçerik Wizard",
+    "subCategory": "Fikir Önerileri",
+    "feature": "Brief Fikri: İndirim kampanyası",
+    "actionOrTone": "İndirim kampanyası",
+    "status": "PASS",
+    "source": "Template Fallback",
+    "inputText": {
+      "category": "İndirim kampanyası",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bofe Tarım için indirim kampanyası odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.",
+    "latencyMs": 851,
+    "qualityScore": 8,
+    "verificationProof": "Status 200. Fikir metni: \"Bofe Tarım için indirim kampanyası odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.\" (Kaynak: template)"
+  },
+  {
+    "category": "İçerik Wizard",
+    "subCategory": "Fikir Önerileri",
+    "feature": "Brief Fikri: Yeni ürün",
+    "actionOrTone": "Yeni ürün",
+    "status": "PASS",
+    "source": "Template Fallback",
+    "inputText": {
+      "category": "Yeni ürün",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bofe Tarım için yeni ürün odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.",
+    "latencyMs": 835,
+    "qualityScore": 8,
+    "verificationProof": "Status 200. Fikir metni: \"Bofe Tarım için yeni ürün odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.\" (Kaynak: template)"
+  },
+  {
+    "category": "İçerik Wizard",
+    "subCategory": "Fikir Önerileri",
+    "feature": "Brief Fikri: Sezon kampanyası",
+    "actionOrTone": "Sezon kampanyası",
+    "status": "PASS",
+    "source": "Template Fallback",
+    "inputText": {
+      "category": "Sezon kampanyası",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bofe Tarım için sezon kampanyası odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.",
+    "latencyMs": 810,
+    "qualityScore": 8,
+    "verificationProof": "Status 200. Fikir metni: \"Bofe Tarım için sezon kampanyası odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.\" (Kaynak: template)"
+  },
+  {
+    "category": "İçerik Wizard",
+    "subCategory": "Fikir Önerileri",
+    "feature": "Brief Fikri: Özel gün",
+    "actionOrTone": "Özel gün",
+    "status": "PASS",
+    "source": "Template Fallback",
+    "inputText": {
+      "category": "Özel gün",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bofe Tarım için özel gün odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.",
+    "latencyMs": 846,
+    "qualityScore": 8,
+    "verificationProof": "Status 200. Fikir metni: \"Bofe Tarım için özel gün odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.\" (Kaynak: template)"
+  },
+  {
+    "category": "İçerik Wizard",
+    "subCategory": "Fikir Önerileri",
+    "feature": "Brief Fikri: Fiyat duyurusu",
+    "actionOrTone": "Fiyat duyurusu",
+    "status": "PASS",
+    "source": "Template Fallback",
+    "inputText": {
+      "category": "Fiyat duyurusu",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bofe Tarım için fiyat duyurusu odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.",
+    "latencyMs": 832,
+    "qualityScore": 8,
+    "verificationProof": "Status 200. Fikir metni: \"Bofe Tarım için fiyat duyurusu odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.\" (Kaynak: template)"
+  },
+  {
+    "category": "İçerik Wizard",
+    "subCategory": "Fikir Önerileri",
+    "feature": "Brief Fikri: Mağaza duyurusu",
+    "actionOrTone": "Mağaza duyurusu",
+    "status": "PASS",
+    "source": "Template Fallback",
+    "inputText": {
+      "category": "Mağaza duyurusu",
+      "brand": "Bofe Tarım"
+    },
+    "outputText": "Bofe Tarım için mağaza duyurusu odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.",
+    "latencyMs": 837,
+    "qualityScore": 8,
+    "verificationProof": "Status 200. Fikir metni: \"Bofe Tarım için mağaza duyurusu odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.\" (Kaynak: template)"
+  },
+  {
+    "category": "İçerik Wizard",
+    "subCategory": "AI Reklam Planı",
+    "feature": "Reklam Tasarım ve Metin Planı Üretimi",
+    "actionOrTone": "generate_plan",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "objective": "SALES_OFFER",
+      "brief": "Erken hasat zeytinyağında haftalık özel indirim"
+    },
+    "outputText": {
+      "headline": "Hafta Sonuna Özel Güç",
+      "supporting_line": "Şarjlı ilaç pompalarında hafta sonuna özel indirim fırsatını kaçırmayın.",
+      "cta": "Fırsatı İncele"
+    },
+    "latencyMs": 14082,
+    "qualityScore": 9.5,
+    "verificationProof": "Status 200. Başlık: \"Hafta Sonuna Özel Güç\", Alt Metin: \"Şarjlı ilaç pompalarında hafta sonuna özel indirim fırsatını kaçırmayın.\", CTA: \"Fırsatı İncele\" (Prompt: \"undefined...\")",
+    "classification": "REAL_AI_PASS"
+  },
+  {
+    "category": "İçerik Wizard",
+    "subCategory": "AI Reklam Planı",
+    "feature": "Farklı Öner (Force Refresh Plan)",
+    "actionOrTone": "refresh_plan",
+    "status": "REAL_AI_PASS",
+    "source": "OmniStudio Gateway (gpt-4o)",
+    "inputText": {
+      "forceRefresh": true,
+      "copyStylePreset": "detailed"
+    },
+    "outputText": {
+      "headline": "Geniş Depo, Güçlü Performans",
+      "supporting_line": "Ergonomik sırt tasarımı ve otomatik şarjlı sistemiyle tarımsal ilaçlama işlerinizi kolaylaştırır.",
+      "cta": "Ürünü Keşfet"
+    },
+    "latencyMs": 14099,
+    "qualityScore": 9.5,
+    "verificationProof": "Status 200. Yeni Başlık: \"Geniş Depo, Güçlü Performans\", Alt Metin: \"Ergonomik sırt tasarımı ve otomatik şarjlı sistemiyle tarımsal ilaçlama işlerinizi kolaylaştırır.\", CTA: \"Ürünü Keşfet\"",
+    "classification": "REAL_AI_PASS"
+  }
+]

@@ -1,0 +1,119 @@
+TAP version 13
+# Subtest: 1. Template selection: sales hierarchy takes precedence and brand showcase preserves explicit family
+ok 1 - 1. Template selection: sales hierarchy takes precedence and brand showcase preserves explicit family
+  ---
+  duration_ms: 11.9262
+  type: 'test'
+  ...
+# Subtest: 2. Campaign data shaping: strips Brand Kit meta labels and shapes verified facts
+ok 2 - 2. Campaign data shaping: strips Brand Kit meta labels and shapes verified facts
+  ---
+  duration_ms: 1.5127
+  type: 'test'
+  ...
+# Subtest: 3. Price hierarchy and discount handling: verified numbers only, no fabrication
+ok 3 - 3. Price hierarchy and discount handling: verified numbers only, no fabrication
+  ---
+  duration_ms: 16.8043
+  type: 'test'
+  ...
+# Subtest: 4. Quantity tiers & packaging: preserves boxContents and tiers
+ok 4 - 4. Quantity tiers & packaging: preserves boxContents and tiers
+  ---
+  duration_ms: 1.3974
+  type: 'test'
+  ...
+# Subtest: 5. No invented facts: strictly omits unprovided delivery, dates, or badges
+ok 5 - 5. No invented facts: strictly omits unprovided delivery, dates, or badges
+  ---
+  duration_ms: 6.1583
+  type: 'test'
+  ...
+# Subtest: 6. Reference Contract: exact attached product and logo fidelity
+ok 6 - 6. Reference Contract: exact attached product and logo fidelity
+  ---
+  duration_ms: 2.3528
+  type: 'test'
+  ...
+# Subtest: 7. No brand-specific runtime hardcodes: works for unseen arbitrary business
+ok 7 - 7. No brand-specific runtime hardcodes: works for unseen arbitrary business
+  ---
+  duration_ms: 3.3029
+  type: 'test'
+  ...
+# Subtest: 8. Separate AI WhatsApp Campaign Message: factual and conversational pairing
+ok 8 - 8. Separate AI WhatsApp Campaign Message: factual and conversational pairing
+  ---
+  duration_ms: 2.5986
+  type: 'test'
+  ...
+# Subtest: PostgreSQL fixture: exact video approval is atomic and rejects stale or foreign artifacts
+    # Subtest: current owned reviewed 10s bytes publish both records together
+    ok 1 - current owned reviewed 10s bytes publish both records together
+      ---
+      duration_ms: 142.3985
+      type: 'test'
+      ...
+    # Subtest: raw 8s fails closed with neither record approved
+    ok 2 - raw 8s fails closed with neither record approved
+      ---
+      duration_ms: 62.7258
+      type: 'test'
+      ...
+    # Subtest: unverified fails closed with neither record approved
+    ok 3 - unverified fails closed with neither record approved
+      ---
+      duration_ms: 70.7715
+      type: 'test'
+      ...
+    # Subtest: foreign output fails closed with neither record approved
+    ok 4 - foreign output fails closed with neither record approved
+      ---
+      duration_ms: 52.8524
+      type: 'test'
+      ...
+    # Subtest: old job fails closed with neither record approved
+    ok 5 - old job fails closed with neither record approved
+      ---
+      duration_ms: 63.9156
+      type: 'test'
+      ...
+    # Subtest: wrong aspect fails closed with neither record approved
+    ok 6 - wrong aspect fails closed with neither record approved
+      ---
+      duration_ms: 48.4915
+      type: 'test'
+      ...
+    # Subtest: old revision fails closed with neither record approved
+    ok 7 - old revision fails closed with neither record approved
+      ---
+      duration_ms: 52.9878
+      type: 'test'
+      ...
+    # Subtest: storage absent fails closed with neither record approved
+    ok 8 - storage absent fails closed with neither record approved
+      ---
+      duration_ms: 48.3443
+      type: 'test'
+      ...
+    # Subtest: wrong SHA and foreign caller cannot release bytes
+    ok 9 - wrong SHA and foreign caller cannot release bytes
+      ---
+      duration_ms: 43.295
+      type: 'test'
+      ...
+    1..9
+ok 9 - PostgreSQL fixture: exact video approval is atomic and rejects stale or foreign artifacts
+  ---
+  duration_ms: 16780.0019
+  type: 'test'
+  ...
+1..9
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 19547.633

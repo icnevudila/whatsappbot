@@ -25,9 +25,11 @@ export default async function CreativeLibraryPage() {
   return (
     <div className="wb-wa-page">
       <LibraryBoard
+        key={org.id}
         orgId={org.id}
         initial={first.items}
         initialHasMore={first.hasMore}
+        initialNextOffset={first.nextOffset}
         canManage={isOrgAdminRole(org.role)}
       />
     </div>

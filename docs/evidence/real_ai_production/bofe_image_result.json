@@ -1,0 +1,11 @@
+{
+  "test": "BOFE_REAL_AI_IMAGE",
+  "creativeId": "aefa9578-07ea-56eb-abe5-cc500d638fca",
+  "imageUrl": "https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc/aefa9578-07ea-56eb-abe5-cc500d638fca/job_11adfea327db67bd.png",
+  "bytes": 2151799,
+  "sha256": "f5d3606d2b949f7bb48fb6a04bfc1cee09a476f2b42879936401636f2817cf83",
+  "durationSec": 130,
+  "handoffPassed": true,
+  "sentinelPersisted": true,
+  "timestamp": "2026-10-11T16:53:05.445Z"
+}

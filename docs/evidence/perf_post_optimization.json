@@ -1,0 +1,84 @@
+[
+  {
+    "target": "http://localhost:3000",
+    "device": "desktop",
+    "cache": "cold",
+    "ttfb": 212,
+    "fcp": 1261,
+    "lcp": 0,
+    "cls": 0,
+    "domContentLoaded": 525,
+    "load": 1407,
+    "totalRequests": 37,
+    "totalBytes": 4543142,
+    "videoRequests": 2,
+    "videoBytes": 3709473,
+    "videoUrls": [
+      "http://localhost:3000/landing/infographics/01-ana-urun-veo-i2v.mp4",
+      "http://localhost:3000/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+    ],
+    "heroVideoLoadedTimeMs": null,
+    "heroPosterVisibleTimeMs": null
+  },
+  {
+    "target": "http://localhost:3000",
+    "device": "desktop",
+    "cache": "warm",
+    "ttfb": 7,
+    "fcp": 325,
+    "lcp": 0,
+    "cls": 0,
+    "domContentLoaded": 212,
+    "load": 319,
+    "totalRequests": 37,
+    "totalBytes": 1914924,
+    "videoRequests": 1,
+    "videoBytes": 1667050,
+    "videoUrls": [
+      "http://localhost:3000/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+    ],
+    "heroVideoLoadedTimeMs": null,
+    "heroPosterVisibleTimeMs": null
+  },
+  {
+    "target": "http://localhost:3000",
+    "device": "mobile",
+    "cache": "cold",
+    "ttfb": 23,
+    "fcp": 804,
+    "lcp": 0,
+    "cls": 0,
+    "domContentLoaded": 673,
+    "load": 891,
+    "totalRequests": 38,
+    "totalBytes": 4619832,
+    "videoRequests": 2,
+    "videoBytes": 3709473,
+    "videoUrls": [
+      "http://localhost:3000/landing/infographics/01-ana-urun-veo-i2v.mp4",
+      "http://localhost:3000/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+    ],
+    "heroVideoLoadedTimeMs": null,
+    "heroPosterVisibleTimeMs": null
+  },
+  {
+    "target": "http://localhost:3000",
+    "device": "mobile",
+    "cache": "warm",
+    "ttfb": 25,
+    "fcp": 341,
+    "lcp": 0,
+    "cls": 0,
+    "domContentLoaded": 107,
+    "load": 342,
+    "totalRequests": 37,
+    "totalBytes": 1947118,
+    "videoRequests": 1,
+    "videoBytes": 1667050,
+    "videoUrls": [
+      "http://localhost:3000/landing/infographics/04-ortak-inbox-veo-i2v.mp4"
+    ],
+    "heroVideoLoadedTimeMs": null,
+    "heroPosterVisibleTimeMs": null
+  }
+]

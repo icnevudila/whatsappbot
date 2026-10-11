@@ -58,7 +58,9 @@ export default async function CreativeDetailPage({
     submissionRequestKey: typeof payload?.requestKey === 'string' ? payload.requestKey : null,
     id: row.id,
     title: displayTitle,
-    publicUrl: row.public_url,
+    publicUrl: ((videoState?.status || row.status) === 'needs_review') && row.public_url && !row.public_url.includes('preview=')
+      ? `${row.public_url}${row.public_url.includes('?') ? '&' : '?'}preview=1`
+      : row.public_url,
     status: videoState?.status || row.status,
     source: row.source,
     generationType: row.generation_type,
@@ -76,6 +78,7 @@ export default async function CreativeDetailPage({
       (row.public_url?.startsWith('/api/ai-media/outputs/') ? `${row.public_url}?thumb=1` : null),
     cleanPublicUrl: payload?.cleanPublicUrl ?? null,
     recoverableImageJob: Boolean(payload?.imageJob && payload?.imageReconciliationRequired),
+    imageReconciliationRequired: Boolean(payload?.imageReconciliationRequired),
     campaignMessage: payload?.campaignMessage ?? null,
   }
 

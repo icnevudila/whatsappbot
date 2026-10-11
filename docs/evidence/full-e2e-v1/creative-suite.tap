@@ -1,0 +1,1053 @@
+TAP version 13
+# Subtest: removes observed AI style labels without changing customer campaign copy
+ok 1 - removes observed AI style labels without changing customer campaign copy
+  ---
+  duration_ms: 8.4332
+  type: 'test'
+  ...
+# Subtest: requested format rejects a decoded image of a different orientation without rejecting raster rounding
+ok 2 - requested format rejects a decoded image of a different orientation without rejecting raster rounding
+  ---
+  duration_ms: 6.3986
+  type: 'test'
+  ...
+# Subtest: real pixels determine dimensions and format, not requested metadata
+ok 3 - real pixels determine dimensions and format, not requested metadata
+  ---
+  duration_ms: 89.388
+  type: 'test'
+  ...
+# Subtest: empty, text-only and random output cannot qualify as image success
+ok 4 - empty, text-only and random output cannot qualify as image success
+  ---
+  duration_ms: 8.2698
+  type: 'test'
+  ...
+# Subtest: metadata-readable but truncated raster is rejected on pixel decode
+ok 5 - metadata-readable but truncated raster is rejected on pixel decode
+  ---
+  duration_ms: 11.529
+  type: 'test'
+  ...
+# Subtest: oversized bytes are rejected before pixel work
+ok 6 - oversized bytes are rejected before pixel work
+  ---
+  duration_ms: 1.6616
+  type: 'test'
+  ...
+# Subtest: independent expected references block zero or partial payload before any provider request
+ok 7 - independent expected references block zero or partial payload before any provider request
+  ---
+  duration_ms: 7.1739
+  type: 'test'
+  ...
+# Subtest: storage read-back requires identical decoded pixels and actual byte hash
+ok 8 - storage read-back requires identical decoded pixels and actual byte hash
+  ---
+  duration_ms: 100.5377
+  type: 'test'
+  ...
+# Subtest: missing, truncated or altered stored bytes cannot qualify as durable success
+ok 9 - missing, truncated or altered stored bytes cannot qualify as durable success
+  ---
+  duration_ms: 12.9002
+  type: 'test'
+  ...
+# Subtest: provider receipt and real output contract remain bound to the exact image job
+    # Subtest: two owned references and exact decoded output pass
+    ok 1 - two owned references and exact decoded output pass
+      ---
+      duration_ms: 172.7623
+      type: 'test'
+      ...
+    # Subtest: missing, mismatched count or foreign receipt fails before downloading artifact
+    ok 2 - missing, mismatched count or foreign receipt fails before downloading artifact
+      ---
+      duration_ms: 11.5878
+      type: 'test'
+      ...
+    # Subtest: wrong output SHA or oversized artifact cannot become a ready image
+    ok 3 - wrong output SHA or oversized artifact cannot become a ready image
+      ---
+      duration_ms: 8.1833
+      type: 'test'
+      ...
+    # Subtest: completed provider job without output URL requires reconciliation and never resubmits
+    ok 4 - completed provider job without output URL requires reconciliation and never resubmits
+      ---
+      duration_ms: 3.3136
+      type: 'test'
+      ...
+    # Subtest: malformed independent expected count performs zero provider submits
+    ok 5 - malformed independent expected count performs zero provider submits
+      ---
+      duration_ms: 3.8094
+      type: 'test'
+      ...
+    # Subtest: unknown or corrupted persisted reference count cannot bypass receipt validation
+    ok 6 - unknown or corrupted persisted reference count cannot bypass receipt validation
+      ---
+      duration_ms: 1.7343
+      type: 'test'
+      ...
+    # Subtest: 401/403 auth errors throw terminal ImageJobFailedError, never ImageJobPendingError
+    ok 7 - 401/403 auth errors throw terminal ImageJobFailedError, never ImageJobPendingError
+      ---
+      duration_ms: 2.7605
+      type: 'test'
+      ...
+    # Subtest: 404 missing job and 500 server error throw ImageJobReconciliationError, never ImageJobPendingError
+    ok 8 - 404 missing job and 500 server error throw ImageJobReconciliationError, never ImageJobPendingError
+      ---
+      duration_ms: 17.9205
+      type: 'test'
+      ...
+    1..8
+ok 10 - provider receipt and real output contract remain bound to the exact image job
+  ---
+  duration_ms: 273.1276
+  type: 'test'
+  ...
+# Subtest: tenant paid-provider preferences and keys cannot enable an external fallback
+ok 11 - tenant paid-provider preferences and keys cannot enable an external fallback
+  ---
+  duration_ms: 6.4322
+  type: 'test'
+  ...
+# Subtest: mutating a caller provider list cannot alter the global policy
+ok 12 - mutating a caller provider list cannot alter the global policy
+  ---
+  duration_ms: 0.6457
+  type: 'test'
+  ...
+# Subtest: OmniStudio HTTP failure never calls paid endpoints even with valid-looking tenant keys
+ok 13 - OmniStudio HTTP failure never calls paid endpoints even with valid-looking tenant keys
+  ---
+  duration_ms: 112.8399
+  type: 'test'
+  ...
+# Subtest: campaign text forwards tenant and creative conversation identity to the gateway
+ok 14 - campaign text forwards tenant and creative conversation identity to the gateway
+  ---
+  duration_ms: 5.104
+  type: 'test'
+  ...
+# Subtest: actual pixels, dimensions, MIME and byte hash are required
+ok 15 - actual pixels, dimensions, MIME and byte hash are required
+  ---
+  duration_ms: 180.6844
+  type: 'test'
+  ...
+# Subtest: image MIME cannot make corrupt bytes a valid reference
+ok 16 - image MIME cannot make corrupt bytes a valid reference
+  ---
+  duration_ms: 12.2824
+  type: 'test'
+  ...
+# Subtest: foreign storage namespace is rejected before any network request
+ok 17 - foreign storage namespace is rejected before any network request
+  ---
+  duration_ms: 10.0591
+  type: 'test'
+  ...
+# Subtest: unconfigured filesystem paths cannot be read as assets
+ok 18 - unconfigured filesystem paths cannot be read as assets
+  ---
+  duration_ms: 2.1492
+  type: 'test'
+  ...
+# Subtest: canonical source matrix runs offline with decoded byte identity
+    # Subtest: absolute_url https://fixture.invalid/product.png
+    ok 1 - absolute_url https://fixture.invalid/product.png
+      ---
+      duration_ms: 108.7658
+      type: 'test'
+      ...
+    # Subtest: gateway_output /outputs/offline-fixture.png
+    ok 2 - gateway_output /outputs/offline-fixture.png
+      ---
+      duration_ms: 20.536
+      type: 'test'
+      ...
+    # Subtest: public_brand /brand/offline-fixture.png
+    ok 3 - public_brand /brand/offline-fixture.png
+      ---
+      duration_ms: 51.1953
+      type: 'test'
+      ...
+    # Subtest: public_logo /logos/offline-fixture.png
+    ok 4 - public_logo /logos/offline-fixture.png
+      ---
+      duration_ms: 26.127
+      type: 'test'
+      ...
+    # Subtest: gateway_output /api/media-proxy?file=offline-fixture.png
+    ok 5 - gateway_output /api/media-proxy?file=offline-fixture.png
+      ---
+      duration_ms: 20.8861
+      type: 'test'
+      ...
+    # Subtest: storage brand-assets
+    ok 6 - storage brand-assets
+      ---
+      duration_ms: 18.8076
+      type: 'test'
+      ...
+    # Subtest: storage creatives
+    ok 7 - storage creatives
+      ---
+      duration_ms: 28.6777
+      type: 'test'
+      ...
+    # Subtest: negative inputs and cross-tenant namespace
+    ok 8 - negative inputs and cross-tenant namespace
+      ---
+      duration_ms: 15.5042
+      type: 'test'
+      ...
+    # Subtest: explicit missing bucket cannot silently load another asset
+    ok 9 - explicit missing bucket cannot silently load another asset
+      ---
+      duration_ms: 1.711
+      type: 'test'
+      ...
+    # Subtest: nested output identity and symlink containment
+    ok 10 - nested output identity and symlink containment
+      ---
+      duration_ms: 63.1456
+      type: 'test'
+      ...
+    # Subtest: approved filesystem source rejects paths outside operator roots
+    ok 11 - approved filesystem source rejects paths outside operator roots
+      ---
+      duration_ms: 26.1557
+      type: 'test'
+      ...
+    1..11
+ok 19 - canonical source matrix runs offline with decoded byte identity
+  ---
+  duration_ms: 456.7833
+  type: 'test'
+  ...
+# Subtest: campaign handoff keeps selected SKU facts, offer, dates, tone and every contact
+ok 20 - campaign handoff keeps selected SKU facts, offer, dates, tone and every contact
+  ---
+  duration_ms: 3.6423
+  type: 'test'
+  ...
+# Subtest: missing fields add no fabricated offer, price, date, delivery or contact
+ok 21 - missing fields add no fabricated offer, price, date, delivery or contact
+  ---
+  duration_ms: 0.7474
+  type: 'test'
+  ...
+# Subtest: 1. Template selection: default to CAMPAIGN_POSTER and map styles correctly
+not ok 22 - 1. Template selection: default to CAMPAIGN_POSTER and map styles correctly
+  ---
+  duration_ms: 20.464
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\campaign-image-engine.test.ts:2:2584'
+  failureType: 'testCodeFailure'
+  error: |-
+    Expected values to be strictly equal:
+    + actual - expected
+
+    + 'CAMPAIGN_POSTER'
+    - 'PRODUCT_SHOWCASE'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'PRODUCT_SHOWCASE'
+  actual: 'CAMPAIGN_POSTER'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\src\lib\creative\campaign-image-engine.test.ts:69:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: 2. Campaign data shaping: strips Brand Kit meta labels and shapes verified facts
+ok 23 - 2. Campaign data shaping: strips Brand Kit meta labels and shapes verified facts
+  ---
+  duration_ms: 1.0983
+  type: 'test'
+  ...
+# Subtest: 3. Price hierarchy and discount handling: verified numbers only, no fabrication
+not ok 24 - 3. Price hierarchy and discount handling: verified numbers only, no fabrication
+  ---
+  duration_ms: 5.2078
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\campaign-image-engine.test.ts:2:4642'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Price hierarchy: 499 TL \(was 750 TL\)/. Input:
+
+    'Create ONE professional commercial campaign creative for WhatsApp / social ads.\n' +
+      'Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.\n' +
+      'Use case: WhatsApp kampanya (1:1).\n' +
+      'Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.\n' +
+      '- The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).\n' +
+      '- Authentic corporate logo placed with pristine clarity and clean contrast margins.\n' +
+      '- High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.\n' +
+      '- Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.\n' +
+      '- Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).\n' +
+      'Sector art direction (İnşaat & Yapı Malzemeleri): Grounded in authentic construction-site materiality—natural daylight, wooden pallets, raw concrete, and authentic masonry texture. Solid architectural typography; avoid generic red discount-flyer compositions.\n' +
+      'Text density guidance (Sales Campaign / Balanced): Display the mandatory commercial core (Headline, Price/Discount, CTA) with clear visual hierarchy. Secondary copy, paragraphs, and repetitive disclaimers are restricted to keep mobile readability clean.\n' +
+      'Brand name: Örnek Yapı.\n' +
+      'Sector: İnşaat Malzemeleri.\n' +
+      'Brand tone of voice: Güvenilir ve kurumsal\n' +
+      'MANDATORY BRAND KIT DISCIPLINE & COLOR ROLES:\n' +
+      '- Primary Brand Color (dark architectural charcoal black): Main headline typography, authoritative brand marks, and key visual structures.\n' +
+      '- Accent Color (vivid architectural crimson red): Reserved strictly for high-impact commercial conversion drivers: promotional price tag/highlight, discount badge, and the Call-to-Action (CTA).\n' +
+      '- PHYSICAL PRODUCT COLOR IMMUNITY: DO NOT recolor or repaint the authentic physical product casing/materials from the attached reference photo. The brand color palette applies exclusively to typography, price/discount highlights, CTA styling, and scene graphic composition — never alter the physical product colors.\n' +
+      'TYPOGRAPHY: Authoritative commercial typography matching Montserrat character. Bold, crisp kerning, mobile-first legibility.\n' +
+      'Authentic product and company logo references are attached.\n' +
+      'STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.\n' +
+      'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.\n' +
+      'Campaign brief from the advertiser: Yüksek kaliteli inşaat tuğlası toptan satış kampanyası\n' +
+      'Products:\n' +
+      'Product 1. name: Ürün. price: 499 TL (was 750 TL). offer: %33 İndirim\n' +
+      'Verified Commercial Core (Mandatory on Visual):\n' +
+      '- Mandatory Headline: "Projelerinize Güvenli Temeller"\n' +
+      '- Mandatory Campaign Price & Offer: 499 TL (was 750 TL) · Discount: %33\n' +
+      '- Mandatory Call-to-Action (CTA): Hemen Teklif Alın\n' +
+      'Supporting Details:\n' +
+      'Key verified selling point: Fabrikadan Doğrudan Sevkiyat · Yüksek Isı Yalıtımı\n' +
+      'Delivery terms: 3 gün içinde şantiyeye teslim\n' +
+      'Phone/WhatsApp: 0532 000 00 00 (Satış Hattı) · Instagram: @ornekfirma\n' +
+      'Website: https://ornek-firma.com\n' +
+      'COMMERCIAL CAMPAIGN MANDATE & COMPOSITION CONTRACT:\n' +
+      '1. NON-NEGOTIABLE CORE: The Headline, Price/Offer, and CTA are mandatory commercial pillars — they MUST appear legibly on the final creative and must not be omitted.\n' +
+      '2. BESPOKE AGENCY ART DIRECTION (ANTI-CANVA): Integrate the price and CTA naturally with bespoke agency art direction using the Brand Accent color. Avoid generic supermarket flyer stickers, avoid 3-badge vertical/horizontal icon stacks, and avoid bottom footer contact bars. Let the composition emerge dynamically from the product geometry and brand palette.\n' +
+      '3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.\n' +
+      'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.\n' +
+      'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    Create ONE professional commercial campaign creative for WhatsApp / social ads.
+    Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.
+    Use case: WhatsApp kampanya (1:1).
+    Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.
+    - The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).
+    - Authentic corporate logo placed with pristine clarity and clean contrast margins.
+    - High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.
+    - Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.
+    - Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).
+    Sector art direction (İnşaat & Yapı Malzemeleri): Grounded in authentic construction-site materiality—natural daylight, wooden pallets, raw concrete, and authentic masonry texture. Solid architectural typography; avoid generic red discount-flyer compositions.
+    Text density guidance (Sales Campaign / Balanced): Display the mandatory commercial core (Headline, Price/Discount, CTA) with clear visual hierarchy. Secondary copy, paragraphs, and repetitive disclaimers are restricted to keep mobile readability clean.
+    Brand name: Örnek Yapı.
+    Sector: İnşaat Malzemeleri.
+    Brand tone of voice: Güvenilir ve kurumsal
+    MANDATORY BRAND KIT DISCIPLINE & COLOR ROLES:
+    - Primary Brand Color (dark architectural charcoal black): Main headline typography, authoritative brand marks, and key visual structures.
+    - Accent Color (vivid architectural crimson red): Reserved strictly for high-impact commercial conversion drivers: promotional price tag/highlight, discount badge, and the Call-to-Action (CTA).
+    - PHYSICAL PRODUCT COLOR IMMUNITY: DO NOT recolor or repaint the authentic physical product casing/materials from the attached reference photo. The brand color palette applies exclusively to typography, price/discount highlights, CTA styling, and scene graphic composition — never alter the physical product colors.
+    TYPOGRAPHY: Authoritative commercial typography matching Montserrat character. Bold, crisp kerning, mobile-first legibility.
+    Authentic product and company logo references are attached.
+    STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.
+    STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.
+    Campaign brief from the advertiser: Yüksek kaliteli inşaat tuğlası toptan satış kampanyası
+    Products:
+    Product 1. name: Ürün. price: 499 TL (was 750 TL). offer: %33 İndirim
+    Verified Commercial Core (Mandatory on Visual):
+    - Mandatory Headline: "Projelerinize Güvenli Temeller"
+    - Mandatory Campaign Price & Offer: 499 TL (was 750 TL) · Discount: %33
+    - Mandatory Call-to-Action (CTA): Hemen Teklif Alın
+    Supporting Details:
+    Key verified selling point: Fabrikadan Doğrudan Sevkiyat · Yüksek Isı Yalıtımı
+    Delivery terms: 3 gün içinde şantiyeye teslim
+    Phone/WhatsApp: 0532 000 00 00 (Satış Hattı) · Instagram: @ornekfirma
+    Website: https://ornek-firma.com
+    COMMERCIAL CAMPAIGN MANDATE & COMPOSITION CONTRACT:
+    1. NON-NEGOTIABLE CORE: The Headline, Price/Offer, and CTA are mandatory commercial pillars — they MUST appear legibly on the final creative and must not be omitted.
+    2. BESPOKE AGENCY ART DIRECTION (ANTI-CANVA): Integrate the price and CTA naturally with bespoke agency art direction using the Brand Accent color. Avoid generic supermarket flyer stickers, avoid 3-badge vertical/horizontal icon stacks, and avoid bottom footer contact bars. Let the composition emerge dynamically from the product geometry and brand palette.
+    3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.
+    Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.
+    Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\src\lib\creative\campaign-image-engine.test.ts:123:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 4. Quantity tiers & packaging: preserves boxContents and tiers
+ok 25 - 4. Quantity tiers & packaging: preserves boxContents and tiers
+  ---
+  duration_ms: 1.0651
+  type: 'test'
+  ...
+# Subtest: 5. No invented facts: strictly omits unprovided delivery, dates, or badges
+ok 26 - 5. No invented facts: strictly omits unprovided delivery, dates, or badges
+  ---
+  duration_ms: 0.8766
+  type: 'test'
+  ...
+# Subtest: 6. Reference Contract: historical d350985 phrasing for product and logo
+not ok 27 - 6. Reference Contract: historical d350985 phrasing for product and logo
+  ---
+  duration_ms: 2.3446
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\campaign-image-engine.test.ts:2:6971'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /A real brand logo image is attached\. Place it as a small clean logo\. Do NOT redraw, restyle or invent a new logo\. Do not distort it\./. Input:
+
+    'Create ONE professional commercial campaign creative for WhatsApp / social ads.\n' +
+      'Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.\n' +
+      'Use case: WhatsApp kampanya (1:1).\n' +
+      'Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.\n' +
+      '- The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).\n' +
+      '- Authentic corporate logo placed with pristine clarity and clean contrast margins.\n' +
+      '- High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.\n' +
+      '- Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.\n' +
+      '- Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).\n' +
+      'Sector art direction (İnşaat & Yapı Malzemeleri): Grounded in authentic construction-site materiality—natural daylight, wooden pallets, raw concrete, and authentic masonry texture. Solid architectural typography; avoid generic red discount-flyer compositions.\n' +
+      'Text density guidance (Sales Campaign / Balanced): Display the mandatory commercial core (Headline, Price/Discount, CTA) with clear visual hierarchy. Secondary copy, paragraphs, and repetitive disclaimers are restricted to keep mobile readability clean.\n' +
+      'Brand name: Örnek Yapı.\n' +
+      'Sector: İnşaat Malzemeleri.\n' +
+      'Brand tone of voice: Güvenilir ve kurumsal\n' +
+      'MANDATORY BRAND KIT DISCIPLINE & COLOR ROLES:\n' +
+      '- Primary Brand Color (dark architectural charcoal black): Main headline typography, authoritative brand marks, and key visual structures.\n' +
+      '- Accent Color (vivid architectural crimson red): Reserved strictly for high-impact commercial conversion drivers: promotional price tag/highlight, discount badge, and the Call-to-Action (CTA).\n' +
+      '- PHYSICAL PRODUCT COLOR IMMUNITY: DO NOT recolor or repaint the authentic physical product casing/materials from the attached reference photo. The brand color palette applies exclusively to typography, price/discount highlights, CTA styling, and scene graphic composition — never alter the physical product colors.\n' +
+      'TYPOGRAPHY: Authoritative commercial typography matching Montserrat character. Bold, crisp kerning, mobile-first legibility.\n' +
+      'Authentic product and company logo references are attached.\n' +
+      'STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.\n' +
+      'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.\n' +
+      'Campaign brief from the advertiser: Yüksek kaliteli inşaat tuğlası toptan satış kampanyası\n' +
+      'Products:\n' +
+      'Product 1. name: Klinker Tuğla. description: Yüksek mukavemetli cephe tuğlası. box contents: Palette 480 adet. price: 18.50 TL (was 24.00 TL). offer: %25 İndirim. extra: Minimum 5 palet sipariş\n' +
+      'Verified Commercial Core (Mandatory on Visual):\n' +
+      '- Mandatory Headline: "Projelerinize Güvenli Temeller"\n' +
+      '- Mandatory Campaign Price & Offer: 18.50 TL (was 24.00 TL) · Discount: %25\n' +
+      '- Mandatory Call-to-Action (CTA): Hemen Teklif Alın\n' +
+      'Supporting Details:\n' +
+      'Key verified selling point: Fabrikadan Doğrudan Sevkiyat · Yüksek Isı Yalıtımı\n' +
+      'Delivery terms: 3 gün içinde şantiyeye teslim\n' +
+      'Phone/WhatsApp: 0532 000 00 00 (Satış Hattı) · Instagram: @ornekfirma\n' +
+      'Website: https://ornek-firma.com\n' +
+      'COMMERCIAL CAMPAIGN MANDATE & COMPOSITION CONTRACT:\n' +
+      '1. NON-NEGOTIABLE CORE: The Headline, Price/Offer, and CTA are mandatory commercial pillars — they MUST appear legibly on the final creative and must not be omitted.\n' +
+      '2. BESPOKE AGENCY ART DIRECTION (ANTI-CANVA): Integrate the price and CTA naturally with bespoke agency art direction using the Brand Accent color. Avoid generic supermarket flyer stickers, avoid 3-badge vertical/horizontal icon stacks, and avoid bottom footer contact bars. Let the composition emerge dynamically from the product geometry and brand palette.\n' +
+      '3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.\n' +
+      'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.\n' +
+      'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    Create ONE professional commercial campaign creative for WhatsApp / social ads.
+    Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.
+    Use case: WhatsApp kampanya (1:1).
+    Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.
+    - The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).
+    - Authentic corporate logo placed with pristine clarity and clean contrast margins.
+    - High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.
+    - Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.
+    - Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).
+    Sector art direction (İnşaat & Yapı Malzemeleri): Grounded in authentic construction-site materiality—natural daylight, wooden pallets, raw concrete, and authentic masonry texture. Solid architectural typography; avoid generic red discount-flyer compositions.
+    Text density guidance (Sales Campaign / Balanced): Display the mandatory commercial core (Headline, Price/Discount, CTA) with clear visual hierarchy. Secondary copy, paragraphs, and repetitive disclaimers are restricted to keep mobile readability clean.
+    Brand name: Örnek Yapı.
+    Sector: İnşaat Malzemeleri.
+    Brand tone of voice: Güvenilir ve kurumsal
+    MANDATORY BRAND KIT DISCIPLINE & COLOR ROLES:
+    - Primary Brand Color (dark architectural charcoal black): Main headline typography, authoritative brand marks, and key visual structures.
+    - Accent Color (vivid architectural crimson red): Reserved strictly for high-impact commercial conversion drivers: promotional price tag/highlight, discount badge, and the Call-to-Action (CTA).
+    - PHYSICAL PRODUCT COLOR IMMUNITY: DO NOT recolor or repaint the authentic physical product casing/materials from the attached reference photo. The brand color palette applies exclusively to typography, price/discount highlights, CTA styling, and scene graphic composition — never alter the physical product colors.
+    TYPOGRAPHY: Authoritative commercial typography matching Montserrat character. Bold, crisp kerning, mobile-first legibility.
+    Authentic product and company logo references are attached.
+    STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.
+    STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.
+    Campaign brief from the advertiser: Yüksek kaliteli inşaat tuğlası toptan satış kampanyası
+    Products:
+    Product 1. name: Klinker Tuğla. description: Yüksek mukavemetli cephe tuğlası. box contents: Palette 480 adet. price: 18.50 TL (was 24.00 TL). offer: %25 İndirim. extra: Minimum 5 palet sipariş
+    Verified Commercial Core (Mandatory on Visual):
+    - Mandatory Headline: "Projelerinize Güvenli Temeller"
+    - Mandatory Campaign Price & Offer: 18.50 TL (was 24.00 TL) · Discount: %25
+    - Mandatory Call-to-Action (CTA): Hemen Teklif Alın
+    Supporting Details:
+    Key verified selling point: Fabrikadan Doğrudan Sevkiyat · Yüksek Isı Yalıtımı
+    Delivery terms: 3 gün içinde şantiyeye teslim
+    Phone/WhatsApp: 0532 000 00 00 (Satış Hattı) · Instagram: @ornekfirma
+    Website: https://ornek-firma.com
+    COMMERCIAL CAMPAIGN MANDATE & COMPOSITION CONTRACT:
+    1. NON-NEGOTIABLE CORE: The Headline, Price/Offer, and CTA are mandatory commercial pillars — they MUST appear legibly on the final creative and must not be omitted.
+    2. BESPOKE AGENCY ART DIRECTION (ANTI-CANVA): Integrate the price and CTA naturally with bespoke agency art direction using the Brand Accent color. Avoid generic supermarket flyer stickers, avoid 3-badge vertical/horizontal icon stacks, and avoid bottom footer contact bars. Let the composition emerge dynamically from the product geometry and brand palette.
+    3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.
+    Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.
+    Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\src\lib\creative\campaign-image-engine.test.ts:198:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 7. No brand-specific runtime hardcodes: works for unseen arbitrary business
+not ok 28 - 7. No brand-specific runtime hardcodes: works for unseen arbitrary business
+  ---
+  duration_ms: 2.6895
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\campaign-image-engine.test.ts:2:7921'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /Campaign headline: "Yüksek Devirde Kesintisiz Güç"/. Input:
+
+    'Create ONE professional commercial campaign creative for WhatsApp / social ads.\n' +
+      'Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.\n' +
+      'Use case: WhatsApp kampanya (1:1).\n' +
+      'Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.\n' +
+      '- The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).\n' +
+      '- Authentic corporate logo placed with pristine clarity and clean contrast margins.\n' +
+      '- High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.\n' +
+      '- Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.\n' +
+      '- Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).\n' +
+      'Sector art direction (Ağır Sanayi & Endüstri): Precision engineering aesthetic highlighting metallic product detail, brushed steel reflections, and realistic workshop or factory environment. Crisp technical typography and engineering clarity; avoid simply recoloring a generic template.\n' +
+      'Text density guidance (Sales Campaign / Balanced): Display the mandatory commercial core (Headline, Price/Discount, CTA) with clear visual hierarchy. Secondary copy, paragraphs, and repetitive disclaimers are restricted to keep mobile readability clean.\n' +
+      'Brand name: Vortex Rulman A.Ş..\n' +
+      'Sector: Endüstriyel Yedek Parça.\n' +
+      'Brand tone of voice: Teknik ve güvenilir\n' +
+      'MANDATORY BRAND KIT DISCIPLINE & COLOR ROLES:\n' +
+      '- Primary Brand Color (deep navy blue): Main headline typography, authoritative brand marks, and key visual structures.\n' +
+      '- Accent Color (optic cyan / bright turquoise): Reserved strictly for high-impact commercial conversion drivers: promotional price tag/highlight, discount badge, and the Call-to-Action (CTA).\n' +
+      '- PHYSICAL PRODUCT COLOR IMMUNITY: DO NOT recolor or repaint the authentic physical product casing/materials from the attached reference photo. The brand color palette applies exclusively to typography, price/discount highlights, CTA styling, and scene graphic composition — never alter the physical product colors.\n' +
+      'TYPOGRAPHY: Authoritative commercial typography matching Inter character. Bold, crisp kerning, mobile-first legibility.\n' +
+      'Authentic product and company logo references are attached.\n' +
+      'STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.\n' +
+      'STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.\n' +
+      'Campaign brief from the advertiser: Sanayi tipi konik makaralı rulmanlarda fabrika teslim kampanya\n' +
+      'Products:\n' +
+      'Product 1. name: Konik Makaralı Rulman 32210. description: Ağır yük dayanımlı çelik konik rulman. box contents: 1 Adet Orijinal Kutulu. price: 850 TL (was 1.050 TL). offer: Toptan alımlarda %20 indirim\n' +
+      'Verified Commercial Core (Mandatory on Visual):\n' +
+      '- Mandatory Headline: "Yüksek Devirde Kesintisiz Güç"\n' +
+      '- Mandatory Campaign Price & Offer: 850 TL (was 1.050 TL) · Discount: %20\n' +
+      '- Mandatory Call-to-Action (CTA): Hemen Teklif Alın\n' +
+      'Supporting Details:\n' +
+      'Key verified selling point: Fabrikadan Doğrudan Sevkiyat · Yüksek Isı Yalıtımı\n' +
+      'Delivery terms: 3 gün içinde şantiyeye teslim\n' +
+      'Phone/WhatsApp: 0532 000 00 00 (Satış Hattı) · Instagram: @ornekfirma\n' +
+      'Website: https://ornek-firma.com\n' +
+      'COMMERCIAL CAMPAIGN MANDATE & COMPOSITION CONTRACT:\n' +
+      '1. NON-NEGOTIABLE CORE: The Headline, Price/Offer, and CTA are mandatory commercial pillars — they MUST appear legibly on the final creative and must not be omitted.\n' +
+      '2. BESPOKE AGENCY ART DIRECTION (ANTI-CANVA): Integrate the price and CTA naturally with bespoke agency art direction using the Brand Accent color. Avoid generic supermarket flyer stickers, avoid 3-badge vertical/horizontal icon stacks, and avoid bottom footer contact bars. Let the composition emerge dynamically from the product geometry and brand palette.\n' +
+      '3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.\n' +
+      'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.\n' +
+      'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.'
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    Create ONE professional commercial campaign creative for WhatsApp / social ads.
+    Turkish audience. High quality, sharp, mobile-first, no watermarks, no stock-photo logos.
+    Use case: WhatsApp kampanya (1:1).
+    Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.
+    - The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).
+    - Authentic corporate logo placed with pristine clarity and clean contrast margins.
+    - High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.
+    - Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.
+    - Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).
+    Sector art direction (Ağır Sanayi & Endüstri): Precision engineering aesthetic highlighting metallic product detail, brushed steel reflections, and realistic workshop or factory environment. Crisp technical typography and engineering clarity; avoid simply recoloring a generic template.
+    Text density guidance (Sales Campaign / Balanced): Display the mandatory commercial core (Headline, Price/Discount, CTA) with clear visual hierarchy. Secondary copy, paragraphs, and repetitive disclaimers are restricted to keep mobile readability clean.
+    Brand name: Vortex Rulman A.Ş..
+    Sector: Endüstriyel Yedek Parça.
+    Brand tone of voice: Teknik ve güvenilir
+    MANDATORY BRAND KIT DISCIPLINE & COLOR ROLES:
+    - Primary Brand Color (deep navy blue): Main headline typography, authoritative brand marks, and key visual structures.
+    - Accent Color (optic cyan / bright turquoise): Reserved strictly for high-impact commercial conversion drivers: promotional price tag/highlight, discount badge, and the Call-to-Action (CTA).
+    - PHYSICAL PRODUCT COLOR IMMUNITY: DO NOT recolor or repaint the authentic physical product casing/materials from the attached reference photo. The brand color palette applies exclusively to typography, price/discount highlights, CTA styling, and scene graphic composition — never alter the physical product colors.
+    TYPOGRAPHY: Authoritative commercial typography matching Inter character. Bold, crisp kerning, mobile-first legibility.
+    Authentic product and company logo references are attached.
+    STRICT LOGO FIDELITY: A real company logo image is attached as a reference. Place that exact logo cleanly without any modification, restyling, or variation. Keep its exact proportions, geometry, emblem shape, and brand colors. NEVER invent a different logo, NEVER stylize or morph the logo, and NEVER replace the logo with typed text.
+    STRICT PRODUCT FIDELITY: The real product photo is provided as a reference. You must preserve the real physical product exactly as shown: exact shape, casing, components, buttons, materials, and colors. Do NOT mutate the product, do NOT invent fantasy product variations, do NOT change the product design, and do NOT replace the product with a generic item.
+    Campaign brief from the advertiser: Sanayi tipi konik makaralı rulmanlarda fabrika teslim kampanya
+    Products:
+    Product 1. name: Konik Makaralı Rulman 32210. description: Ağır yük dayanımlı çelik konik rulman. box contents: 1 Adet Orijinal Kutulu. price: 850 TL (was 1.050 TL). offer: Toptan alımlarda %20 indirim
+    Verified Commercial Core (Mandatory on Visual):
+    - Mandatory Headline: "Yüksek Devirde Kesintisiz Güç"
+    - Mandatory Campaign Price & Offer: 850 TL (was 1.050 TL) · Discount: %20
+    - Mandatory Call-to-Action (CTA): Hemen Teklif Alın
+    Supporting Details:
+    Key verified selling point: Fabrikadan Doğrudan Sevkiyat · Yüksek Isı Yalıtımı
+    Delivery terms: 3 gün içinde şantiyeye teslim
+    Phone/WhatsApp: 0532 000 00 00 (Satış Hattı) · Instagram: @ornekfirma
+    Website: https://ornek-firma.com
+    COMMERCIAL CAMPAIGN MANDATE & COMPOSITION CONTRACT:
+    1. NON-NEGOTIABLE CORE: The Headline, Price/Offer, and CTA are mandatory commercial pillars — they MUST appear legibly on the final creative and must not be omitted.
+    2. BESPOKE AGENCY ART DIRECTION (ANTI-CANVA): Integrate the price and CTA naturally with bespoke agency art direction using the Brand Accent color. Avoid generic supermarket flyer stickers, avoid 3-badge vertical/horizontal icon stacks, and avoid bottom footer contact bars. Let the composition emerge dynamically from the product geometry and brand palette.
+    3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.
+    Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.
+    Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (C:\Users\TP2\Documents\whatsapp-full-e2e-v1\apps\customer\src\lib\creative\campaign-image-engine.test.ts:248:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: 8. Separate AI WhatsApp Campaign Message: factual and conversational pairing
+ok 29 - 8. Separate AI WhatsApp Campaign Message: factual and conversational pairing
+  ---
+  duration_ms: 1.1484
+  type: 'test'
+  ...
+# Subtest: 1. Creative Archetypes Library contains exactly 23 curated commercial archetypes with real grammar
+ok 30 - 1. Creative Archetypes Library contains exactly 23 curated commercial archetypes with real grammar
+  ---
+  duration_ms: 5.0804
+  type: 'test'
+  ...
+# Subtest: 2. Sector DNA engine correctly classifies real commercial contexts without hardcoded company names
+ok 31 - 2. Sector DNA engine correctly classifies real commercial contexts without hardcoded company names
+  ---
+  duration_ms: 2.8586
+  type: 'test'
+  ...
+# Subtest: 3. Creative Memory prevents consecutive repetitive archetypes and ensures campaign variation
+ok 32 - 3. Creative Memory prevents consecutive repetitive archetypes and ensures campaign variation
+  ---
+  duration_ms: 22.7172
+  type: 'test'
+  ...
+# Subtest: 4. Art Direction Plan contains full designer-grade specifications and rejects generic concepts
+ok 33 - 4. Art Direction Plan contains full designer-grade specifications and rejects generic concepts
+  ---
+  duration_ms: 11.635
+  type: 'test'
+  ...
+# Subtest: 5. Prompt Enhancer enriches buildCreativePrompt while preserving 100% of working fields
+ok 34 - 5. Prompt Enhancer enriches buildCreativePrompt while preserving 100% of working fields
+  ---
+  duration_ms: 7.1042
+  type: 'test'
+  ...
+# Subtest: 6. Designer Graphic Layer builds appropriate SVG accents per archetype
+ok 35 - 6. Designer Graphic Layer builds appropriate SVG accents per archetype
+  ---
+  duration_ms: 1.2827
+  type: 'test'
+  ...
+# Subtest: 7. High Quality Best-of-2 generates TWO genuinely contrasting archetypes
+ok 36 - 7. High Quality Best-of-2 generates TWO genuinely contrasting archetypes
+  ---
+  duration_ms: 5.3908
+  type: 'test'
+  ...
+# Subtest: 8. Lightweight visual advisory evaluator benchmarks sharpness and contrast in <50ms without GPU
+ok 37 - 8. Lightweight visual advisory evaluator benchmarks sharpness and contrast in <50ms without GPU
+  ---
+  duration_ms: 134.2085
+  type: 'test'
+  ...
+# Subtest: 9. Commercial Poster Grammar V1 contains all 6 layout grammars with generic auto-routing
+ok 38 - 9. Commercial Poster Grammar V1 contains all 6 layout grammars with generic auto-routing
+  ---
+  duration_ms: 1.8966
+  type: 'test'
+  ...
+# Subtest: 10. Commercial Grammar controls layout hierarchy while Brand Kit strictly controls visual identity
+ok 39 - 10. Commercial Grammar controls layout hierarchy while Brand Kit strictly controls visual identity
+  ---
+  duration_ms: 3.9279
+  type: 'test'
+  ...
+# Subtest: 11. Legacy Simple prompt philosophy produces clean, short, factual prompt without micromanaging composition
+ok 40 - 11. Legacy Simple prompt philosophy produces clean, short, factual prompt without micromanaging composition
+  ---
+  duration_ms: 6.7557
+  type: 'test'
+  ...
+# Subtest: matching tenant and catalog product are both required before restoring draft copy
+ok 41 - matching tenant and catalog product are both required before restoring draft copy
+  ---
+  duration_ms: 3.0106
+  type: 'test'
+  ...
+# Subtest: corrupt browser storage cannot become an owned draft
+ok 42 - corrupt browser storage cannot become an owned draft
+  ---
+  duration_ms: 0.4564
+  type: 'test'
+  ...
+# Subtest: real materialization failure does not disclose internal source or tenant to customer
+ok 43 - real materialization failure does not disclose internal source or tenant to customer
+  ---
+  duration_ms: 4.0471
+  type: 'test'
+  ...
+# Subtest: unknown provider exception is never rendered verbatim
+ok 44 - unknown provider exception is never rendered verbatim
+  ---
+  duration_ms: 0.8159
+  type: 'test'
+  ...
+# Subtest: identical product/logo gives actionable Turkish message
+ok 45 - identical product/logo gives actionable Turkish message
+  ---
+  duration_ms: 0.8786
+  type: 'test'
+  ...
+# Subtest: clean library requires owned decoded stored image; status alone cannot publish
+ok 46 - clean library requires owned decoded stored image; status alone cannot publish
+  ---
+  duration_ms: 5.6796
+  type: 'test'
+  ...
+# Subtest: unreviewed V3 bytes remain hidden; review of another SHA cannot release them
+ok 47 - unreviewed V3 bytes remain hidden; review of another SHA cannot release them
+  ---
+  duration_ms: 1.0854
+  type: 'test'
+  ...
+# Subtest: legacy MP4 and missing output state fail closed; approved owned output passes
+ok 48 - legacy MP4 and missing output state fail closed; approved owned output passes
+  ---
+  duration_ms: 0.6213
+  type: 'test'
+  ...
+# Subtest: logo and product permit generation
+ok 49 - logo and product permit generation
+  ---
+  duration_ms: 2.7265
+  type: 'test'
+  ...
+# Subtest: logo disabled or missing is independently rejected
+ok 50 - logo disabled or missing is independently rejected
+  ---
+  duration_ms: 4.4674
+  type: 'test'
+  ...
+# Subtest: product missing without valid base is independently rejected
+ok 51 - product missing without valid base is independently rejected
+  ---
+  duration_ms: 0.6621
+  type: 'test'
+  ...
+# Subtest: verified derivative base satisfies reference but never bypasses logo
+ok 52 - verified derivative base satisfies reference but never bypasses logo
+  ---
+  duration_ms: 0.6712
+  type: 'test'
+  ...
+# Subtest: lost response and reload reuse identity; changed draft and tenant get a new identity
+ok 53 - lost response and reload reuse identity; changed draft and tenant get a new identity
+  ---
+  duration_ms: 5.3592
+  type: 'test'
+  ...
+# Subtest: blocked storage retains identity in memory and corrupt storage cannot supply a request ID
+ok 54 - blocked storage retains identity in memory and corrupt storage cannot supply a request ID
+  ---
+  duration_ms: 2.2792
+  type: 'test'
+  ...
+# node:internal/modules/cjs/loader:1383
+#   const err = new Error(message);
+#               ^
+# Error: Cannot find module '@/lib/ai/text'
+# Require stack:
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\v2\\ai-planner.ts
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\v2\\ai-planner.test.ts
+#     at node:internal/modules/cjs/loader:1383:15
+#     at j._resolveFilename (file:///C:/Users/TP2/Documents/whatsapp/node_modules/tsx/dist/register-SoqaU4rg.mjs:2:17957)
+#     at nextResolveSimple (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1006)
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4959
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4261
+#     at resolveTsPaths (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:759)
+#     at Function._resolveFilename (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1199)
+#     at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+#     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+#     at Function._load (node:internal/modules/cjs/loader:1192:37) {
+#   code: 'MODULE_NOT_FOUND',
+#   requireStack: [
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\v2\\\\ai-planner.ts',
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\v2\\\\ai-planner.test.ts'
+#   ]
+# }
+# Node.js v22.20.0
+# Subtest: apps\\customer\\src\\lib\\creative\\v2\\ai-planner.test.ts
+not ok 17 - apps\\customer\\src\\lib\\creative\\v2\\ai-planner.test.ts
+  ---
+  duration_ms: 1687.2866
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\v2\\ai-planner.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# node:internal/modules/cjs/loader:1383
+#   const err = new Error(message);
+#               ^
+# Error: Cannot find module '@/lib/video-voiceover-contract'
+# Require stack:
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\v2\\creative-studio-v2.test.ts
+#     at node:internal/modules/cjs/loader:1383:15
+#     at j._resolveFilename (file:///C:/Users/TP2/Documents/whatsapp/node_modules/tsx/dist/register-SoqaU4rg.mjs:2:17957)
+#     at nextResolveSimple (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1006)
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4959
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4261
+#     at resolveTsPaths (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:759)
+#     at Function._resolveFilename (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1199)
+#     at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+#     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+#     at Function._load (node:internal/modules/cjs/loader:1192:37) {
+#   code: 'MODULE_NOT_FOUND',
+#   requireStack: [
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\v2\\\\creative-studio-v2.test.ts'
+#   ]
+# }
+# Node.js v22.20.0
+# Subtest: apps\\customer\\src\\lib\\creative\\v2\\creative-studio-v2.test.ts
+not ok 18 - apps\\customer\\src\\lib\\creative\\v2\\creative-studio-v2.test.ts
+  ---
+  duration_ms: 2062.571
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\v2\\creative-studio-v2.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: current saved draft restores campaign objective and nested commerce copy
+ok 57 - current saved draft restores campaign objective and nested commerce copy
+  ---
+  duration_ms: 5.1821
+  type: 'test'
+  ...
+# Subtest: explicit cleared copy stays cleared instead of resurrecting legacy product extras
+ok 58 - explicit cleared copy stays cleared instead of resurrecting legacy product extras
+  ---
+  duration_ms: 0.7439
+  type: 'test'
+  ...
+# Subtest: malformed nested copy cannot enter restored commercial values
+ok 59 - malformed nested copy cannot enter restored commercial values
+  ---
+  duration_ms: 0.6473
+  type: 'test'
+  ...
+# Subtest: Deterministic UUID generation produces canonical RFC-4122 v5 UUID format for any org+requestKey
+ok 60 - Deterministic UUID generation produces canonical RFC-4122 v5 UUID format for any org+requestKey
+  ---
+  duration_ms: 3.101
+  type: 'test'
+  ...
+# Subtest: PostgreSQL Primary Key Engine Simulation: concurrent simultaneous inserts resolve to single winner and 23505 handler
+ok 61 - PostgreSQL Primary Key Engine Simulation: concurrent simultaneous inserts resolve to single winner and 23505 handler
+  ---
+  duration_ms: 1.8582
+  type: 'test'
+  ...
+# Subtest: DeterministicImageCompositor renders valid target dimensions, hashes, and Turkish text
+ok 62 - DeterministicImageCompositor renders valid target dimensions, hashes, and Turkish text
+  ---
+  duration_ms: 624.7946
+  type: 'test'
+  ...
+# Subtest: DeterministicImageCompositor supports 9:16 and 4:5 ratios without logo
+ok 63 - DeterministicImageCompositor supports 9:16 and 4:5 ratios without logo
+  ---
+  duration_ms: 601.2749
+  type: 'test'
+  ...
+# node:internal/modules/cjs/loader:1383
+#   const err = new Error(message);
+#               ^
+# Error: Cannot find module '@/lib/ai/text'
+# Require stack:
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\v2\\ai-planner.ts
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\v2\\wizard-v2.test.ts
+#     at node:internal/modules/cjs/loader:1383:15
+#     at j._resolveFilename (file:///C:/Users/TP2/Documents/whatsapp/node_modules/tsx/dist/register-SoqaU4rg.mjs:2:17957)
+#     at nextResolveSimple (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1006)
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4959
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4261
+#     at resolveTsPaths (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:759)
+#     at Function._resolveFilename (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1199)
+#     at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+#     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+#     at Function._load (node:internal/modules/cjs/loader:1192:37) {
+#   code: 'MODULE_NOT_FOUND',
+#   requireStack: [
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\v2\\\\ai-planner.ts',
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\v2\\\\wizard-v2.test.ts'
+#   ]
+# }
+# Node.js v22.20.0
+# Subtest: apps\\customer\\src\\lib\\creative\\v2\\wizard-v2.test.ts
+not ok 22 - apps\\customer\\src\\lib\\creative\\v2\\wizard-v2.test.ts
+  ---
+  duration_ms: 1790.7032
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\v2\\wizard-v2.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: variation preserves commercial context without copying output or submission state
+ok 65 - variation preserves commercial context without copying output or submission state
+  ---
+  duration_ms: 9.136
+  type: 'test'
+  ...
+# Subtest: explicit empty and null edits override parent facts
+ok 66 - explicit empty and null edits override parent facts
+  ---
+  duration_ms: 0.6744
+  type: 'test'
+  ...
+# Subtest: Vercel-local static reference becomes an absolute source for the production worker
+ok 67 - Vercel-local static reference becomes an absolute source for the production worker
+  ---
+  duration_ms: 3.8406
+  type: 'test'
+  ...
+# Subtest: tenant storage source remains unchanged
+ok 68 - tenant storage source remains unchanged
+  ---
+  duration_ms: 0.662
+  type: 'test'
+  ...
+# Subtest: different URLs carrying identical logo/product bytes fail before a job is published
+ok 69 - different URLs carrying identical logo/product bytes fail before a job is published
+  ---
+  duration_ms: 1.945
+  type: 'test'
+  ...
+# Subtest: video snapshot retains canonical SKU, selected kit and supplied commercial fields for campaign reuse
+ok 70 - video snapshot retains canonical SKU, selected kit and supplied commercial fields for campaign reuse
+  ---
+  duration_ms: 21.3431
+  type: 'test'
+  ...
+# node:internal/modules/cjs/loader:1383
+#   const err = new Error(message);
+#               ^
+# Error: Cannot find module '@/lib/media-url'
+# Require stack:
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\video-catalog-references.ts
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\video-catalog-references.test.ts
+#     at node:internal/modules/cjs/loader:1383:15
+#     at j._resolveFilename (file:///C:/Users/TP2/Documents/whatsapp/node_modules/tsx/dist/register-SoqaU4rg.mjs:2:17957)
+#     at nextResolveSimple (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1006)
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4959
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4261
+#     at resolveTsPaths (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:759)
+#     at Function._resolveFilename (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1199)
+#     at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+#     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+#     at Function._load (node:internal/modules/cjs/loader:1192:37) {
+#   code: 'MODULE_NOT_FOUND',
+#   requireStack: [
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\video-catalog-references.ts',
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\video-catalog-references.test.ts'
+#   ]
+# }
+# Node.js v22.20.0
+# Subtest: apps\\customer\\src\\lib\\creative\\video-catalog-references.test.ts
+not ok 26 - apps\\customer\\src\\lib\\creative\\video-catalog-references.test.ts
+  ---
+  duration_ms: 1800.3405
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\video-catalog-references.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: delivery uses persisted nested final path and rejects traversal or guessed identities
+ok 72 - delivery uses persisted nested final path and rejects traversal or guessed identities
+  ---
+  duration_ms: 2.9356
+  type: 'test'
+  ...
+# Subtest: entire file SHA and byte count required even for a byte-range request
+ok 73 - entire file SHA and byte count required even for a byte-range request
+  ---
+  duration_ms: 82.7288
+  type: 'test'
+  ...
+# node:internal/modules/cjs/loader:1383
+#   const err = new Error(message);
+#               ^
+# Error: Cannot find module '@/lib/video-wizard-contract'
+# Require stack:
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\video-job-service.ts
+# - C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\video-job-duplicate-reference.test.ts
+#     at node:internal/modules/cjs/loader:1383:15
+#     at j._resolveFilename (file:///C:/Users/TP2/Documents/whatsapp/node_modules/tsx/dist/register-SoqaU4rg.mjs:2:17957)
+#     at nextResolveSimple (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1006)
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4959
+#     at C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:9:4261
+#     at resolveTsPaths (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:759)
+#     at Function._resolveFilename (C:\\Users\\TP2\\Documents\\whatsapp\\node_modules\\tsx\\dist\\register-OY9cqBEN.cjs:10:1199)
+#     at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+#     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+#     at Function._load (node:internal/modules/cjs/loader:1192:37) {
+#   code: 'MODULE_NOT_FOUND',
+#   requireStack: [
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\video-job-service.ts',
+#     'C:\\\\Users\\\\TP2\\\\Documents\\\\whatsapp-full-e2e-v1\\\\apps\\\\customer\\\\src\\\\lib\\\\creative\\\\video-job-duplicate-reference.test.ts'
+#   ]
+# }
+# Node.js v22.20.0
+# Subtest: apps\\customer\\src\\lib\\creative\\video-job-duplicate-reference.test.ts
+not ok 28 - apps\\customer\\src\\lib\\creative\\video-job-duplicate-reference.test.ts
+  ---
+  duration_ms: 2164.0221
+  type: 'test'
+  location: 'C:\\Users\\TP2\\Documents\\whatsapp-full-e2e-v1\\apps\\customer\\src\\lib\\creative\\video-job-duplicate-reference.test.ts:1:1'
+  failureType: 'testCodeFailure'
+  exitCode: 1
+  signal: ~
+  error: 'test failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: library replaces stale ready with owned output approval and actual duration
+ok 75 - library replaces stale ready with owned output approval and actual duration
+  ---
+  duration_ms: 11.6879
+  type: 'test'
+  ...
+# Subtest: technical validation alone never releases a video awaiting editorial review
+ok 76 - technical validation alone never releases a video awaiting editorial review
+  ---
+  duration_ms: 5.3255
+  type: 'test'
+  ...
+# Subtest: review preview requires an owned validated review output and never grants approval
+ok 77 - review preview requires an owned validated review output and never grants approval
+  ---
+  duration_ms: 1.4617
+  type: 'test'
+  ...
+1..77
+# tests 96
+# suites 0
+# pass 87
+# fail 9
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9570.527

@@ -1,0 +1,682 @@
+TAP version 13
+# Subtest: external aliases share canonical leases and never fall back to another account
+ok 1 - external aliases share canonical leases and never fall back to another account
+  ---
+  duration_ms: 39.598
+  type: 'test'
+  ...
+# Subtest: 1. cold browser incoming job boots, validates and executes only after READY
+ok 2 - 1. cold browser incoming job boots, validates and executes only after READY
+  ---
+  duration_ms: 11.365
+  type: 'test'
+  ...
+# Subtest: failed video browser shutdown retains process ownership and future exit tracking
+ok 3 - failed video browser shutdown retains process ownership and future exit tracking
+  ---
+  duration_ms: 7.4753
+  type: 'test'
+  ...
+# Subtest: 2. warm browser incoming job reuses browser and canonical tab
+ok 4 - 2. warm browser incoming job reuses browser and canonical tab
+  ---
+  duration_ms: 2.5988
+  type: 'test'
+  ...
+# Subtest: 3. same account + two jobs -> second waits
+ok 5 - 3. same account + two jobs -> second waits
+  ---
+  duration_ms: 45.9
+  type: 'test'
+  ...
+# Subtest: 4. two different accounts -> real parallel scheduling
+ok 6 - 4. two different accounts -> real parallel scheduling
+  ---
+  duration_ms: 49.1076
+  type: 'test'
+  ...
+# Subtest: 5. third tab -> rejected or safe orphan cleaned
+ok 7 - 5. third tab -> rejected or safe orphan cleaned
+  ---
+  duration_ms: 28.0064
+  type: 'test'
+  ...
+# Subtest: 6. active generation -> TTL cannot close browser
+ok 8 - 6. active generation -> TTL cannot close browser
+  ---
+  duration_ms: 5.3469
+  type: 'test'
+  ...
+# Subtest: 7. active download -> reaper cannot close browser
+ok 9 - 7. active download -> reaper cannot close browser
+  ---
+  duration_ms: 7.8144
+  type: 'test'
+  ...
+# Subtest: 8. idle 20 minutes -> graceful Browser.close
+ok 10 - 8. idle 20 minutes -> graceful Browser.close
+  ---
+  duration_ms: 4.8719
+  type: 'test'
+  ...
+# Subtest: 9. graceful shutdown and restart reuse the same persistent profile
+ok 11 - 9. graceful shutdown and restart reuse the same persistent profile
+  ---
+  duration_ms: 3.3489
+  type: 'test'
+  ...
+# Subtest: 10. expired auth becomes AUTH_REQUIRED and alternate account is selected
+ok 12 - 10. expired auth becomes AUTH_REQUIRED and alternate account is selected
+  ---
+  duration_ms: 6.7969
+  type: 'test'
+  ...
+# Subtest: 10b. expired auth retries once with Chrome last-session restore
+ok 13 - 10b. expired auth retries once with Chrome last-session restore
+  ---
+  duration_ms: 3.5689
+  type: 'test'
+  ...
+# Subtest: 10c. persistent auth failure is bounded and remains AUTH_REQUIRED
+ok 14 - 10c. persistent auth failure is bounded and remains AUTH_REQUIRED
+  ---
+  duration_ms: 3.1724
+  type: 'test'
+  ...
+# Subtest: 10d. non-video auth failures do not trigger video session restore
+ok 15 - 10d. non-video auth failures do not trigger video session restore
+  ---
+  duration_ms: 2.5773
+  type: 'test'
+  ...
+# Subtest: 10e. auth restore kills an orphaned CDP browser before relaunch
+ok 16 - 10e. auth restore kills an orphaned CDP browser before relaunch
+  ---
+  duration_ms: 5.4196
+  type: 'test'
+  ...
+# Subtest: 10f. unexpected CDP disconnect arms restore on the next launch
+ok 17 - 10f. unexpected CDP disconnect arms restore on the next launch
+  ---
+  duration_ms: 2.611
+  type: 'test'
+  ...
+# Subtest: auth recovery runs under an existing reservation before provider execution
+ok 18 - auth recovery runs under an existing reservation before provider execution
+  ---
+  duration_ms: 3.621
+  type: 'test'
+  ...
+# Subtest: a terminal auth failure clears STARTING and does not loop on later readiness calls
+ok 19 - a terminal auth failure clears STARTING and does not loop on later readiness calls
+  ---
+  duration_ms: 4.8548
+  type: 'test'
+  ...
+# Subtest: reserved startup permission never shuts down provider execution
+ok 20 - reserved startup permission never shuts down provider execution
+  ---
+  duration_ms: 3.4184
+  type: 'test'
+  ...
+# Subtest: 11. startup failure preserves provider execution and selects alternate account
+ok 21 - 11. startup failure preserves provider execution and selects alternate account
+  ---
+  duration_ms: 3.4002
+  type: 'test'
+  ...
+# Subtest: 12. Gemini account NO_QUOTA -> another Gemini account tried first
+ok 22 - 12. Gemini account NO_QUOTA -> another Gemini account tried first
+  ---
+  duration_ms: 7.7095
+  type: 'test'
+  ...
+# Subtest: 13. whole Gemini pool unavailable -> Flow fallback
+ok 23 - 13. whole Gemini pool unavailable -> Flow fallback
+  ---
+  duration_ms: 5.0151
+  type: 'test'
+  ...
+# Subtest: 14. heartbeat does not create tab leak
+ok 24 - 14. heartbeat does not create tab leak
+  ---
+  duration_ms: 28.0622
+  type: 'test'
+  ...
+# Subtest: 15. maintenance scan does not refresh real lastActivity
+ok 25 - 15. maintenance scan does not refresh real lastActivity
+  ---
+  duration_ms: 10.0487
+  type: 'test'
+  ...
+# Subtest: 16. duplicate recovery cannot execute the same job twice
+ok 26 - 16. duplicate recovery cannot execute the same job twice
+  ---
+  duration_ms: 5.8098
+  type: 'test'
+  ...
+# Subtest: idle shutdown never closes STARTING, BUSY, GENERATING, DOWNLOADING or VERIFYING workers
+ok 27 - idle shutdown never closes STARTING, BUSY, GENERATING, DOWNLOADING or VERIFYING workers
+  ---
+  duration_ms: 8.4149
+  type: 'test'
+  ...
+# Subtest: queue-aware prewarm starts an eligible Gemini worker only when queue has work
+ok 28 - queue-aware prewarm starts an eligible Gemini worker only when queue has work
+  ---
+  duration_ms: 1.5385
+  type: 'test'
+  ...
+# Subtest: 17. VNC disabled -> normal mocked job path works
+ok 29 - 17. VNC disabled -> normal mocked job path works
+  ---
+  duration_ms: 6.4502
+  type: 'test'
+  ...
+# Subtest: mocked stress test: 100 sequential jobs across 4 accounts
+ok 30 - mocked stress test: 100 sequential jobs across 4 accounts
+  ---
+  duration_ms: 42.3482
+  type: 'test'
+  ...
+# Subtest: 21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions
+ok 31 - 21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions
+  ---
+  duration_ms: 69.4209
+  type: 'test'
+  ...
+# Subtest: 22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL
+ok 32 - 22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL
+  ---
+  duration_ms: 8.8871
+  type: 'test'
+  ...
+# Subtest: 23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions
+ok 33 - 23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions
+  ---
+  duration_ms: 7.3002
+  type: 'test'
+  ...
+# Subtest: 24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently
+ok 34 - 24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently
+  ---
+  duration_ms: 53.1495
+  type: 'test'
+  ...
+# [ChatManager] 💾 [tenant:tenant-a:company:Ahmet:conversation:conv-a] [chat] -> "[Mesajify] Ahmet - Mesajlar" kaydedildi: https://chatgpt.com/c/a
+# [ChatManager] 💾 [tenant:tenant-b:company:Ahmet:conversation:conv-b] [chat] -> "[Mesajify] Ahmet - Mesajlar" kaydedildi: https://chatgpt.com/c/b
+# [ChatManager] 💾 [Ahmet] [chat] -> "[Mesajify] Ahmet - Mesajlar" kaydedildi: https://chatgpt.com/c/legacy
+# Subtest: same display customer in different tenants has isolated cached sessions
+ok 35 - same display customer in different tenants has isolated cached sessions
+  ---
+  duration_ms: 27.8316
+  type: 'test'
+  ...
+# Subtest: legacy display-name keys remain readable and cache avoids repeat disk reads
+ok 36 - legacy display-name keys remain readable and cache avoids repeat disk reads
+  ---
+  duration_ms: 67.7036
+  type: 'test'
+  ...
+# Subtest: matching replaced document with composer completes
+ok 37 - matching replaced document with composer completes
+  ---
+  duration_ms: 4.4539
+  type: 'test'
+  ...
+# Subtest: wrong target remains blocked and diagnostics contain no conversation data
+ok 38 - wrong target remains blocked and diagnostics contain no conversation data
+  ---
+  duration_ms: 40.676
+  type: 'test'
+  ...
+# Subtest: matching URL without composer remains blocked
+ok 39 - matching URL without composer remains blocked
+  ---
+  duration_ms: 70.8319
+  type: 'test'
+  ...
+# Subtest: parses Turkish Google Flow credit labels with grouping separators
+ok 40 - parses Turkish Google Flow credit labels with grouping separators
+  ---
+  duration_ms: 4.86
+  type: 'test'
+  ...
+# Subtest: parses English and Spanish Flow credit labels
+ok 41 - parses English and Spanish Flow credit labels
+  ---
+  duration_ms: 0.5268
+  type: 'test'
+  ...
+# Subtest: does not infer a balance from unrelated numbers
+ok 42 - does not infer a balance from unrelated numbers
+  ---
+  duration_ms: 0.4951
+  type: 'test'
+  ...
+# Subtest: extracts the authenticated email from account menu text
+ok 43 - extracts the authenticated email from account menu text
+  ---
+  duration_ms: 1.1131
+  type: 'test'
+  ...
+# Subtest: prefers the leaf email when a parent menu node concatenates labels
+ok 44 - prefers the leaf email when a parent menu node concatenates labels
+  ---
+  duration_ms: 1.5163
+  type: 'test'
+  ...
+# Subtest: requires the exact expected Flow identity instead of trusting the chooser slot
+ok 45 - requires the exact expected Flow identity instead of trusting the chooser slot
+  ---
+  duration_ms: 0.6097
+  type: 'test'
+  ...
+# Subtest: normal WhatsApp reply preserves company, tone and supplied history
+ok 46 - normal WhatsApp reply preserves company, tone and supplied history
+  ---
+  duration_ms: 1342.8719
+  type: 'test'
+  ...
+# Subtest: product, price and unknown-product messages remain distinct worker inputs
+ok 47 - product, price and unknown-product messages remain distinct worker inputs
+  ---
+  duration_ms: 112.1218
+  type: 'test'
+  ...
+# Subtest: missing company context is accepted and remains empty
+ok 48 - missing company context is accepted and remains empty
+  ---
+  duration_ms: 45.1897
+  type: 'test'
+  ...
+# Subtest: worker errors complete the synchronous text request with the existing 500 contract
+ok 49 - worker errors complete the synchronous text request with the existing 500 contract
+  ---
+  duration_ms: 46.3354
+  type: 'test'
+  ...
+# Subtest: image reference metadata and brand kit reach the leased worker unchanged
+ok 50 - image reference metadata and brand kit reach the leased worker unchanged
+  ---
+  duration_ms: 20.1583
+  type: 'test'
+  ...
+# Subtest: image generation remains an async queue contract and returns a URL after upload
+ok 51 - image generation remains an async queue contract and returns a URL after upload
+  ---
+  duration_ms: 34.5658
+  type: 'test'
+  ...
+# Subtest: malformed worker text result preserves the existing pass-through response shape
+ok 52 - malformed worker text result preserves the existing pass-through response shape
+  ---
+  duration_ms: 31.573
+  type: 'test'
+  ...
+# Subtest: same customer display name from different tenants cannot cancel each other
+ok 53 - same customer display name from different tenants cannot cancel each other
+  ---
+  duration_ms: 42.7414
+  type: 'test'
+  ...
+# Subtest: a duplicate tenant/request/operation is executed once and shares its result
+ok 54 - a duplicate tenant/request/operation is executed once and shares its result
+  ---
+  duration_ms: 62.2679
+  type: 'test'
+  ...
+# Subtest: generic chat keeps the full prompt, system directive and tenant aliases
+ok 55 - generic chat keeps the full prompt, system directive and tenant aliases
+  ---
+  duration_ms: 29.5011
+  type: 'test'
+  ...
+# Subtest: image disconnect after submit intent holds the exact job instead of retrying a paid generation
+ok 56 - image disconnect after submit intent holds the exact job instead of retrying a paid generation
+  ---
+  duration_ms: 25.1879
+  type: 'test'
+  ...
+# Subtest: completed jobs expire without deleting an active response
+ok 57 - completed jobs expire without deleting an active response
+  ---
+  duration_ms: 75.493
+  type: 'test'
+  ...
+# Subtest: classifies the three allowed automatic fallback conditions
+ok 58 - classifies the three allowed automatic fallback conditions
+  ---
+  duration_ms: 8.398
+  type: 'test'
+  ...
+# Subtest: does not classify content and tenant failures as provider availability
+ok 59 - does not classify content and tenant failures as provider availability
+  ---
+  duration_ms: 0.7701
+  type: 'test'
+  ...
+# Subtest: ambiguous internal errors stay UNKNOWN
+ok 60 - ambiguous internal errors stay UNKNOWN
+  ---
+  duration_ms: 0.775
+  type: 'test'
+  ...
+# Subtest: 1. Apps Activity OFF + auth + video UI + quota -> AVAILABLE_WITH_WARNING -> ready_for_canary YES
+ok 61 - 1. Apps Activity OFF + auth + video UI + quota -> AVAILABLE_WITH_WARNING -> ready_for_canary YES
+  ---
+  duration_ms: 6.8628
+  type: 'test'
+  ...
+# Subtest: 2. explicit runtime 1040 after submit -> RUNTIME_BLOCKED
+ok 62 - 2. explicit runtime 1040 after submit -> RUNTIME_BLOCKED
+  ---
+  duration_ms: 1.5231
+  type: 'test'
+  ...
+# Subtest: 3. first Gemini runtime-blocked -> next Gemini account attempted
+ok 63 - 3. first Gemini runtime-blocked -> next Gemini account attempted
+  ---
+  duration_ms: 4.6833
+  type: 'test'
+  ...
+# Subtest: director accepts only two owned hash-verified canonical image roles
+ok 64 - director accepts only two owned hash-verified canonical image roles
+  ---
+  duration_ms: 13.3072
+  type: 'test'
+  ...
+# Subtest: director rejects missing logo, extra asset, wrong role and unowned reference
+ok 65 - director rejects missing logo, extra asset, wrong role and unowned reference
+  ---
+  duration_ms: 16.9273
+  type: 'test'
+  ...
+# Subtest: director fails closed on changed bytes and identical canonical assets
+ok 66 - director fails closed on changed bytes and identical canonical assets
+  ---
+  duration_ms: 2.5671
+  type: 'test'
+  ...
+# Subtest: physical receipt must match both exact asset ids, roles and hashes
+ok 67 - physical receipt must match both exact asset ids, roles and hashes
+  ---
+  duration_ms: 1.7688
+  type: 'test'
+  ...
+# Subtest: reconnect uses only original target despite another active customer tab
+ok 68 - reconnect uses only original target despite another active customer tab
+  ---
+  duration_ms: 7.2076
+  type: 'test'
+  ...
+# Subtest: lost or repurposed target fails closed without connecting to another conversation
+ok 69 - lost or repurposed target fails closed without connecting to another conversation
+  ---
+  duration_ms: 2.271
+  type: 'test'
+  ...
+# Subtest: two references skip an unrelated first chooser and single-file image widget
+ok 70 - two references skip an unrelated first chooser and single-file image widget
+  ---
+  duration_ms: 6.3333
+  type: 'test'
+  ...
+# Subtest: composer-owned chooser wins over another image-upload feature
+ok 71 - composer-owned chooser wins over another image-upload feature
+  ---
+  duration_ms: 29.2473
+  type: 'test'
+  ...
+# Subtest: real ChatGPT DOM with camera capture, photos/videos, and photos choosers selects Attach photos
+ok 72 - real ChatGPT DOM with camera capture, photos/videos, and photos choosers selects Attach photos
+  ---
+  duration_ms: 2.4554
+  type: 'test'
+  ...
+# Subtest: ambiguous portals, disabled chooser and absent composer fail closed
+ok 73 - ambiguous portals, disabled chooser and absent composer fail closed
+  ---
+  duration_ms: 9.8345
+  type: 'test'
+  ...
+# Subtest: one unambiguous portal image chooser remains supported
+ok 74 - one unambiguous portal image chooser remains supported
+  ---
+  duration_ms: 2.3455
+  type: 'test'
+  ...
+# [ChatManager] 💾 [tenant:tenant-alpha:company:Lüks Mobilya:conversation:c1] [chat] -> "[Mesajify] Lüks Mobilya - Mesajlar" kaydedildi: https://chatgpt.com/c/alpha-session-1791625006849
+# [ChatManager] 💾 [tenant:tenant-beta:company:Lüks Mobilya:conversation:c2] [chat] -> "[Mesajify] Lüks Mobilya - Mesajlar" kaydedildi: https://chatgpt.com/c/beta-session-1791625006849
+# Subtest: same-name different tenant has isolated chat manager and scope keys
+ok 75 - same-name different tenant has isolated chat manager and scope keys
+  ---
+  duration_ms: 70.4239
+  type: 'test'
+  ...
+# [ChatManager] 💾 [tenant:tenant-evict:company:Customer:conversation:c] [chat] -> "[Mesajify] Customer - Mesajlar" kaydedildi: https://chatgpt.com/c/cached-1791625007067
+# Subtest: concurrent same-tenant messages write serialization prevents data loss
+ok 76 - concurrent same-tenant messages write serialization prevents data loss
+  ---
+  duration_ms: 146.646
+  type: 'test'
+  ...
+# Subtest: cache eviction: expired TTL is evicted and LRU respects capacity limit
+ok 77 - cache eviction: expired TTL is evicted and LRU respects capacity limit
+  ---
+  duration_ms: 51.9694
+  type: 'test'
+  ...
+# Subtest: stale text response protection: baseline assistant snapshot rejects existing messages
+ok 78 - stale text response protection: baseline assistant snapshot rejects existing messages
+  ---
+  duration_ms: 1.2415
+  type: 'test'
+  ...
+# Subtest: stale image result protection: snapshot rejects pre-existing images
+ok 79 - stale image result protection: snapshot rejects pre-existing images
+  ---
+  duration_ms: 2.8709
+  type: 'test'
+  ...
+# Subtest: immediate DOM readiness completes quickly without blind sleep penalties
+ok 80 - immediate DOM readiness completes quickly without blind sleep penalties
+  ---
+  duration_ms: 1.5991
+  type: 'test'
+  ...
+# Subtest: delayed DOM readiness succeeds after condition is met
+ok 81 - delayed DOM readiness succeeds after condition is met
+  ---
+  duration_ms: 130.7723
+  type: 'test'
+  ...
+# {"event":"omnistudio_runtime_metric","operation":"text_reply","tenant_id":"tenant-clean","request_id":"req-clean","result":"success","error_code":null,"prompt_sizes":{"system_prompt_chars":560,"context_chars":16,"conversation_chars":16,"product_count_injected":1,"input_prompt_chars":13},"stages":{"request_received_ms":null,"tenant_resolve_ms":null,"brand_context_ms":null,"product_context_ms":null,"prompt_build_ms":null,"queue_wait_ms":null,"ai_request_ms":null,"response_parse_ms":null,"media_generation_ms":null,"result_delivery_ms":null},"worker_stages":{"worker_acquire_ms":10,"tab_acquire_ms":5,"tab_ready_ms":8,"prompt_insert_ms":25,"submit_ms":12,"first_response_signal_ms":150,"response_complete_ms":450,"parse_ms":15,"provider_wait_ms":450,"infrastructure_overhead_ms":60,"total_worker_ms":510},"total_ms":600}
+# Subtest: timeout fallback returns fail-closed error without stale data
+ok 82 - timeout fallback returns fail-closed error without stale data
+  ---
+  duration_ms: 46.0745
+  type: 'test'
+  ...
+# Subtest: completed payload cleanup and size-aware retention telemetry
+ok 83 - completed payload cleanup and size-aware retention telemetry
+  ---
+  duration_ms: 25.9968
+  type: 'test'
+  ...
+# Subtest: retry policy classifies errors correctly and avoids duplicate provider requests
+ok 84 - retry policy classifies errors correctly and avoids duplicate provider requests
+  ---
+  duration_ms: 1.9185
+  type: 'test'
+  ...
+# Subtest: TabRegistry registers and tracks worker canonical ownership
+ok 85 - TabRegistry registers and tracks worker canonical ownership
+  ---
+  duration_ms: 93.0369
+  type: 'test'
+  ...
+# Subtest: OrphanTabReaper: Active worker tab running a job is NEVER closed
+ok 86 - OrphanTabReaper: Active worker tab running a job is NEVER closed
+  ---
+  duration_ms: 5.7027
+  type: 'test'
+  ...
+# Subtest: OrphanTabReaper: Canonical tabs for multiple concurrent workers are NEVER closed
+ok 87 - OrphanTabReaper: Canonical tabs for multiple concurrent workers are NEVER closed
+  ---
+  duration_ms: 5.3685
+  type: 'test'
+  ...
+# Subtest: OrphanTabReaper: Protected system URLs (monitor, rotate cookies, gemini) are NEVER closed
+ok 88 - OrphanTabReaper: Protected system URLs (monitor, rotate cookies, gemini) are NEVER closed
+  ---
+  duration_ms: 2.1762
+  type: 'test'
+  ...
+# Subtest: OrphanTabReaper: Grace period protects newly created tabs from immediate closing
+ok 89 - OrphanTabReaper: Grace period protects newly created tabs from immediate closing
+  ---
+  duration_ms: 8.4693
+  type: 'test'
+  ...
+# Subtest: OrphanTabReaper: Duplicate idle ChatGPT tabs older than grace period are reaped
+ok 90 - OrphanTabReaper: Duplicate idle ChatGPT tabs older than grace period are reaped
+  ---
+  duration_ms: 122.5401
+  type: 'test'
+  ...
+# Subtest: OrphanTabReaper: Abandoned prompt-textarea tabs are identified and reaped after grace period
+ok 91 - OrphanTabReaper: Abandoned prompt-textarea tabs are identified and reaped after grace period
+  ---
+  duration_ms: 103.5102
+  type: 'test'
+  ...
+# Subtest: OrphanTabReaper: Worker busy state aborts cleanup unconditionally
+ok 92 - OrphanTabReaper: Worker busy state aborts cleanup unconditionally
+  ---
+  duration_ms: 1.3174
+  type: 'test'
+  ...
+# [OrphanTabReaper] 🧹 Swept 1 orphan tab(s) (test_sweep). Reclaimed: 0 MB. Renderers: 0 -> 0
+# {"event":"omnistudio_orphan_reaper_metric","reason":"test_sweep","timestamp":1791625007788,"chrome_tab_count":1,"chrome_renderer_count":0,"orphan_tabs_detected":1,"orphan_tabs_closed":1,"chrome_rss_mb":0,"memory_before_cleanup_mb":0,"memory_after_cleanup_mb":0,"reclaimed_memory_mb":0,"closed_details":[{"id":"tab-orphan","url":"https://chatgpt.com/?prompt-textarea=stray","reason":"ABANDONED_PROMPT_TEXTAREA_TAB"}]}
+# Subtest: OrphanTabReaper: sweep executes PUT /json/close on candidates and emits telemetry
+ok 93 - OrphanTabReaper: sweep executes PUT /json/close on candidates and emits telemetry
+  ---
+  duration_ms: 1235.5778
+  type: 'test'
+  ...
+# Subtest: acquireSubmitPacing: enforces session-scoped minimum interval between submissions without blind sleeps
+ok 94 - acquireSubmitPacing: enforces session-scoped minimum interval between submissions without blind sleeps
+  ---
+  duration_ms: 230.658
+  type: 'test'
+  ...
+# {"event":"omnistudio_runtime_metric","operation":"text_reply","tenant_id":"tenant-a","request_id":"request-1","result":"success","error_code":null,"prompt_sizes":{"system_prompt_chars":0,"context_chars":7,"conversation_chars":12,"product_count_injected":2,"input_prompt_chars":7},"stages":{"request_received_ms":null,"tenant_resolve_ms":null,"brand_context_ms":null,"product_context_ms":null,"prompt_build_ms":null,"queue_wait_ms":13,"ai_request_ms":null,"response_parse_ms":null,"media_generation_ms":null,"result_delivery_ms":null},"worker_stages":{},"total_ms":45}
+# Subtest: metrics preserve only request metadata and prompt sizes
+ok 95 - metrics preserve only request metadata and prompt sizes
+  ---
+  duration_ms: 6.8493
+  type: 'test'
+  ...
+# Subtest: unknown or negative stages are rejected without corrupting metrics
+ok 96 - unknown or negative stages are rejected without corrupting metrics
+  ---
+  duration_ms: 0.8193
+  type: 'test'
+  ...
+# Subtest: SESSION COORDINATOR: acquireSessionFlightLease ensures single-flight on same session
+ok 97 - SESSION COORDINATOR: acquireSessionFlightLease ensures single-flight on same session
+  ---
+  duration_ms: 578.2988
+  type: 'test'
+  ...
+# Subtest: SESSION COORDINATOR: same profile A/B/C executes in FIFO order with zero overlap
+ok 98 - SESSION COORDINATOR: same profile A/B/C executes in FIFO order with zero overlap
+  ---
+  duration_ms: 319.9408
+  type: 'test'
+  ...
+# [BrandManifest] 🏢 Tenant Registry Başlatıldı (4 kurum, 1 varlık)
+# {"event":"omnistudio_runtime_metric","operation":"text_reply","tenant_id":null,"request_id":null,"result":"success","error_code":null,"prompt_sizes":{"system_prompt_chars":0,"context_chars":0,"conversation_chars":0,"product_count_injected":0,"input_prompt_chars":8},"stages":{"request_received_ms":0,"tenant_resolve_ms":null,"brand_context_ms":null,"product_context_ms":null,"prompt_build_ms":0,"queue_wait_ms":5,"ai_request_ms":null,"response_parse_ms":null,"media_generation_ms":null,"result_delivery_ms":null},"worker_stages":{},"session_telemetry":{"session_queue_depth":1,"session_wait_ms":5,"session_active_job_id":"job_a316997b70d0091d","session_rate_limit_count":0,"session_cooldown_ms":0},"total_ms":5}
+# Subtest: SESSION COORDINATOR: different profiles A and B are allowed to execute concurrently
+ok 99 - SESSION COORDINATOR: different profiles A and B are allowed to execute concurrently
+  ---
+  duration_ms: 148.3936
+  type: 'test'
+  ...
+# Subtest: SESSION COORDINATOR: failed first request safely releases lease for next job
+ok 100 - SESSION COORDINATOR: failed first request safely releases lease for next job
+  ---
+  duration_ms: 49.7295
+  type: 'test'
+  ...
+# Subtest: SESSION COORDINATOR: timed out lease is reclaimed without deadlocking
+ok 101 - SESSION COORDINATOR: timed out lease is reclaimed without deadlocking
+  ---
+  duration_ms: 28.1951
+  type: 'test'
+  ...
+# Subtest: GATEWAY QUEUE: same profile A & B submitted simultaneously -> B waits in queue until A completes
+ok 102 - GATEWAY QUEUE: same profile A & B submitted simultaneously -> B waits in queue until A completes
+  ---
+  duration_ms: 145.5077
+  type: 'test'
+  ...
+# Subtest: GATEWAY QUEUE: different profile workers can execute text jobs concurrently
+ok 103 - GATEWAY QUEUE: different profile workers can execute text jobs concurrently
+  ---
+  duration_ms: 4.3206
+  type: 'test'
+  ...
+# Subtest: GATEWAY QUEUE: rate limit error triggers WEB_SESSION_RATE_LIMITED and session cooldown
+ok 104 - GATEWAY QUEUE: rate limit error triggers WEB_SESSION_RATE_LIMITED and session cooldown
+  ---
+  duration_ms: 5.9381
+  type: 'test'
+  ...
+# Subtest: GATEWAY QUEUE: cancelled pending request is cleaned up without blocking session
+ok 105 - GATEWAY QUEUE: cancelled pending request is cleaned up without blocking session
+  ---
+  duration_ms: 4.1446
+  type: 'test'
+  ...
+# Subtest: supervisor cleanup preserves another process active image target even under force cap
+ok 106 - supervisor cleanup preserves another process active image target even under force cap
+  ---
+  duration_ms: 19.6436
+  type: 'test'
+  ...
+# Subtest: account probe waits for hydrated identity before persisting a successful login
+ok 107 - account probe waits for hydrated identity before persisting a successful login
+  ---
+  duration_ms: 28.1755
+  type: 'test'
+  ...
+# Subtest: explicit signed-out page is not persisted as verified account configuration
+ok 108 - explicit signed-out page is not persisted as verified account configuration
+  ---
+  duration_ms: 4.4947
+  type: 'test'
+  ...
+# Subtest: wrong Google account cannot overwrite the configured identity
+ok 109 - wrong Google account cannot overwrite the configured identity
+  ---
+  duration_ms: 2.9947
+  type: 'test'
+  ...
+# Subtest: page that never hydrates fails without persisting authentication
+ok 110 - page that never hydrates fails without persisting authentication
+  ---
+  duration_ms: 115.9521
+  type: 'test'
+  ...
+1..110
+# tests 110
+# suites 0
+# pass 110
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3964.9553

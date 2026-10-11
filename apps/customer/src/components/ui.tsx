@@ -507,9 +507,11 @@ export function Pagination({
 export function Notice({
   tone = 'warn',
   children,
+  className,
 }: {
   tone?: 'warn' | 'danger' | 'accent' | 'success'
   children: ReactNode
+  className?: string
 }) {
   const styles = {
     warn: 'border-warn/30 bg-warn/8 text-warn',
@@ -520,8 +522,8 @@ export function Notice({
 
   return (
     <div
-      role={tone === 'danger' ? 'alert' : tone === 'success' || tone === 'accent' ? 'status' : undefined}
-      className={cx('rounded-md border px-3.5 py-2.5 text-[13.5px]', styles)}
+      role={tone === 'danger' || tone === 'warn' ? 'alert' : tone === 'success' || tone === 'accent' ? 'status' : undefined}
+      className={cx('wb-notice rounded-md border px-3.5 py-2.5 text-[13.5px]', styles, className)}
     >
       {children}
     </div>

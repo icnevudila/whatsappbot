@@ -1,5 +1,6 @@
 'use server'
 import sharp from 'sharp'
+import { promotionMode, offeringKind, promotionPolicyError, BRAND_VIDEO_UNAVAILABLE } from '@/lib/creative/promotion-policy'
 
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -12,6 +13,7 @@ function uuidFromRequestKey(orgId: string, requestKey: string): string {
 }
 import { enqueueJob } from '@/lib/jobs'
 import { campaignFactsError, parseCampaignMoney } from '@/lib/creative/campaign-facts'
+import { isLibraryCreativeEligible } from '@/lib/creative/library-eligibility'
 import { canReviewImage } from '@/lib/creative/image-review'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
@@ -165,6 +167,10 @@ export async function startCreativeGeneration(
 
   const authContext = { userId, org, supabase }
   const format = formatFromId(String(draft.formatId ?? 'wa'))
+  if (promotionMode(draft.promotionMode) === 'brand' && format.format === 'video') return {error:BRAND_VIDEO_UNAVAILABLE}
+  if (promotionMode(draft.promotionMode) === 'brand' && Array.isArray(draft.referenceImageUrls) && draft.referenceImageUrls.length) {
+    return {error:'Marka tanıtımında yalnız işletme logosu kullanılır; ek ürün görseli bağlanmaz.'}
+  }
   const kitId = String(draft.brandKitId ?? '').trim() || null
   const rawProductIds = parseIds(draft.productIds)
   const heroProductId = String(draft.heroProductId || '').trim()
@@ -319,6 +325,7 @@ export async function startCreativeGeneration(
     return { error: 'Marka kiti bulunamadı.' }
   }
 
+  if (!kitRow) return { error: 'Üretimden önce işletmenize ait marka kitini oluşturun.' }
   const orgRow = orgRowRes.data
   const orgLogoPath = orgRow?.logo_path ?? null
 
@@ -444,10 +451,21 @@ export async function startCreativeGeneration(
   }
   const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
   const logoSource = String(kitRow?.logo_path || orgLogoPath || '').trim()
+  const subjectMode = promotionMode(draft.promotionMode)
+  // Brand-only is explicit, never inferred from an objective or missing product.
+  if (subjectMode === 'brand' || draft.promotionMode === 'offering') {
+    const subjectError = promotionPolicyError({ mode: subjectMode, video: format.format === 'video',
+      hasLogo: Boolean(logoSource) && draft.useLogo !== false,
+      hasOfferingReference: products.some(product => product.include.image && Boolean(product.imageUrl)),
+      hasOfferingSelection: products.length > 0 || rawProductIds.length > 0 || Boolean(heroProductId),
+      hasBase: Boolean(baseCreativeId) })
+    if (subjectError) return { error: subjectError }
+  }
   if (products.some(product => !product.include.image || !product.imageUrl || product.imageUrl.trim() === logoSource || /^\/?(?:brand|logos)\//i.test(product.imageUrl))) {
     return { error: 'Seçilen her ürün için gerçek ürün veya arayüz görseli ekleyin. İşletme logosu ürün referansı yerine kullanılamaz.' }
   }
   const imageAssetGate = requiredImageAssets({
+    promotionMode: subjectMode,
     useLogo: draft.useLogo !== false, hasLogo: Boolean(kitRow?.logo_path || orgLogoPath),
     hasProductReference: products.some((product) => product.include.image && Boolean(product.imageUrl)),
     hasValidBase: Boolean(baseCreativeId),
@@ -486,6 +504,8 @@ export async function startCreativeGeneration(
 
   const tInsertStart = Date.now()
   const snapshot: CreativePayload = {
+    promotionMode: subjectMode,
+    offeringKind: offeringKind(draft.offeringKind),
     brief,
     style: String(draft.style ?? 'auto'),
     formatId: format.id,
@@ -535,7 +555,7 @@ export async function startCreativeGeneration(
     customSupporting: (draft.customSupporting as string) || null,
     heroProductId: heroProductId || (products[0]?.id as string) || null,
     stylePreset: (draft.stylePreset as string) || null,
-    objective: (draft.objective as string) || null,
+    objective: subjectMode === 'brand' ? 'BRAND_AWARENESS' : (draft.objective as string) || null,
     artDirectionPlan: artDirectionPlan || null,
     art_direction_source: artDirectionSource,
     submissionMetrics: {
@@ -715,6 +735,69 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
   }
 }
 
+export async function reconcileCreative(id: string): Promise<CreativeActionState> {
+  const trimmed = id.trim()
+  if (!trimmed) return { error: 'Kayıt yok.' }
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    if (!isOrgAdminRole(org.role)) return { error: 'Yetki yok.' }
+    const { data } = await supabase
+      .from('creatives')
+      .select('id, status, source, format, error, payload')
+      .eq('id', trimmed)
+      .eq('org_id', org.id)
+      .maybeSingle()
+    if (!data) return { error: 'Görsel bulunamadı.' }
+    const payload = (data.payload || {}) as Record<string, unknown>
+    const lastJob = (payload.lastImageJob || payload.imageJob) as { id: string; gatewayUrl: string } | undefined
+
+    if (lastJob?.id && lastJob?.gatewayUrl) {
+      try {
+        const gwRes = await fetch(`${lastJob.gatewayUrl.replace(/\/$/, '')}/jobs/${lastJob.id}`, {
+          signal: AbortSignal.timeout(6000),
+        })
+        if (gwRes.ok) {
+          const gwJson = await gwRes.json()
+          if (gwJson.status === 'completed' && gwJson.result_url) {
+            const processRes = await processCreativeGeneration(trimmed, supabase)
+            if (processRes.ready || processRes.needsReview) {
+              revalidateLibrary(trimmed)
+              return { ok: 'Üretim tamamlanmış olarak kurtarıldı.' }
+            }
+          }
+        }
+      } catch {
+        // Gateway poll timeout or offline
+      }
+    }
+
+    const updatedPayload = {
+      ...payload,
+      imageJob: null,
+      imageSubmitIntent: null,
+      imageSubmissionUncertain: false,
+      imageReconciliationRequired: false,
+      imageDirectIntent: null,
+      imageTerminalFailure: null,
+    }
+
+    await supabase
+      .from('creatives')
+      .update({
+        status: 'failed',
+        error: 'Önceki sağlayıcı yanıt vermedi. Güvenli şekilde tekrar deneyebilirsiniz.',
+        payload: updatedPayload,
+      })
+      .eq('id', trimmed)
+      .eq('org_id', org.id)
+
+    revalidateLibrary(trimmed)
+    return { ok: 'Üretim durumu doğrulandı. Tekrar deneyebilirsiniz.' }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Oturum yok.' }
+  }
+}
+
 export async function approveReviewedImage(formData: FormData): Promise<CreativeActionState> {
   if (formData.get('identity') !== 'on' || formData.get('commerce') !== 'on')
     return {error:'Ürün/marka ve ticari bilgileri görselde kontrol ettiğinizi doğrulayın.'}
@@ -794,55 +877,94 @@ export async function listLibraryCreatives({
   sort?: 'new' | 'old'
   offset?: number
   limit?: number
-}): Promise<{ items: LibraryCreativeRow[]; hasMore: boolean; error?: string }> {
+}): Promise<{ items: LibraryCreativeRow[]; hasMore: boolean; nextOffset?: number; error?: string }> {
   try {
     const { org, supabase } = await requireActiveOrg()
     const start = Math.max(0, offset)
     const size = Math.min(120, Math.max(1, limit))
     let request = supabase
       .from('creatives')
-      .select('id, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
+      .select('id, org_id, storage_path, title, public_url, status, source, generation_type, created_at, error, parent_id, format, payload')
       .eq('org_id', org.id)
       .neq('source', 'upload')
-      .neq('status', 'failed')
+      .in('status', ['ready', 'needs_review'])
+      .not('public_url', 'is', null)
       .order('created_at', { ascending: sort === 'old' })
+      .order('id', { ascending: sort === 'old' })
       .range(start, start + size - 1)
     const term = query.trim()
     if (term) request = request.ilike('title', `%${term}%`)
     const { data, error } = await request
     if (error) return { items: [], hasMore: false, error: error.message }
     const videoStates = await loadVideoLibraryState(createSupabaseServiceClient() || supabase, org.id, data ?? [])
-    const items = (data ?? []).map((row) => {
-      const payload = (row.payload ?? {}) as Record<string, unknown>
-      const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
-      let thumb =
-        typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl && !payload.thumbnailUrl.includes('?thumb=1')
-          ? payload.thumbnailUrl
-          : isVideo
-            ? null
-            : row.public_url
-      return {
-        id: row.id,
-        title: row.title,
-        publicUrl: row.public_url,
-        thumbnailUrl: thumb,
-        format: row.format,
-        status: videoStates.get(row.id)?.status || row.status,
-        durationSeconds: videoStates.get(row.id)?.durationSeconds ?? null,
-        source: row.source,
-        generationType: row.generation_type,
-        createdAt: row.created_at,
-        error: row.error,
-        parentId: row.parent_id,
-      }
-    })
-    return { items, hasMore: items.length === size }
+    const items = (data ?? [])
+      .filter(row => isLibraryCreativeEligible(row, org.id, videoStates.get(row.id)))
+      .map((row) => {
+        const payload = (row.payload ?? {}) as Record<string, unknown>
+        const isVideo = row.format === 'video' || Boolean(row.public_url?.endsWith('.mp4')) || Boolean(row.public_url?.includes('/api/ai-media/outputs/'))
+        const isReview = (videoStates.get(row.id)?.status || row.status) === 'needs_review'
+        const rawUrl = row.public_url || ''
+        const effectivePublicUrl = isVideo && isReview && rawUrl && !rawUrl.includes('preview=')
+          ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}preview=1`
+          : row.public_url
+        let thumb =
+          typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
+            ? payload.thumbnailUrl
+            : isVideo
+              ? (effectivePublicUrl ? `${effectivePublicUrl}${effectivePublicUrl.includes('?') ? '&' : '?'}thumb=1` : null)
+              : effectivePublicUrl
+        return {
+          id: row.id,
+          title: row.title,
+          publicUrl: effectivePublicUrl,
+          thumbnailUrl: thumb,
+          format: row.format,
+          status: isVideo ? (videoStates.get(row.id)?.status || row.status) : row.status,
+          durationSeconds: videoStates.get(row.id)?.durationSeconds ?? null,
+          source: row.source,
+          generationType: row.generation_type,
+          createdAt: row.created_at,
+          error: null,
+          parentId: row.parent_id,
+        }
+      })
+    return { items, hasMore: (data ?? []).length === size, nextOffset: start + (data ?? []).length }
   } catch (error) {
     return {
       items: [],
       hasMore: false,
       error: error instanceof Error ? error.message : 'Oturum yok.',
     }
+  }
+}
+
+export async function getActiveGeneratingCreative(): Promise<{
+  id: string
+  title: string
+  status: string
+  format: string
+  createdAt: string
+} | null> {
+  try {
+    const { org, supabase } = await requireActiveOrg()
+    const { data } = await supabase
+      .from('creatives')
+      .select('id, title, status, format, created_at')
+      .eq('org_id', org.id)
+      .in('status', ['pending', 'rendering'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (!data) return null
+    return {
+      id: data.id,
+      title: data.title || 'Yeni reklam üretimi',
+      status: data.status,
+      format: data.format,
+      createdAt: data.created_at,
+    }
+  } catch {
+    return null
   }
 }
 
