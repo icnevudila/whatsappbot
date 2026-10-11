@@ -113,7 +113,13 @@ function CampaignWizardForm({
   const [selectedStep, setStep] = useState<WizardStepId>(() => parseWizardStep(
     searchParams.get('adim') || (initialStep !== 'kampanya' ? initialStep : null) || saved?.step || 'kampanya',
   ))
-  const step = searchParams.get('adim') ? parseWizardStep(searchParams.get('adim')) : selectedStep
+  const step = selectedStep
+  useEffect(() => {
+    const qStep = searchParams.get('adim')
+    if (qStep) {
+      setStep(parseWizardStep(qStep))
+    }
+  }, [searchParams])
   const [name, setName] = useState(campaign?.name ?? saved?.name ?? initialCreative?.name ?? '')
   const [body, setBody] = useState(campaign?.body ?? saved?.body ?? initialCreative?.body ?? '')
   const [aiMessageGenerated, setAiMessageGenerated] = useState(saved?.aiMessageGenerated === true)
@@ -208,7 +214,8 @@ function CampaignWizardForm({
   useEffect(() => () => { messageRequest.current?.abort() }, [mediaUrl, messageType])
 
   useEffect(() => {
-    if (mode !== 'create' || !ready || !initialCreative || aiMessageGenerated || autoMessageStarted.current) return
+    // Kullanıcının yazdığı veya taslaktan gelen metni asla izinsiz ezme:
+    if (mode !== 'create' || !ready || !initialCreative || aiMessageGenerated || autoMessageStarted.current || body.trim().length > 0) return
     // Strict Mode replays mount effects. Do not mark an aborted replay as a
     // completed start or leave the handoff with only its initial draft text.
     let disposed = false
@@ -218,7 +225,7 @@ function CampaignWizardForm({
       void generateCreativeMessage()
     })
     return () => { disposed = true }
-  }, [mode, ready, initialCreative, aiMessageGenerated, generateCreativeMessage])
+  }, [mode, ready, initialCreative, aiMessageGenerated, body, generateCreativeMessage])
 
   useEffect(() => {
     if (mode !== 'create' || !ready) return
@@ -286,21 +293,23 @@ function CampaignWizardForm({
 
   const mark = () => setDirty(true)
 
-  const validateStep = (id: WizardStepId): string | null => {
+  const validateStep = (id: WizardStepId, forDraft = false): string | null => {
     if (id === 'mesaj' && aiMessagePending) return 'AI kampanya mesajı hazırlanıyor. Tamamlanmasını bekleyin.'
     if (id === 'kampanya' && !name.trim()) return 'Kampanyaya bir ad verin.'
-    if (id === 'alicilar') {
-      if (shared.lists.length === 0) return 'Önce Kişiler’den bir grup oluşturun.'
-      if (submitListIds.length === 0) return 'En az bir kişi grubu seçin.'
-    }
-    if (id === 'mesaj' && !body.trim() && !mediaUrl) return 'Mesaj yazın veya görsel ekleyin.'
-    if (id === 'gonderen') {
-      if (enabledAccounts.length === 0 && submitAccountIds.length === 0) {
-        return 'Önce Hatlar’dan bir hat bağlayın.'
+    if (!forDraft) {
+      if (id === 'mesaj' && !body.trim() && !mediaUrl) return 'Mesaj yazın veya görsel ekleyin.'
+      if (id === 'alicilar') {
+        if (shared.lists.length === 0) return 'Önce Kişiler’den bir grup oluşturun.'
+        if (submitListIds.length === 0) return 'En az bir kişi grubu seçin.'
       }
-      if (submitAccountIds.length === 0) return 'En az bir WhatsApp hattı seçin.'
+      if (id === 'gonderen') {
+        if (enabledAccounts.length === 0 && submitAccountIds.length === 0) {
+          return 'Önce Hatlar’dan bir hat bağlayın.'
+        }
+        if (submitAccountIds.length === 0) return 'En az bir WhatsApp hattı seçin.'
+      }
+      if (id === 'yayinla' && startMode === 'schedule' && !scheduledAt) return 'Planlamak için tarih ve saat seçin.'
     }
-    if (id === 'yayinla' && startMode === 'schedule' && !scheduledAt) return 'Planlamak için tarih ve saat seçin.'
     return null
   }
 
@@ -428,17 +437,20 @@ function CampaignWizardForm({
         action={formAction}
         className="flex flex-col"
         onSubmit={(event) => {
-          if (step !== 'yayinla' || !allowSubmitRef.current) {
+          if (!allowSubmitRef.current) {
             event.preventDefault()
             if (step !== 'yayinla') goNext()
             return
           }
+          const startModeInput = formRef.current?.elements.namedItem('start_mode') as HTMLInputElement | null
+          const effectiveStartMode = step === 'yayinla' ? startMode : (startModeInput?.value || startMode)
+          const isDraft = effectiveStartMode === 'draft'
           const error =
-            validateStep('yayinla') ||
-            validateStep('kampanya') ||
-            validateStep('alicilar') ||
-            validateStep('mesaj') ||
-            validateStep('gonderen')
+            (step === 'yayinla' ? validateStep('yayinla', isDraft) : null) ||
+            validateStep('kampanya', isDraft) ||
+            validateStep('alicilar', isDraft) ||
+            validateStep('mesaj', isDraft) ||
+            validateStep('gonderen', isDraft)
           if (error) {
             event.preventDefault()
             setHint(error)
@@ -474,7 +486,7 @@ function CampaignWizardForm({
         <input type="hidden" name="daily_cap" value={campaign?.daily_cap_per_account ?? 100} />
         <input type="hidden" name="ab_percent" value={campaign?.ab_percent ?? 0} />
         <input type="hidden" name="body_b" value={campaign?.body_b ?? ''} />
-        <input type="hidden" name="start_mode" value={startMode} />
+        <input type="hidden" name="start_mode" id="wizard_start_mode" value={startMode} />
         <input type="hidden" name="scheduled_at" value={scheduledAt || defaultScheduleLocal()} />
         {submitListIds.map((id) => (
           <input key={`list-${id}`} type="hidden" name="lists" value={id} />
@@ -689,6 +701,8 @@ function CampaignWizardForm({
                 selected={startMode}
                 onSelect={(value) => {
                   setStartMode(value)
+                  const startModeInput = formRef.current?.elements.namedItem('start_mode') as HTMLInputElement | null
+                  if (startModeInput) startModeInput.value = value
                   if (value === 'schedule' && !scheduledAt) setScheduledAt(defaultScheduleLocal())
                   sendArmedRef.current = false
                   mark()
@@ -713,24 +727,49 @@ function CampaignWizardForm({
               <Icon name="back" className="size-4 shrink-0" />
               Geri
             </Button>
-            {step !== 'yayinla' ? (
-              <Button type="button" className="wb-wa-submit" disabled={pending} onClick={goNext}>
-                İleri
-                <Icon name="back" className="size-4 shrink-0 rotate-180" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                className={startMode === 'now' && !structureLocked ? 'wb-wa-submit is-danger' : 'wb-wa-submit'}
-                disabled={pending}
-                onClick={() => {
-                  allowSubmitRef.current = true
-                  formRef.current?.requestSubmit()
-                }}
-              >
-                {submitLabel}
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {step !== 'yayinla' && name.trim() ? (
+                <Button
+                  type="button"
+                  variant="quiet"
+                  className="wb-wa-text-btn text-ink-muted hover:text-ink"
+                  disabled={pending}
+                  onClick={() => {
+                    const err = validateStep('kampanya', true) || validateStep('mesaj', true)
+                    if (err) {
+                      setHint(err)
+                      return
+                    }
+                    setStartMode('draft')
+                    const startModeInput = formRef.current?.elements.namedItem('start_mode') as HTMLInputElement | null
+                    if (startModeInput) startModeInput.value = 'draft'
+                    allowSubmitRef.current = true
+                    formRef.current?.requestSubmit()
+                  }}
+                >
+                  <Icon name="copy" className="size-4 shrink-0" />
+                  Taslağı Kaydet
+                </Button>
+              ) : null}
+              {step !== 'yayinla' ? (
+                <Button type="button" className="wb-wa-submit" disabled={pending} onClick={goNext}>
+                  İleri
+                  <Icon name="back" className="size-4 shrink-0 rotate-180" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  className={startMode === 'now' && !structureLocked ? 'wb-wa-submit is-danger' : 'wb-wa-submit'}
+                  disabled={pending}
+                  onClick={() => {
+                    allowSubmitRef.current = true
+                    formRef.current?.requestSubmit()
+                  }}
+                >
+                  {submitLabel}
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </form>

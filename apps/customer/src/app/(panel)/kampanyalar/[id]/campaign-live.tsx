@@ -446,7 +446,7 @@ export function CampaignLive({
                   run(async () => {
                     const result = await duplicateCampaign(campaign.id)
                     if (result.error) return { error: result.error }
-                    if (result.id) router.push(`/kampanyalar/${result.id}/duzenle`)
+                    if (result.id) window.location.assign(`/kampanyalar/${result.id}/duzenle`)
                     return {}
                   })
                 }
@@ -458,6 +458,7 @@ export function CampaignLive({
                 name={campaign.name}
                 body={campaign.body}
                 mediaUrl={campaign.media_url}
+                messageType={campaign.message_type}
                 className="wb-wa-submit is-secondary"
                 label="Önizle"
               />

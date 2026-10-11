@@ -60,9 +60,13 @@ export async function createCampaign(
   if (name.length > 160 || body.length > 4096) return { error: 'Kampanya adı 160, mesaj 4096 karakteri aşamaz.' }
 
   if (!name) return { error: 'Kampanyaya bir ad verin.' }
-  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir görsel gerekli.' }
-  if (listIds.length === 0) return { error: 'En az bir kişi grubu seçin.' }
-  if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
+  const isDraft = startMode === 'draft'
+  if (!isDraft && !body && !mediaUrl) return { error: 'Mesaj metni veya bir görsel gerekli.' }
+
+  if (!isDraft) {
+    if (listIds.length === 0) return { error: 'Göndermek veya planlamak için en az bir kişi grubu seçin.' }
+    if (accountIds.length === 0) return { error: 'Göndermek veya planlamak için en az bir gönderen hat seçin.' }
+  }
   if (minDelay > maxDelay) {
     return { error: 'En kısa bekleme, en uzun beklemeden büyük olamaz.' }
   }
@@ -87,27 +91,33 @@ export async function createCampaign(
     }
   }
 
-  const [lists, accounts] = await Promise.all([
-    supabase.from('contact_lists').select('id').eq('org_id', org.id).in('id', listIds),
-    supabase
-      .from('accounts')
-      .select('id, enabled, is_locked, status')
-      .eq('org_id', org.id)
-      .in('id', accountIds),
-  ])
-  if (lists.error) return { error: 'Seçilen gruplar doğrulanamadı. Grupları yeniden seçin.' }
-  if (accounts.error) return { error: 'Seçilen hatlar doğrulanamadı. Hatları yeniden seçin.' }
-  if (!idsMatch(lists.data, listIds)) {
-    return { error: 'Seçilen gruplardan bazıları artık yok. Grupları yeniden seçin.' }
-  }
-  if (!idsMatch(accounts.data, accountIds)) {
-    return { error: 'Seçilen hatlardan bazıları artık yok. Hatları yeniden seçin.' }
-  }
-  const blocked = (accounts.data ?? []).filter(
-    (row) => row.status !== 'connected' || row.is_locked || row.enabled === false,
-  )
-  if (blocked.length > 0) {
-    return { error: 'Seçilen hatlar bağlı ve gönderime açık olmalı.' }
+  if (listIds.length > 0 || accountIds.length > 0) {
+    const [lists, accounts] = await Promise.all([
+      listIds.length > 0
+        ? supabase.from('contact_lists').select('id').eq('org_id', org.id).in('id', listIds)
+        : Promise.resolve({ data: [] as { id: string }[], error: null }),
+      accountIds.length > 0
+        ? supabase
+            .from('accounts')
+            .select('id, enabled, is_locked, status')
+            .eq('org_id', org.id)
+            .in('id', accountIds)
+        : Promise.resolve({ data: [] as { id: string; enabled: boolean; is_locked: boolean; status: string }[], error: null }),
+    ])
+    if (lists.error) return { error: 'Seçilen gruplar doğrulanamadı. Grupları yeniden seçin.' }
+    if (accounts.error) return { error: 'Seçilen hatlar doğrulanamadı. Hatları yeniden seçin.' }
+    if (!idsMatch(lists.data, listIds)) {
+      return { error: 'Seçilen gruplardan bazıları artık yok. Grupları yeniden seçin.' }
+    }
+    if (!idsMatch(accounts.data, accountIds)) {
+      return { error: 'Seçilen hatlardan bazıları artık yok. Hatları yeniden seçin.' }
+    }
+    const blocked = (accounts.data ?? []).filter(
+      (row) => row.status !== 'connected' || row.is_locked || row.enabled === false,
+    )
+    if (!isDraft && blocked.length > 0) {
+      return { error: 'Seçilen hatlar bağlı ve gönderime açık olmalı.' }
+    }
   }
 
   const schedule = startMode === 'schedule'
@@ -137,18 +147,20 @@ export async function createCampaign(
 
   if (error) return { error: error.message }
 
-  const { error: linkError } = await supabase.from('campaign_accounts').insert(
-    accountIds.map((accountId) => ({
-      org_id: org.id,
-      created_by: userId,
-      campaign_id: campaign.id,
-      account_id: accountId,
-    })),
-  )
+  if (accountIds.length > 0) {
+    const { error: linkError } = await supabase.from('campaign_accounts').insert(
+      accountIds.map((accountId) => ({
+        org_id: org.id,
+        created_by: userId,
+        campaign_id: campaign.id,
+        account_id: accountId,
+      })),
+    )
 
-  if (linkError) {
-    await supabase.from('campaigns').delete().eq('id', campaign.id).eq('org_id', org.id).eq('status', schedule ? 'scheduled' : 'draft')
-    return { error: 'Gönderen hatlar bağlanamadı. Tekrar deneyin.' }
+    if (linkError) {
+      await supabase.from('campaigns').delete().eq('id', campaign.id).eq('org_id', org.id).eq('status', schedule ? 'scheduled' : 'draft')
+      return { error: 'Gönderen hatlar bağlanamadı. Tekrar deneyin.' }
+    }
   }
 
   if (schedule) {
@@ -307,9 +319,12 @@ export async function updateCampaign(
   if (name.length > 160 || body.length > 4096) {
     return { error: 'Kampanya adı 160, mesaj 4096 karakteri aşamaz.' }
   }
-  if (!body && !mediaUrl) return { error: 'Mesaj metni veya bir görsel gerekli.' }
-  if (listIds.length === 0) return { error: 'En az bir kişi grubu seçin.' }
-  if (accountIds.length === 0) return { error: 'En az bir gönderen hat seçin.' }
+  const isDraft = startMode === 'draft'
+  if (!isDraft && !body && !mediaUrl) return { error: 'Mesaj metni veya bir görsel gerekli.' }
+  if (!isDraft) {
+    if (listIds.length === 0) return { error: 'Göndermek veya planlamak için en az bir kişi grubu seçin.' }
+    if (accountIds.length === 0) return { error: 'Göndermek veya planlamak için en az bir gönderen hat seçin.' }
+  }
 
   let userId: string
   let org: Awaited<ReturnType<typeof requireActiveOrg>>['org']
@@ -356,22 +371,28 @@ export async function updateCampaign(
     }
   }
 
-  const [lists, accounts] = await Promise.all([
-    supabase.from('contact_lists').select('id').eq('org_id', org.id).in('id', listIds),
-    supabase.from('accounts').select('id, enabled, is_locked').eq('org_id', org.id).in('id', accountIds),
-  ])
-  if (lists.error || accounts.error || lists.data?.length !== listIds.length) {
-    return { error: 'Seçilen grupları kontrol edin.' }
-  }
-  if (!accounts.data || accounts.data.length !== accountIds.length) {
-    return { error: 'Seçilen hatları kontrol edin.' }
-  }
-  const newlyAdded = accountIds.filter((id) => !prevAccountIds.includes(id))
-  const badNew = (accounts.data ?? []).filter(
-    (row) => newlyAdded.includes(row.id) && (!row.enabled || row.is_locked),
-  )
-  if (badNew.length > 0) {
-    return { error: 'Yeni eklenen hatlar bağlı ve kilitli olmamalı.' }
+  if (listIds.length > 0 || accountIds.length > 0) {
+    const [lists, accounts] = await Promise.all([
+      listIds.length > 0
+        ? supabase.from('contact_lists').select('id').eq('org_id', org.id).in('id', listIds)
+        : Promise.resolve({ data: [] as { id: string }[], error: null }),
+      accountIds.length > 0
+        ? supabase.from('accounts').select('id, enabled, is_locked').eq('org_id', org.id).in('id', accountIds)
+        : Promise.resolve({ data: [] as { id: string; enabled: boolean; is_locked: boolean }[], error: null }),
+    ])
+    if (lists.error || (listIds.length > 0 && lists.data?.length !== listIds.length)) {
+      return { error: 'Seçilen grupları kontrol edin.' }
+    }
+    if (accounts.error || (accountIds.length > 0 && accounts.data?.length !== accountIds.length)) {
+      return { error: 'Seçilen hatları kontrol edin.' }
+    }
+    const newlyAdded = accountIds.filter((id) => !prevAccountIds.includes(id))
+    const badNew = (accounts.data ?? []).filter(
+      (row) => newlyAdded.includes(row.id) && (!row.enabled || row.is_locked),
+    )
+    if (!isDraft && badNew.length > 0) {
+      return { error: 'Yeni eklenen hatlar bağlı ve kilitli olmamalı.' }
+    }
   }
 
   const patch: {
@@ -429,18 +450,22 @@ export async function updateCampaign(
       .eq('campaign_id', campaignId)
       .eq('org_id', org.id)
 
-    const { error: linkError } = await supabase.from('campaign_accounts').insert(
-      accountIds.map((accountId) => ({
-        org_id: org.id,
-        created_by: userId,
-        campaign_id: campaignId,
-        account_id: accountId,
-      })),
-    )
-    if (linkError) return { error: 'Gönderen hatlar güncellenemedi.' }
+    if (accountIds.length > 0) {
+      const { error: linkError } = await supabase.from('campaign_accounts').insert(
+        accountIds.map((accountId) => ({
+          org_id: org.id,
+          created_by: userId,
+          campaign_id: campaignId,
+          account_id: accountId,
+        })),
+      )
+      if (linkError) return { error: 'Gönderen hatlar güncellenemedi.' }
+    }
   }
 
-  const needsRefresh = listsChanged || cancelRemaining
+  // Taslak kampanyalarda henüz gönderim başlamadığı için refresh_targets job'u oluşturulmaz.
+  const isCurrentlyDraft = patch.status === 'draft' || (!patch.status && existing.status === 'draft')
+  const needsRefresh = !isCurrentlyDraft && (listsChanged || cancelRemaining)
 
   if (needsRefresh) {
     const { error: jobError } = await enqueueJob({
@@ -485,6 +510,9 @@ export async function updateCampaign(
 
   revalidatePath(`/kampanyalar/${campaignId}`)
   revalidatePath('/kampanyalar')
+  if (startMode === 'draft' || (!startMode && existing.status === 'draft')) {
+    redirect(`/kampanyalar/${campaignId}?taslak=1`)
+  }
   return { ok: 'Kampanya kaydedildi.' }
 }
 

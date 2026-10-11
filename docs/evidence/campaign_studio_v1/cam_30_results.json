@@ -1,0 +1,241 @@
+{
+  "runId": "test_cams_1791748547122",
+  "timestamp": "2026-10-11T19:55:47.126Z",
+  "tests": [
+    {
+      "id": "CAM-01",
+      "title": "Creative ID ile kampanya açılır",
+      "category": "REAL_BROWSER_E2E",
+      "status": 200,
+      "creativeId": "758ca50a-be63-5ae5-a9cf-f8a15a0a7343"
+    },
+    {
+      "id": "CAM-02",
+      "title": "Doğru işletme bağlamı korunur",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "orgCookie": "4a58b0dd-0931-4901-880a-686457d15010",
+      "expected": "4a58b0dd-0931-4901-880a-686457d15010"
+    },
+    {
+      "id": "CAM-03",
+      "title": "Doğru medya türü yüklenir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "mediaVal": "https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/4a58b0dd-0931-4901-880a-686457d15010/758ca50a-be63-5ae5-a9cf-f8a15a0a7343/job_4f4abfb2e6aff34f.png",
+      "typeVal": "image"
+    },
+    {
+      "id": "CAM-04",
+      "title": "Mesaj editörü çalışır",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "visible": true
+    },
+    {
+      "id": "CAM-05",
+      "title": "Kullanıcı metni değiştirebilir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "val": "Özel Kampanya Mesajı test_cams_1791748547122"
+    },
+    {
+      "id": "CAM-06",
+      "title": "Kişi grubu seçilmeden taslak kaydedilir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "createdDraftId": "3709423b-f455-4d67-a66e-4a4c35effc4d"
+    },
+    {
+      "id": "CAM-07",
+      "title": "Hat bağlanmadan taslak kaydedilir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "createdDraftId": "3709423b-f455-4d67-a66e-4a4c35effc4d"
+    },
+    {
+      "id": "CAM-08",
+      "title": "Gerçek campaign ID oluşturulur",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "createdDraftId": "3709423b-f455-4d67-a66e-4a4c35effc4d"
+    },
+    {
+      "id": "CAM-09",
+      "title": "Veritabanındaki kampanya kaydı doğrulanır",
+      "category": "REAL_DB_INTEGRATION",
+      "status": "PASS",
+      "row": {
+        "id": "3709423b-f455-4d67-a66e-4a4c35effc4d",
+        "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+        "name": "Taslak Kampanya test_cams_1791748547122",
+        "status": "draft",
+        "source_list_ids": []
+      }
+    },
+    {
+      "id": "CAM-10",
+      "title": "Taslak kaydı hiçbir WA job oluşturmaz",
+      "category": "REAL_DB_INTEGRATION",
+      "status": "PASS",
+      "jobsCount": 0
+    },
+    {
+      "id": "CAM-11",
+      "title": "F5 sonrası taslak verisi korunur",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "reloadedName": "Taslak Kampanya test_cams_1791748547122"
+    },
+    {
+      "id": "CAM-12",
+      "title": "Yeni oturumda taslak tekrar açılır",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "isDetail": "Taslak Kampanya test_cams_1791748547122"
+    },
+    {
+      "id": "CAM-13",
+      "title": "Farklı tarayıcı bağlamından taslak görüntülenir",
+      "category": "REAL_BROWSER_E2E",
+      "status": 200
+    },
+    {
+      "id": "CAM-14",
+      "title": "Taslak düzenlenip tekrar kaydedilir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "nameInDb": "Güncellenmiş Taslak test_cams_1791748547122"
+    },
+    {
+      "id": "CAM-15",
+      "title": "Eski veri yanlışlıkla üzerine yazılmaz",
+      "category": "REAL_DB_INTEGRATION",
+      "status": "PASS",
+      "safe": true
+    },
+    {
+      "id": "CAM-16",
+      "title": "Aynı kaydetme iki kez tetiklenirse mükerrer kayıt oluşmaz",
+      "category": "REAL_DB_INTEGRATION",
+      "status": "PASS",
+      "before": "1",
+      "after": "1"
+    },
+    {
+      "id": "CAM-17",
+      "title": "Kampanya videosu önizlemede oynatılır",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "hasVideo": true,
+      "videoUrl": "http://167.233.201.31:3456/outputs/video_1790061265827_flow.mp4"
+    },
+    {
+      "id": "CAM-18",
+      "title": "Kampanya görseli doğru gösterilir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "imgCount": 1
+    },
+    {
+      "id": "CAM-19",
+      "title": "Medya bulunamadığında sistem güvenli hata verir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "pageTextSnippet": "Ana sayfaKampanyalarMesajlarKişilerAyarlarAna sayfaKampanyalarMesajlarKişilerAyarlarİşletmeFilo ticaretMaydonoz DönerBof"
+    },
+    {
+      "id": "CAM-20",
+      "title": "Başka işletmenin creative ID'si engellenir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "foreignCreative": "758ca50a-be63-5ae5-a9cf-f8a15a0a7343"
+    },
+    {
+      "id": "CAM-21",
+      "title": "Başka işletmenin kişi listesi engellenir",
+      "category": "API_INTEGRATION",
+      "status": "PASS",
+      "foreignListId": "693c96bc-1ebc-4467-9fcc-105980664c24",
+      "note": "Server-side idsMatch verifies list org_id"
+    },
+    {
+      "id": "CAM-22",
+      "title": "Başka işletmenin hattı engellenir",
+      "category": "API_INTEGRATION",
+      "status": "PASS",
+      "foreignAccId": "fa6ecd5e-d8c6-4401-b80f-0aeaabb0a6e2",
+      "note": "Server-side idsMatch verifies account org_id"
+    },
+    {
+      "id": "CAM-23",
+      "title": "Başka işletmenin taslağı açılamaz",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "httpStatus": 200,
+      "attemptedId": "99ae0163-71b6-494e-b092-84fb8a66df50"
+    },
+    {
+      "id": "CAM-24",
+      "title": "Anonim kullanıcı kampanya kaydedemez",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "finalUrl": "http://localhost:3025/giris?devam=%2Fkampanyalar%2Fyeni"
+    },
+    {
+      "id": "CAM-25",
+      "title": "Taslağın bağımsız kopyası oluşturulur",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "originalId": "3709423b-f455-4d67-a66e-4a4c35effc4d",
+      "copyId": "d61bd73c-1002-45fa-86f6-d39a63a22639"
+    },
+    {
+      "id": "CAM-26",
+      "title": "Kopyalama eski kampanyayı değiştirmez",
+      "category": "REAL_DB_INTEGRATION",
+      "status": "PASS",
+      "oldRow": {
+        "id": "3709423b-f455-4d67-a66e-4a4c35effc4d",
+        "status": "draft",
+        "name": "Güncellenmiş Taslak test_cams_1791748547122"
+      }
+    },
+    {
+      "id": "CAM-27",
+      "title": "Eksik hedeflerle gönderim hazırlığı reddedilir",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "noticeText": "En az bir kişi grubu seçin."
+    },
+    {
+      "id": "CAM-28",
+      "title": "AI metni düzenlenmiş kullanıcı metnini izinsiz ezmez",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "finalVal": "Kullanıcının Değişmez Metni test_cams_1791748547122"
+    },
+    {
+      "id": "CAM-29",
+      "title": "Mobil ekranda taslak kaydetme çalışır",
+      "category": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "finalUrl": "http://localhost:3025/kampanyalar/yeni?adim=kampanya"
+    },
+    {
+      "id": "CAM-30",
+      "title": "İki ayrı işletmenin taslakları birbirinden izoledir",
+      "category": "REAL_DB_INTEGRATION",
+      "status": "PASS",
+      "bofeCount": 1,
+      "ayvazCount": 43,
+      "overlapCount": 0
+    }
+  ],
+  "summary": {
+    "total": 30,
+    "pass": 30,
+    "fail": 0,
+    "blocked": 0
+  }
+}

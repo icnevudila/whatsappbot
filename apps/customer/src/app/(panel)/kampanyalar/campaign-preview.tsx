@@ -8,12 +8,14 @@ export function CampaignPreviewButton({
   name: _name,
   body,
   mediaUrl,
+  messageType,
   className,
   label,
 }: {
   name: string
   body: string | null
   mediaUrl: string | null
+  messageType?: string
   className?: string
   label?: string
 }) {
@@ -38,6 +40,7 @@ export function CampaignPreviewButton({
         <CampaignPreviewModal
           body={body}
           mediaUrl={mediaUrl}
+          messageType={messageType}
           onClose={() => setOpen(false)}
         />
       ) : null}
@@ -48,10 +51,12 @@ export function CampaignPreviewButton({
 function CampaignPreviewModal({
   body,
   mediaUrl,
+  messageType,
   onClose,
 }: {
   body: string | null
   mediaUrl: string | null
+  messageType?: string
   onClose: () => void
 }) {
   const titleId = useId()
@@ -94,19 +99,21 @@ function CampaignPreviewModal({
           </button>
         </div>
 
-        <CompactWaPreview body={body ?? ''} mediaUrl={mediaUrl} />
+        <CompactWaPreview body={body ?? ''} mediaUrl={mediaUrl} messageType={messageType} />
       </div>
     </div>,
     document.body,
   )
 }
 
-function CompactWaPreview({ body, mediaUrl }: { body: string; mediaUrl: string | null }) {
+function CompactWaPreview({ body, mediaUrl, messageType }: { body: string; mediaUrl: string | null; messageType?: string }) {
   const preview = body.replaceAll('{{ad}}', 'Ahmet').replaceAll('{{name}}', 'Ahmet')
   return (
     <div className="wb-wa-bubble-preview">
       <div className="wb-wa-phone-bubble">
-        {mediaUrl ? (
+        {mediaUrl && messageType === 'video' ? (
+          <video src={mediaUrl} controls playsInline preload="metadata" className="wb-wa-phone-media" />
+        ) : mediaUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={mediaUrl} alt="" className="wb-wa-phone-media" />
         ) : null}
