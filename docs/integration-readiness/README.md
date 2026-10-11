@@ -2,6 +2,8 @@
 
 Decision: **NO-GO**. Initial snapshots and later Sales correction are separate; each report contains both the original evidence and the follow-up boundary.
 
+User clarification: the initial product does not use Stripe subscriptions. Billing findings and Stripe migration work are deferred, not launch/pilot blockers. The remaining NO-GO concerns media delivery, tenant/admin security and missing independent customer-journey evidence.
+
 - [Independent code audit](INDEPENDENT_CODE_AUDIT.md)
 - [Three branch compatibility](THREE_BRANCH_COMPATIBILITY.md)
 - [60-test truth audit](MASTER_60_TEST_TRUTH_AUDIT.md)

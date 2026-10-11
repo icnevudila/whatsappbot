@@ -2,6 +2,10 @@
 
 > Independent frozen-snapshot audit. No main merge, production deployment, paid AI generation, real payment, WhatsApp send, credential rotation or customer DB access. Active worktrees were not edited. Fresh browser/customer E2E: **BLOCKED**.
 
+## Initial launch scope — user clarification
+
+Stripe subscriptions are **not part of the initial product release**. Stripe billing defects, the Stripe ledger/RLS finding and Stripe migration delivery dependency are deferred integration work, **not launch or pilot blockers**. Their historical evidence remains valid. No billing code was changed or enabled. The remaining NO-GO rests on media authorization/playback, tenant/admin security and missing independent customer-journey/recovery evidence.
+
 | Role | Remote branch | Frozen SHA |
 |---|---|---|
 | main | origin/main | `5e79320b86298d472508275c1538beabedea9ebb` |
@@ -11,7 +15,7 @@
 
 ## Decision: NO-GO
 
-Text merges are clean, but cross-branch media and billing defects were reproduced. Production exploitability and capacity are not inferred from local tests.
+Text merges are clean, but cross-branch media defects were reproduced; historical billing findings are deferred. Production exploitability and capacity are not inferred from local tests.
 
 ## Branch architecture and tested boundaries
 
@@ -57,7 +61,7 @@ Recommended fix: Use owned application media IDs and authenticated proxy/signed 
 
 Retest: Signed URL survives normalization; fresh and historical images render in private bucket; expired links renew only after tenant authorization.
 
-### P1 BILL-01 — Old subscription deletion bypasses subscription mismatch guard
+### Deferred Stripe: P1 BILL-01 — Old subscription deletion bypasses subscription mismatch guard
 
 Owner: Image Fix. Evidence: [apps/customer/src/app/api/billing/webhook/route.ts:155](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/app/api/billing/webhook/route.ts#L155); [supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql:108](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql#L108).
 
@@ -67,7 +71,7 @@ Recommended fix: Pass event subscription ID even on deletion; clear local ID ins
 
 Retest: Run signed obsolete deletion and incomplete_expired update through actual POST; current plan/subscription unchanged; valid current deletion downgrades.
 
-### P1 BILL-02 — invoice.payment_failed with invoice status open does not suspend
+### Deferred Stripe: P1 BILL-02 — invoice.payment_failed with invoice status open does not suspend
 
 Owner: Image Fix. Evidence: [apps/customer/src/app/api/billing/webhook/route.ts:144](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/app/api/billing/webhook/route.ts#L144); [supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql:129](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql#L129).
 
@@ -77,7 +81,7 @@ Recommended fix: Normalize event type separately from invoice lifecycle status, 
 
 Retest: invoice.payment_failed open/draft variants suspend according to policy; payment recovery clears only Stripe-owned suspension; manual/security suspension persists.
 
-### P1 BILL-03 — Paid invoice can downgrade plan and replace current subscription with an obsolete one
+### Deferred Stripe: P1 BILL-03 — Paid invoice can downgrade plan and replace current subscription with an obsolete one
 
 Owner: Image Fix. Evidence: [apps/customer/src/app/api/billing/webhook/route.ts:132](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/app/api/billing/webhook/route.ts#L132); [apps/customer/src/lib/stripe-prices.ts:17](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/lib/stripe-prices.ts#L17); [supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql:109](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql#L109).
 
@@ -87,7 +91,7 @@ Recommended fix: Resolve invoice subscription using the pinned Stripe API schema
 
 Retest: Metadata-free current paid invoice retains pro; obsolete invoice success/failure/deletion has no entitlement effect; test invoice parent.subscription_details for supported API version.
 
-### P1 BILL-04 — Unpaid completed Checkout is treated as active entitlement
+### Deferred Stripe: P1 BILL-04 — Unpaid completed Checkout is treated as active entitlement
 
 Owner: Image Fix. Evidence: [apps/customer/src/app/api/billing/webhook/route.ts:117](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/apps/customer/src/app/api/billing/webhook/route.ts#L117).
 
@@ -147,7 +151,7 @@ Recommended fix: Never skip a whole line due to marker text; use scoped placehol
 
 Retest: Mixed env/secret line, comments, nested docs, malformed Git context, deleted files and full delivery staged diff; report scope explicitly.
 
-### P1 DB-01 — Stripe ledger has no explicit RLS or tenant read policy
+### Deferred Stripe: P1 DB-01 — Stripe ledger has no explicit RLS or tenant read policy
 
 Owner: Image Fix. Evidence: [supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql:9](https://github.com/icnevudila/whatsappbot/blob/17b8eb765b408784a7ac11ed4ef3974c7281cc0f/supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql#L9).
 
@@ -195,6 +199,6 @@ Retest: Valid CA connects; invalid/self-signed unexpected certificate fails; rea
 
 Sales advanced to `0f7af781f3dd72471ce8ab8ee0cd68dbc5a2203a` after the initial capture. Its four changed files are listed in [follow-up metadata](evidence/sales-follow-up.json); Master and Research remain at original SHAs. Follow-up independent run: 20 passed, 0 failed, 1 skipped; [separate TAP](evidence/follow-up-tests.tap). **BILL-02 is corrected in the isolated signed-POST/SQL fixture**: invoice.payment_failed/open now suspends. The initial finding remains historical evidence, not an allegation against this later code. BILL-01 (null cancellation ID), BILL-03 (paid-invoice fallback/obsolete success), BILL-04 (unpaid Checkout) and the other pinned-module reproductions remain. Pairwise merge-tree with later Sales is still clean.
 
-**P1 migration delivery dependency**: the follow-up edits the existing `20261011123000_stripe_webhook_atomic_ledger.sql` file instead of delivering a new migration. An environment that already applied the original migration will not automatically receive the updated function through normal migration history. Owner: Image Fix. Supply an additive replacement-function migration, then retest upgrading an already-migrated fixture as well as a clean install. No deployed migration state was inspected.
+**Deferred Stripe migration delivery dependency (P1 before future activation)**: the follow-up edits the existing `20261011123000_stripe_webhook_atomic_ledger.sql` file instead of delivering a new migration. An environment that already applied the original migration will not automatically receive the updated function through normal migration history. Owner: Image Fix. Supply an additive replacement-function migration, then retest upgrading an already-migrated fixture as well as a clean install. No deployed migration state was inspected.
 
 Docker engine was unavailable on the independent audit host during a local probe; real multi-connection PostgreSQL/container tests remain BLOCKED. Full seeded browser E2E remains BLOCKED. No service was restarted to obtain it. Final release decision remains **NO-GO**.

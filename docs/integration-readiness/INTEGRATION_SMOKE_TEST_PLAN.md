@@ -2,6 +2,10 @@
 
 > Independent frozen-snapshot audit. No main merge, production deployment, paid AI generation, real payment, WhatsApp send, credential rotation or customer DB access. Active worktrees were not edited. Fresh browser/customer E2E: **BLOCKED**.
 
+## Initial launch scope — user clarification
+
+Stripe subscriptions are **not part of the initial product release**. Stripe billing defects, the Stripe ledger/RLS finding and Stripe migration delivery dependency are deferred integration work, **not launch or pilot blockers**. Their historical evidence remains valid. No billing code was changed or enabled. The remaining NO-GO rests on media authorization/playback, tenant/admin security and missing independent customer-journey/recovery evidence.
+
 | Role | Remote branch | Frozen SHA |
 |---|---|---|
 | main | origin/main | `5e79320b86298d472508275c1538beabedea9ebb` |
@@ -22,8 +26,8 @@ Use tests/integration-readiness README and fixed source loader. Scope: actual JS
 | Invalid/expired signature and unknown owner | 401/403, no readable bytes, no public cache | REAL_INTEGRATION |
 | Restart | owner/job/final file survives process/container recreation | REAL_INTEGRATION |
 | NEEDS_REVIEW | private preview allowed only owned review, publication denied | REAL_INTEGRATION + REAL_BROWSER_E2E |
-| Stripe events | failed/succeeded/updated/deleted/checkout signed payloads reflect correct current sub | REAL_INTEGRATION |
-| Race/replay/out-of-order | Separate PG clients duplicate same event; no unsafe state/double entitlement | REAL_INTEGRATION |
+| Stripe events (deferred; not an initial-launch gate) | failed/succeeded/updated/deleted/checkout signed payloads reflect correct current sub | REAL_INTEGRATION |
+| Stripe race/replay/out-of-order (deferred) | Separate PG clients duplicate same event; no unsafe state/double entitlement | REAL_INTEGRATION |
 | Recovery/idempotency | Two tabs one job; F5 returns same job; stale approval/version rejected | REAL_BROWSER_E2E + DB read-back |
 | Save/reopen | DB draft exists, new session reads exact content and creative_id | REAL_BROWSER_E2E + REAL_INTEGRATION |
 | Mobile | Controls and preview usable at each viewport, no empty-selector pass | REAL_BROWSER_E2E |
@@ -44,6 +48,6 @@ Not available in this audit: full seeded app, real PostgREST/Storage, separate P
 
 Sales advanced to `0f7af781f3dd72471ce8ab8ee0cd68dbc5a2203a` after the initial capture. Its four changed files are listed in [follow-up metadata](evidence/sales-follow-up.json); Master and Research remain at original SHAs. Follow-up independent run: 20 passed, 0 failed, 1 skipped; [separate TAP](evidence/follow-up-tests.tap). **BILL-02 is corrected in the isolated signed-POST/SQL fixture**: invoice.payment_failed/open now suspends. The initial finding remains historical evidence, not an allegation against this later code. BILL-01 (null cancellation ID), BILL-03 (paid-invoice fallback/obsolete success), BILL-04 (unpaid Checkout) and the other pinned-module reproductions remain. Pairwise merge-tree with later Sales is still clean.
 
-**P1 migration delivery dependency**: the follow-up edits the existing `20261011123000_stripe_webhook_atomic_ledger.sql` file instead of delivering a new migration. An environment that already applied the original migration will not automatically receive the updated function through normal migration history. Owner: Image Fix. Supply an additive replacement-function migration, then retest upgrading an already-migrated fixture as well as a clean install. No deployed migration state was inspected.
+**Deferred Stripe migration delivery dependency (P1 before future activation)**: the follow-up edits the existing `20261011123000_stripe_webhook_atomic_ledger.sql` file instead of delivering a new migration. An environment that already applied the original migration will not automatically receive the updated function through normal migration history. Owner: Image Fix. Supply an additive replacement-function migration, then retest upgrading an already-migrated fixture as well as a clean install. No deployed migration state was inspected.
 
 Docker engine was unavailable on the independent audit host during a local probe; real multi-connection PostgreSQL/container tests remain BLOCKED. Full seeded browser E2E remains BLOCKED. No service was restarted to obtain it. Final release decision remains **NO-GO**.
