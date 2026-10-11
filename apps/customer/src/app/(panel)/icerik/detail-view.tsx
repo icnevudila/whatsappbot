@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { AccentLink, Badge, Button, Field, Notice, Textarea } from '@/components/ui'
 import { Icon, type IconName } from '@/components/icon'
 import { CreativeGenerating } from '@/components/creative-generating'
+import { CreativeDownload } from '@/components/creative-download'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -145,16 +146,11 @@ export function CreativeMoreMenu({
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
           {publicUrl ? (
-            <a
-              role="menuitem"
-              href={publicUrl}
-              download=""
+            <CreativeDownload
+              creativeId={creativeId} role="menuitem"
               className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-              onClick={() => setOpen(false)}
-            >
-              <Icon name="download" className="size-4 text-ink-muted" />
-              İndir
-            </a>
+              onStarted={() => setOpen(false)}
+            />
           ) : null}
           {canManage ? (
             <button
@@ -680,7 +676,7 @@ export function CreativeDetail({
                   className="w-full rounded-[var(--radius-card)] object-contain"
                 />
               </button>
-              <DetailImageMenu publicUrl={getSafeMediaUrl(displayPublicUrl) || displayPublicUrl} />
+              <DetailImageMenu creativeId={creative.id} />
               <ImageLightbox
                 open={lightboxOpen}
                 src={getSafeMediaUrl(displayPublicUrl) || displayPublicUrl}
@@ -1005,7 +1001,7 @@ function ImageLightbox({
   )
 }
 
-function DetailImageMenu({ publicUrl }: { publicUrl: string }) {
+function DetailImageMenu({ creativeId }: { creativeId: string }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -1042,16 +1038,11 @@ function DetailImageMenu({ publicUrl }: { publicUrl: string }) {
           role="menu"
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
-          <a
-            role="menuitem"
-            href={publicUrl}
-            download=""
+          <CreativeDownload
+            creativeId={creativeId} role="menuitem"
             className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-            onClick={() => setOpen(false)}
-          >
-            <Icon name="download" className="size-4 text-ink-muted" />
-            İndir
-          </a>
+            onStarted={() => setOpen(false)}
+          />
         </div>
       ) : null}
     </div>

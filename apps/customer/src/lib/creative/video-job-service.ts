@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { BRAND_VIDEO_UNAVAILABLE } from './promotion-policy'
 import { NextRequest, NextResponse } from 'next/server'
 import type { requireActiveOrg } from '@/lib/org'
 import { MAX_SPOKEN_WORDS, countWords } from '@/lib/video-wizard-contract'
@@ -53,6 +54,11 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     }
 
     const body = await req.json()
+    // The current adapter requires distinct logo + real offering assets.
+    // Do not manufacture a second reference or a fake catalog item for brand ads.
+    if (body.promotionMode === 'brand' || body.promotionType === 'general_brand') {
+      return NextResponse.json({ error: BRAND_VIDEO_UNAVAILABLE }, { status: 422 })
+    }
     const {
       title,
       brief,

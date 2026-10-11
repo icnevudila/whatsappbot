@@ -5,7 +5,7 @@ export function inheritVariationContext(draft: Record<string, unknown>, parent: 
   const inherited = { ...draft }
   const keys = ['cta', 'address', 'website', 'dateRange', 'customText', 'customHeadline',
     'customSupporting', 'objective', 'stylePreset', 'qualityMode', 'templateFamily',
-    'sector', 'deliveryInfo', 'stockInfo', 'urgencyInfo', 'primaryBenefits'] as const
+    'sector', 'deliveryInfo', 'stockInfo', 'urgencyInfo', 'primaryBenefits', 'promotionMode', 'offeringKind'] as const
   for (const key of keys) {
     if (!Object.prototype.hasOwnProperty.call(draft, key) && parent[key] !== undefined) {
       inherited[key] = parent[key]

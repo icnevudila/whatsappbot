@@ -874,7 +874,7 @@ export function buildCreativePrompt(
   prompt: string
   negative: string
 } {
-  if (options?.mode === 'V3') return buildCreativePromptV3(snapshot)
+  if (snapshot.promotionMode === 'brand' || options?.mode === 'V3') return buildCreativePromptV3(snapshot)
   if (options?.mode === 'OVER_DIRECTED_DESIGNER') {
     return buildOverDirectedCreativePrompt(snapshot, options)
   }

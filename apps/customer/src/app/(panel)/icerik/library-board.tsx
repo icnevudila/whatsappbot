@@ -10,6 +10,7 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { CreativeGenerating } from '@/components/creative-generating'
+import { CreativeDownload } from '@/components/creative-download'
 import { deleteCreative, listLibraryCreatives } from './actions'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
 import { getSafeMediaUrl } from './detail-view'
@@ -413,7 +414,7 @@ function ItemMenu({
     })
     items.push({ key: 'revise', label: 'Revize et', href: `/icerik/${item.id}?revize=1` })
     items.push({ key: 'vary', label: 'Varyasyon', href: `/icerik/${item.id}` })
-    items.push({ key: 'download', label: 'İndir', href: item.publicUrl, download: true })
+    items.push({ key: 'download', label: 'İndir', download: true })
   }
   if (canManage) items.push({ key: 'delete', label: 'Sil', danger: true, onSelect: onDelete })
   if (items.length === 0) return null
@@ -437,7 +438,11 @@ function ItemMenu({
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
           {items.map((entry) =>
-            entry.href ? (
+            entry.download ? (
+              <CreativeDownload key={entry.key} creativeId={item.id} role="menuitem"
+                className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
+                onStarted={() => setOpen(false)} />
+            ) : entry.href ? (
               <a
                 key={entry.key}
                 role="menuitem"

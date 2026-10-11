@@ -1,0 +1,82 @@
+{
+  "at": "2026-10-11T17:54:09.852Z",
+  "base": "http://localhost:3015",
+  "scope": "Local modified Next app; existing real Supabase test account/media; no production deploy, generation or tenant mutation. Wizard visual tests explicitly fixture-only.",
+  "results": [
+    {
+      "name": "Real session login",
+      "status": "PASS",
+      "localApp": true
+    },
+    {
+      "name": "bofe browser file download",
+      "status": "PASS",
+      "creativeId": "aefa9578-07ea-56eb-abe5-cc500d638fca",
+      "filename": "Bofe ile Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası. Ürünü inceleyin ve ay-aefa9578.png",
+      "bytes": 2151799,
+      "downloadedSha256": "f5d3606d2b949f7bb48fb6a04bfc1cee09a476f2b42879936401636f2817cf83",
+      "originalSha256": "f5d3606d2b949f7bb48fb6a04bfc1cee09a476f2b42879936401636f2817cf83",
+      "contentType": "image/png",
+      "contentDisposition": "attachment; filename=\"Bofe ile Bofe Otomatik Sarjl Akulu Srt Ilaclama Pompas. Urunu inceleyin ve ay-aefa9578.png\"; filename*=UTF-8''Bofe%20ile%20Bofe%20Otomatik%20%C5%9Earjl%C4%B1%20Ak%C3%BCl%C3%BC%20S%C4%B1rt%20%C4%B0la%C3%A7lama%20Pompas%C4%B1.%20%C3%9Cr%C3%BCn%C3%BC%20inceleyin%20ve%20ay-aefa9578.png",
+      "pageUnchanged": true,
+      "decoded": {
+        "width": 1254,
+        "height": 1254,
+        "format": "png"
+      }
+    },
+    {
+      "name": "Real video playback + seek + HTTP 206",
+      "status": "PASS",
+      "creativeId": "b3fcc6a6-7dbd-40eb-a468-9c0424fd1efc",
+      "statusCode": 206
+    },
+    {
+      "name": "ayvaz browser file download",
+      "status": "PASS",
+      "creativeId": "b3fcc6a6-7dbd-40eb-a468-9c0424fd1efc",
+      "filename": "Ayvazoğlu İnşaat - tuğla 2 Reklam Filmi-b3fcc6a6.mp4",
+      "bytes": 3204489,
+      "downloadedSha256": "43da113f27957f2f58384c0d205ba3c1ad668dee3afa5fda16469469a72eeca0",
+      "originalSha256": "43da113f27957f2f58384c0d205ba3c1ad668dee3afa5fda16469469a72eeca0",
+      "contentType": "video/mp4",
+      "contentDisposition": "attachment; filename=\"Ayvazoglu Insaat - tugla 2 Reklam Filmi-b3fcc6a6.mp4\"; filename*=UTF-8''Ayvazo%C4%9Flu%20%C4%B0n%C5%9Faat%20-%20tu%C4%9Fla%202%20Reklam%20Filmi-b3fcc6a6.mp4",
+      "pageUnchanged": true,
+      "decoded": {
+        "duration": "10.000000",
+        "videoCodec": "h264"
+      }
+    },
+    {
+      "name": "Cross-active-tenant real download denied",
+      "status": "PASS",
+      "statusCode": 404
+    },
+    {
+      "name": "Anonymous real download denied",
+      "status": "PASS",
+      "statusCode": 401
+    },
+    {
+      "name": "Missing media ID real API denied",
+      "status": "PASS",
+      "statusCode": 404
+    },
+    {
+      "name": "Brand image logo-only UI + physical image required",
+      "status": "PASS",
+      "fixtureOnly": true
+    },
+    {
+      "name": "Logo-only brand video unavailable with clear explanation",
+      "status": "PASS",
+      "fixtureOnly": true
+    },
+    {
+      "name": "Mobile mode selector readable without horizontal overflow",
+      "status": "PASS",
+      "width": 390,
+      "fixtureOnly": true
+    }
+  ]
+}

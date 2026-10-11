@@ -1,5 +1,6 @@
 'use server'
 import sharp from 'sharp'
+import { promotionMode, offeringKind, promotionPolicyError, BRAND_VIDEO_UNAVAILABLE } from '@/lib/creative/promotion-policy'
 
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -167,6 +168,10 @@ export async function startCreativeGeneration(
 
   const authContext = { userId, org, supabase }
   const format = formatFromId(String(draft.formatId ?? 'wa'))
+  if (promotionMode(draft.promotionMode) === 'brand' && format.format === 'video') return {error:BRAND_VIDEO_UNAVAILABLE}
+  if (promotionMode(draft.promotionMode) === 'brand' && Array.isArray(draft.referenceImageUrls) && draft.referenceImageUrls.length) {
+    return {error:'Marka tanıtımında yalnız işletme logosu kullanılır; ek ürün görseli bağlanmaz.'}
+  }
   const kitId = String(draft.brandKitId ?? '').trim() || null
   const rawProductIds = parseIds(draft.productIds)
   const heroProductId = String(draft.heroProductId || '').trim()
@@ -447,10 +452,21 @@ export async function startCreativeGeneration(
   }
   const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
   const logoSource = String(kitRow?.logo_path || orgLogoPath || '').trim()
+  const subjectMode = promotionMode(draft.promotionMode)
+  // Brand-only is explicit, never inferred from an objective or missing product.
+  if (subjectMode === 'brand' || draft.promotionMode === 'offering') {
+    const subjectError = promotionPolicyError({ mode: subjectMode, video: format.format === 'video',
+      hasLogo: Boolean(logoSource) && draft.useLogo !== false,
+      hasOfferingReference: products.some(product => product.include.image && Boolean(product.imageUrl)),
+      hasOfferingSelection: products.length > 0 || rawProductIds.length > 0 || Boolean(heroProductId),
+      hasBase: Boolean(baseCreativeId) })
+    if (subjectError) return { error: subjectError }
+  }
   if (products.some(product => !product.include.image || !product.imageUrl || product.imageUrl.trim() === logoSource || /^\/?(?:brand|logos)\//i.test(product.imageUrl))) {
     return { error: 'Seçilen her ürün için gerçek ürün veya arayüz görseli ekleyin. İşletme logosu ürün referansı yerine kullanılamaz.' }
   }
   const imageAssetGate = requiredImageAssets({
+    promotionMode: subjectMode,
     useLogo: draft.useLogo !== false, hasLogo: Boolean(kitRow?.logo_path || orgLogoPath),
     hasProductReference: products.some((product) => product.include.image && Boolean(product.imageUrl)),
     hasValidBase: Boolean(baseCreativeId),
@@ -489,6 +505,8 @@ export async function startCreativeGeneration(
 
   const tInsertStart = Date.now()
   const snapshot: CreativePayload = {
+    promotionMode: subjectMode,
+    offeringKind: offeringKind(draft.offeringKind),
     brief,
     style: String(draft.style ?? 'auto'),
     formatId: format.id,
@@ -538,7 +556,7 @@ export async function startCreativeGeneration(
     customSupporting: (draft.customSupporting as string) || null,
     heroProductId: heroProductId || (products[0]?.id as string) || null,
     stylePreset: (draft.stylePreset as string) || null,
-    objective: (draft.objective as string) || null,
+    objective: subjectMode === 'brand' ? 'BRAND_AWARENESS' : (draft.objective as string) || null,
     artDirectionPlan: artDirectionPlan || null,
     art_direction_source: artDirectionSource,
     submissionMetrics: {
