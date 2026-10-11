@@ -357,7 +357,7 @@ function LibraryCard({
               failed ? 'bg-[#fff5f4] text-danger' : 'bg-surface/90 text-ink-muted'
             }`}
           >
-            {statusLabel(failed ? 'failed' : item.status)}
+            {isVideo && item.status === 'needs_review' ? 'Kullanıma hazır değil' : statusLabel(failed ? 'failed' : item.status)}
           </span>
         ) : null}
         <ItemMenu item={item} canManage={canManage} pending={pending} onDelete={onDelete} />
@@ -513,8 +513,8 @@ function GeneratingFrame({ status, error }: { status: string; error: string | nu
       {status === 'needs_review' ? (
         <div className="flex h-full flex-col items-center justify-center bg-canvas px-4 text-center">
           <Icon name="video" className="mb-3 size-7 text-ink-muted" />
-          <p className="text-[13px] font-semibold text-ink">Video inceleme bekliyor</p>
-          <p className="mt-2 text-[12.5px] text-ink-muted">Kalite kontrolü tamamlanmadan kullanılamaz.</p>
+          <p className="text-[13px] font-semibold text-ink">Video kullanıma hazır değil</p>
+          <p className="mt-2 text-[12.5px] text-ink-muted">Dosya doğrulanamadı veya bir sorun tespit edildi.</p>
         </div>
       ) : status === 'failed' ? (
         <div className="flex h-full flex-col items-center justify-center bg-canvas px-3 text-center">

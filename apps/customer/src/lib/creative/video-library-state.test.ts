@@ -7,7 +7,7 @@ test('library replaces stale ready with owned output approval and actual duratio
   const outputId = 'a55d1687-1924-42dd-a721-000ba5efbaad'
   const rows = [{ id: 'creative', status: 'ready', public_url: `/api/ai-media/outputs/${outputId}` }]
   const filters: any[] = []
-  let output: any = { id: outputId, org_id: 'owned', verified: true, is_approved: false, duration_seconds: '8.00', width: 720, height: 1280 }
+  let output: any = { id: outputId, org_id: 'owned', verified: true, is_approved: false, duration_seconds: '8.00', width: 720, height: 1280, sha256:'a'.repeat(64),byte_size:1024,file_path:'/shared/outputs/finished.mp4' }
   let error: any = null
   const query: any = { select() { return this }, eq(...args: any[]) { filters.push(args); return this },
     async in() { return { data: [output], error } } }
@@ -18,6 +18,12 @@ test('library replaces stale ready with owned output approval and actual duratio
   assert.equal((await loadVideoLibraryState(db, 'owned', rows)).get('creative')?.status, 'needs_review', 'approved raw source is not a final master')
   output.duration_seconds = '10.00'
   assert.equal((await loadVideoLibraryState(db, 'owned', rows)).get('creative')?.status, 'ready')
+  output.is_approved = false
+  output.visual_qa_report = {reason:'TECHNICAL_VALIDATION_ONLY',technical_checks:[]}
+  assert.equal((await loadVideoLibraryState(db,'owned',[{...rows[0],status:'needs_review'}])).get('creative')?.status,'ready')
+  output.is_approved = true
+  output.visual_qa_report = {final_qa:{passed:false}}
+  assert.equal((await loadVideoLibraryState(db,'owned',rows)).get('creative')?.status,'needs_review','serious failure overrides a stale approved flag')
   output.org_id = 'foreign'
   assert.deepEqual((await loadVideoLibraryState(db, 'owned', rows)).get('creative'), { status: 'needs_review', durationSeconds: null })
   error = { message: 'unavailable' }

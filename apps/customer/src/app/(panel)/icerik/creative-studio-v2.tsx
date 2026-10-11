@@ -786,14 +786,13 @@ export function CreativeStudioV2({
             }`}
           >
             <p className={`text-[13.5px] font-bold ${jobState === 'FAILED' ? 'text-rose-800' : 'text-amber-900'}`}>
-              {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video İnceleme Bekliyor'}
+              {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video Kullanıma Hazır Değil'}
             </p>
             <p className="mt-1 text-[12px] leading-relaxed text-[#667781]">
               {jobState === 'FAILED'
                 ? videoFailureUserMessage(jobFailureMessage)
-                : 'Videonuz üretildi ancak otomatik kalite kontrolü inceleme gerektiriyor.'}
+                : 'Videoda bir sorun tespit edildi veya dosya doğrulaması tamamlanamadı. Yeniden oluşturmayı deneyin.'}
             </p>
-            <p className="mt-2 break-all text-[11px] text-[#667781]">İş kimliği: {activeJobId}</p>
           </div>
 
           {/* Show the video preview even in NEEDS_REVIEW if playback URL exists */}

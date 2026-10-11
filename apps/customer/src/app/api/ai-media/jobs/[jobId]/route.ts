@@ -115,7 +115,7 @@ export async function GET(
 
       if (recentCompleted && recentCompleted.length > 0) {
         const approvedOutputs = await ((createSupabaseServiceClient() || supabase) as SupabaseClient)
-          .from('ai_media_outputs').select('job_id,verified,is_approved,duration_seconds,width,height,product_type')
+          .from('ai_media_outputs').select('job_id,verified,is_approved,duration_seconds,width,height,product_type,visual_qa_report,sha256,byte_size,file_path')
           .eq('org_id', org.id).in('job_id', recentCompleted.map((item: {id:string}) => item.id))
         const approvedIds = new Set((approvedOutputs.error ? [] : approvedOutputs.data || [])
           .filter(isApprovedFinalVideoOutput).map((item: {job_id:string}) => item.job_id))
@@ -152,7 +152,7 @@ export async function GET(
     if (job.state === 'COMPLETED' || job.state === 'NEEDS_REVIEW') {
       const { data: outputs } = await (createSupabaseServiceClient() || supabase as any)
         .from('ai_media_outputs')
-        .select('id, org_id, job_id, file_path, storage_url, sha256, duration_seconds, width, height, product_type, verified, is_approved, visual_qa_report')
+        .select('id, org_id, job_id, file_path, storage_url, sha256, byte_size, duration_seconds, width, height, product_type, verified, is_approved, visual_qa_report')
         .eq('job_id', jobId)
         .eq('org_id', org.id)
         .order('created_at', { ascending: false })
@@ -170,7 +170,8 @@ export async function GET(
     }
 
     // Publication readiness derives from persisted artifact evidence, never job completion alone.
-    const displayState = job.state === 'COMPLETED' && !playbackUrl ? 'NEEDS_REVIEW' : job.state
+    const displayState = (job.state === 'COMPLETED' || job.state === 'NEEDS_REVIEW')
+      ? (outputEvidence && isApprovedFinalVideoOutput(outputEvidence) ? 'COMPLETED' : 'NEEDS_REVIEW') : job.state
     if (displayState !== job.state) {
       stageMapping = mapEngineStateToStage(displayState)
       etaResult = calculateAuthoritativeEta({ historicalDurationsSeconds, activeWorkerCapacity: dynamicCapacity,
@@ -208,7 +209,7 @@ export async function GET(
       failure_user_message: job.state === 'FAILED'
         ? videoFailureUserMessage(job.error_message)
         : displayState === 'NEEDS_REVIEW'
-          ? 'Son video veya yayın onayı doğrulanamadı; çıktı yayınlanmadan önce inceleme gerekiyor.'
+          ? 'Videoda bir sorun tespit edildi veya dosya doğrulaması tamamlanamadı. Kampanyada kullanmadan önce yeniden oluşturun.'
           : null,
       creative_engine_mode: job.creative_engine_mode || job.metadata?.creative_engine_mode || null,
       requested_provider: job.requested_provider || job.metadata?.requested_provider || null,

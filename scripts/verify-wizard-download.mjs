@@ -25,6 +25,7 @@ const capture=(name,proof)=>{results.push({name,status:'PASS',...proof});console
 try {
   // No provider/planner/generation API requests in an acceptance download test.
   await context.route('**/api/ai-media/plan',route=>route.abort())
+  await context.route('**/api/mesaj-yaz',route=>route.abort())
   await context.route('**/api/ai-media/draft',route=>route.abort())
   await context.route('**/api/ai-media/jobs',route=>route.request().method()==='POST'?route.abort():route.continue())
   await page.goto(`${base}/giris`,{waitUntil:'domcontentloaded',timeout:90_000})
@@ -78,6 +79,9 @@ try {
     if(response.headers()['content-type']!==type)throw new Error('Wrong media MIME')
     let decoded
     if(video) {
+      if(await page.locator('input[type="checkbox"][name="identity"], input[type="checkbox"][name="commerce"]').count()) throw new Error('Video still requires customer review checkboxes')
+      if(!(await page.getByRole('link',{name:'Kampanyada kullan',exact:true}).count())) throw new Error('Successful video unavailable for campaign')
+      capture('Real successful video has campaign action and no manual review checkboxes',{localApp:true})
       decoded=JSON.parse(execFileSync('ffprobe',['-v','error','-show_format','-show_streams','-of','json',path],{encoding:'utf8'}))
       if(!decoded.streams.some(stream=>stream.codec_type==='video') || Number(decoded.format.duration)<9.9)throw new Error('Invalid final MP4')
       const player=page.locator('video').first()
@@ -98,6 +102,12 @@ try {
       downloadedSha256:actualSha,originalSha256:originalSha,contentType:type,contentDisposition:response.headers()['content-disposition'],
       pageUnchanged:true,decoded:video?{duration:decoded.format.duration,videoCodec:decoded.streams.find(s=>s.codec_type==='video').codec_name}:decoded})
     if(video) {
+      const campaignHref=await page.getByRole('link',{name:'Kampanyada kullan',exact:true}).getAttribute('href')
+      await page.goto(new URL(campaignHref,base).toString(),{waitUntil:'load',timeout:90_000})
+      if(await page.getByText(/İçerik bulunamadı veya kampanyada kullanıma hazır değil/).count()) throw new Error('Real campaign handoff rejected successful final')
+      if(await page.locator('input[name="creative_id"]').inputValue()!==chosen.id) throw new Error('Campaign handoff lost creative identity')
+      if(await page.locator('input[name="message_type"]').inputValue()!=='video') throw new Error('Campaign handoff misclassified video')
+      capture('Real tenant-owned final loads into campaign wizard without review',{creativeId:chosen.id,noCampaignSaved:true})
       await setOrg(orgs.bofe)
       const foreign=await context.request.get(endpoint)
       if(foreign.status()!==404)throw new Error('Cross-active-tenant download was not blocked')
@@ -109,6 +119,19 @@ try {
   const missing=await context.request.get(`${base}/api/creatives/00000000-0000-4000-8000-999999999999/download`)
   if(missing.status()!==404)throw new Error('Missing creative response wrong')
   capture('Missing media ID real API denied',{statusCode:missing.status()})
+  await context.route('**/fixture-video.mp4',route=>route.fulfill({status:404,body:''}))
+  await page.goto(`${base}/dev/studio-v3?view=video-ready`,{waitUntil:'load',timeout:90_000})
+  if(await page.locator('input[type="checkbox"]').count()) throw new Error('Technical-success fixture requires manual review')
+  if(!(await page.getByRole('link',{name:'Kampanyada kullan',exact:true}).count())) throw new Error('Editorial-only successful final cannot be used')
+  if(await page.getByText('Video kullanıma hazır değil',{exact:true}).count()) throw new Error('Unnecessary successful video warning')
+  await page.screenshot({path:resolve(out,'video-ready-no-review.png'),fullPage:true})
+  capture('Persisted editorial-only final is usable without review UI',{fixtureOnly:true})
+  await page.goto(`${base}/dev/studio-v3?view=video-blocked`,{waitUntil:'load',timeout:90_000})
+  if(!(await page.getByText('Video kullanıma hazır değil',{exact:true}).count())) throw new Error('Confirmed failure is silently ready')
+  if(await page.getByRole('link',{name:'Kampanyada kullan',exact:true}).count()) throw new Error('Blocked video can enter campaign')
+  if(await page.locator('input[type="checkbox"]').count()) throw new Error('Critical failure exposes manual override')
+  await page.screenshot({path:resolve(out,'video-blocked-warning.png'),fullPage:true})
+  capture('Confirmed serious failure warns and blocks campaign without checkbox override',{fixtureOnly:true})
   // UI-only fixture has previewOnly: no writes or paid generation. Actual session/data checks are above.
   await page.goto(`${base}/dev/studio-v3?missing=product`,{waitUntil:'load',timeout:90_000})
   await page.waitForTimeout(1000)

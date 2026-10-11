@@ -22,6 +22,7 @@ import {
 } from '@wa/creative-video-orchestrator'
 import { validateOutput } from './validator.js'
 import { JobState, transitionJob } from './state-machine.js'
+import { automaticVideoRelease } from './automatic-video-release.js'
 import { FlowVeoVideoProvider, OmniStudioGeminiNativeVideoProvider } from './providers/real-video-providers.js'
 import {
   VideoProviderRouter,
@@ -550,7 +551,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     }
   }
 
-  const approved = review.decision === 'PASS' && !presentationNeedsReview
+  const approved = automaticVideoRelease(review, !presentationNeedsReview)
   ws.writeResult({
     job_id: job.id,
     attempt_id: attemptId,
@@ -620,7 +621,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     finalState,
     approved
       ? `SIMPLE_V5_HYBRID completed in ${Math.round((Date.now() - startTime) / 1000)}s`
-      : 'SIMPLE_V5_HYBRID output is technically valid but requires human review',
+      : 'SIMPLE_V5_HYBRID output blocked by a confirmed quality or presentation problem',
     { final_sha256: finalSha, selected_provider: generated.selectedProvider, review_decision: review.decision },
     attemptId
   )

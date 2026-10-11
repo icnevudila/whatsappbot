@@ -34,8 +34,7 @@ import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-i
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } from './wizard-types'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
-import { isApprovedFinalVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
-import { libraryVideoOutputId, loadVideoLibraryState } from '@/lib/creative/video-library-state'
+import { loadVideoLibraryState } from '@/lib/creative/video-library-state'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import {
   generateVideoScenarios,
@@ -822,48 +821,6 @@ export async function approveReviewedImage(formData: FormData): Promise<Creative
   if (error || !approved) return {error:'Kayıt değişti; yeniden inceleyin.'}
   revalidateLibrary(id)
   return {ok:'Görsel inceleme onayınız kaydedildi.'}
-}
-
-export async function approveReviewedVideo(formData: FormData): Promise<CreativeActionState> {
-  if (formData.get('identity') !== 'on' || formData.get('commerce') !== 'on')
-    return { error: 'Ürün/marka ve ticari bilgileri videoda kontrol ettiğinizi doğrulayın.' }
-  const { org, userId, supabase } = await requireActiveOrg()
-  if (!isOrgAdminRole(org.role)) return { error: 'Onay yetkiniz yok.' }
-  const id = String(formData.get('id') || '').trim()
-  if (!id) return { error: 'Geçersiz video ID.' }
-
-  const { data: row, error: readError } = await supabase
-    .from('creatives')
-    .select('id, format, status, public_url, payload, updated_at')
-    .eq('org_id', org.id)
-    .eq('id', id)
-    .maybeSingle()
-
-  if (readError || !row || row.status !== 'needs_review')
-    return { error: 'Video kaydı bulunamadı veya onay durumunda değil.' }
-
-  const serviceClient = createSupabaseServiceClient() || supabase
-  const outputId = libraryVideoOutputId(row.public_url)
-  if (row.format !== 'video' || !outputId) return { error: 'Doğrulanabilir video çıktısı bulunamadı.' }
-  const { data: out, error: outputError } = await (serviceClient as any)
-    .from('ai_media_outputs')
-    .select('id,job_id,org_id,verified,is_approved,sha256,storage_url,file_path,duration_seconds,width,height,product_type')
-    .eq('id', outputId).eq('org_id', org.id).maybeSingle()
-  if (outputError || !out) return { error: 'Video çıktısı doğrulanamadı.' }
-  const { data: job, error: jobError } = await (serviceClient as any)
-    .from('ai_media_jobs').select('id,org_id,state')
-    .eq('id', out.job_id).eq('org_id', org.id).maybeSingle()
-  if (jobError || !isReviewVideoOutput(out, job, org.id) ||
-      !isApprovedFinalVideoOutput({ ...out, is_approved: true }) ||
-      !(out.storage_url || out.file_path)) return { error: 'Video kalite ve iş kimliği doğrulamasından geçmedi.' }
-
-  const { data: approved, error: approvalError } = await (serviceClient as any).rpc('approve_creative_video_review', {
-    p_org: org.id, p_creative: id, p_output: outputId, p_sha: out.sha256,
-    p_updated: row.updated_at, p_reviewer: userId,
-  })
-  if (approvalError || approved !== true) return { error: 'Onay kaydedilemedi veya kayıt değişti; yeniden inceleyin.' }
-  revalidateLibrary(id)
-  return { ok: 'Video inceleme onayınız kaydedildi.' }
 }
 
 export async function renameCreative(formData: FormData): Promise<CreativeActionState> {

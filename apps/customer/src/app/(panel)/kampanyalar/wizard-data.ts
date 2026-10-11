@@ -15,11 +15,11 @@ export async function loadCampaignCreativeHandoff(orgId: string, creativeId: str
   const { data: row, error } = await supabase.from('creatives')
     .select('id, title, status, public_url, format, payload')
     .eq('org_id', orgId).eq('id', creativeId).maybeSingle()
-  if (error || !row || row.status !== 'ready' || !row.public_url) return null
+  if (error || !row || !['ready','needs_review'].includes(row.status) || !row.public_url) return null
   const videoState = (await loadVideoLibraryState(supabase, orgId, [row])).get(row.id)
   if (videoState && videoState.status !== 'ready') return null
   const payload = (row.payload ?? {}) as Partial<CreativePayload>
-  if (!videoState && row.format !== 'video' && !isImageReviewApproved(payload)) return null
+  if (!videoState && (row.status !== 'ready' || row.format === 'video' || !isImageReviewApproved(payload))) return null
   return {
     creativeId: row.id,
     mediaUrl: row.public_url,
@@ -54,7 +54,7 @@ export async function loadCampaignWizardData(orgId: string) {
       .from('creatives')
       .select('id, title, status, public_url, format, payload')
       .eq('org_id', orgId)
-      .eq('status', 'ready')
+      .in('status', ['ready','needs_review'])
       .not('public_url', 'is', null)
       .order('created_at', { ascending: false })
       .limit(24),
@@ -100,7 +100,7 @@ export async function loadCampaignWizardData(orgId: string) {
 
   const videoStates = await loadVideoLibraryState(supabase, orgId, creativesResult.data ?? [])
   const creatives: CreativeOption[] = (creativesResult.data ?? [])
-    .filter((row) => row.public_url && (!videoStates.has(row.id) || videoStates.get(row.id)?.status === 'ready') &&
+    .filter((row) => row.public_url && (videoStates.has(row.id) ? videoStates.get(row.id)?.status === 'ready' : row.status === 'ready' && row.format !== 'video') &&
       (row.format === 'video' || videoStates.has(row.id) || isImageReviewApproved(row.payload)))
     .map((row) => ({ id: row.id, url: row.public_url as string, title:row.title || 'Kreatif',
       messageType:row.format === 'video' || videoStates.has(row.id) ? 'video' : 'image',

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Button, Card, Field, FileUploadButton, Input, Notice, Textarea } from '@/components/ui'
 import { Stepper } from '@/components/stepper'
 import { ProductionProgress } from '@/components/production-progress/production-progress'
+import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import { uploadAssetOnly } from './actions'
 import {
   AD_FORMAT_OPTIONS,
@@ -731,12 +732,10 @@ export function CreativeWizard({
           <div className="mx-auto max-w-xl space-y-4 p-6">
             <div className={`rounded-xl border p-4 ${jobState === 'FAILED' ? 'border-rose-200 bg-rose-50' : 'border-amber-300 bg-amber-50'}`}>
               <p className={`text-[13.5px] font-bold ${jobState === 'FAILED' ? 'text-rose-800' : 'text-amber-900'}`}>
-                {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video İnceleme Bekliyor'}
+                {jobState === 'FAILED' ? 'Video Hazırlanamadı' : 'Video Kullanıma Hazır Değil'}
               </p>
               <p className="mt-1 text-[12px] leading-relaxed text-[#667781]">
-                {jobFailureMessage?.includes('Asset count') 
-                  ? 'Görsel aktarımı sırasında geçici bir senkronizasyon oluştu. Lütfen tekrar deneyin.'
-                  : (jobFailureMessage || jobDisplayMessage || 'Video üretimi tamamlanamadı.')}
+                {jobState === 'FAILED' ? videoFailureUserMessage(jobFailureMessage) : 'Videoda bir sorun tespit edildi veya dosya doğrulaması tamamlanamadı. Yeniden oluşturmayı deneyin.'}
               </p>
             </div>
             {/* Show the video preview even in NEEDS_REVIEW so the user can see what was produced */}

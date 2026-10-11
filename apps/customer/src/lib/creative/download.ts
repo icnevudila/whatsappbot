@@ -16,7 +16,7 @@ export type DownloadCreative = {
 export type DownloadOutput = {
   id: string; org_id: string; file_path: string; storage_url: string | null;
   sha256: string; byte_size: number; verified: boolean; is_approved: boolean;
-  duration_seconds: number; width: number; height: number; product_type?: string | null
+  duration_seconds: number; width: number; height: number; product_type?: string | null; visual_qa_report?: unknown
 }
 export type DownloadDependencies = {
   orgId: string;
@@ -82,7 +82,7 @@ function bytesMatchType(bytes: Buffer, extension: string): boolean {
 }
 
 async function target(creative: DownloadCreative, deps: DownloadDependencies) {
-  if (creative.status !== 'ready') throw new DownloadError(409, 'Medya henüz indirmeye hazır değil.')
+  if (creative.status !== 'ready' && !(creative.status === 'needs_review' && (creative.format === 'video' || libraryVideoOutputId(creative.public_url)))) throw new DownloadError(409, 'Medya henüz indirmeye hazır değil.')
   const payload = record(creative.payload)
   const outputId = libraryVideoOutputId(creative.public_url)
   if (creative.format === 'video' || outputId) {

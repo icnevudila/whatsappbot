@@ -32,7 +32,7 @@ async function download(request: Request, {params}: {params: Promise<{creativeId
     },
     output:async id => {
       const outputDb = db as unknown as SupabaseClient<OutputDatabase>
-      const result = await outputDb.from('ai_media_outputs').select('id,org_id,file_path,storage_url,sha256,byte_size,verified,is_approved,duration_seconds,width,height,product_type')
+      const result = await outputDb.from('ai_media_outputs').select('id,org_id,file_path,storage_url,sha256,byte_size,verified,is_approved,duration_seconds,width,height,product_type,visual_qa_report')
         .eq('id',id).eq('org_id',active.org.id).maybeSingle()
       if (result.error) throw result.error
       return result.data as DownloadOutput | null

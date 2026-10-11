@@ -2,6 +2,8 @@
 
 Branch: `codex/wizard-reference-download`. Başlangıç: `374c0381d8bd309ccb275e3712533784cc9a044e`.
 
+Video kullanımının sonraki ürün kararı ve doğrulaması: [Video Ready UX](VIDEO_READY_UX.md). Başarılı FINAL çıktıda manuel müşteri video incelemesi artık zorunlu değildir; ciddi hata kontrolleri korunur.
+
 ## Tanıtım modeli
 
 Mevcut CreativeStudioV2 / Wizard V3 ekranı iki tanıtım biçimi sunar:

@@ -491,6 +491,9 @@ async function runJobExecution(job: any, accountId: string) {
       throw new Error(`Validation failed: ${validation.errors.join('; ')}`)
     }
 
+    // Successful final technical validation requires no customer editorial confirmation.
+    const finalReady = Math.abs(validation.ffprobe.duration - 10) <= 0.1 && validation.ffprobe.width >= 720 &&
+      validation.ffprobe.height >= 1280 && Math.abs(validation.ffprobe.width / validation.ffprobe.height - 9 / 16) <= 0.01
     // 4. Save Verified Output
     const { data: outputRecord, error: outputError } = await supabase.from('ai_media_outputs').insert({
       job_id: job.id,
@@ -498,7 +501,7 @@ async function runJobExecution(job: any, accountId: string) {
       attempt_id: attemptId,
       file_path: outputPath,
       sha256: validation.sha256,
-      byte_size: result.file_size,
+      byte_size: fs.statSync(outputPath).size,
       duration_seconds: validation.ffprobe.duration,
       width: validation.ffprobe.width,
       height: validation.ffprobe.height,
@@ -507,16 +510,16 @@ async function runJobExecution(job: any, accountId: string) {
       acodec: validation.ffprobe.acodec,
       visual_qa_score: null,
       visual_qa_report: {
-        status: 'NEEDS_REVIEW',
+        status: finalReady ? 'PASS' : 'BLOCKED',
         technical_checks: validation.errors,
-        reason: 'TECHNICAL_VALIDATION_ONLY',
+        reason: finalReady ? 'AUTOMATED_TECHNICAL_SUCCESS' : 'FINAL_FORMAT_INVALID',
         missing_evidence: ['PRODUCT_FIDELITY', 'BRAND_FIDELITY', 'PHYSICAL_ACTION', 'SPOKEN_DIALOGUE'],
       },
       qa_frame_10_url: validation.qaFramePaths.frame10,
       qa_frame_50_url: validation.qaFramePaths.frame50,
       qa_frame_90_url: validation.qaFramePaths.frame90,
       verified: true,
-      is_approved: false,
+      is_approved: finalReady,
       delivered_at: null,
     }).select('id').single()
 
@@ -527,12 +530,12 @@ async function runJobExecution(job: any, accountId: string) {
     if (outputRecord?.id) {
       try {
         const updatePayload = {
-          status: 'ready',
+          status: finalReady ? 'ready' : 'needs_review',
           public_url: `/api/ai-media/outputs/${outputRecord.id}`,
           payload: {
             job_id: job.id,
-            approvalStatus: 'NEEDS_REVIEW',
-            isApproved: false,
+            approvalStatus: finalReady ? 'READY' : 'BLOCKED',
+            isApproved: finalReady,
             thumbnailUrl: `/api/ai-media/outputs/${outputRecord.id}?thumb=1`,
           },
           updated_at: new Date().toISOString(),
@@ -541,6 +544,7 @@ async function runJobExecution(job: any, accountId: string) {
           .from('creatives')
           .update(updatePayload)
           .eq('id', job.id)
+          .eq('org_id', job.org_id)
           .select('id')
 
         if (!updated || updated.length === 0) {
@@ -568,11 +572,11 @@ async function runJobExecution(job: any, accountId: string) {
       finished_at: new Date().toISOString(),
     }).eq('id', attemptId)
 
-    // Technical readiness alone is not a quality approval.
+    // Serious technical failures remain blocked; successful final files need no manual confirmation.
     await transitionJob(
       supabase, job.id, job.org_id,
-      JobState.VISUAL_QA_EVALUATING, JobState.NEEDS_REVIEW,
-      `Technical output ready; fidelity evidence required (${Math.round((Date.now() - startTime) / 1000)}s)`,
+      JobState.VISUAL_QA_EVALUATING, finalReady ? JobState.COMPLETED : JobState.NEEDS_REVIEW,
+      `Automatic technical checks finished (${Math.round((Date.now() - startTime) / 1000)}s)`,
       { duration_seconds: validation.ffprobe.duration, sha256: validation.sha256 },
       attemptId
     )
@@ -1069,12 +1073,14 @@ async function runCreativeVideoExecution(
   const outputVerified = Boolean(
     result.verified &&
     (!result.finalQAReport || result.finalQAReport.passed) &&
-    /^[0-9a-f]{64}$/i.test(finalSha256) &&
+    /^[0-9a-f]{64}$/i.test(finalSha256) && finalByteSize > 0 &&
+    finalProbe.width >= 720 && finalProbe.height >= 1280 && Math.abs(finalProbe.width / finalProbe.height - 9 / 16) <= 0.01 &&
+    (isLongFormV1 ? finalProbe.duration >= 24 : Math.abs(finalProbe.duration - 10) <= 0.1) &&
     (!isLongFormV1 || (postProductionManifest?.status === 'PASS' && postProductionManifest?.qa_validation?.passed === true)),
   )
 
   // Save Verified Output
-  const { data: outRow } = await supabase.from('ai_media_outputs').insert({
+  const { data: outRow, error: finalReceiptError } = await supabase.from('ai_media_outputs').insert({
     job_id: job.id,
     org_id: job.org_id,
     attempt_id: attemptId,
@@ -1103,10 +1109,12 @@ async function runCreativeVideoExecution(
     delivered_at: new Date().toISOString(),
   }).select('id').single()
 
+  if (finalReceiptError || !outRow?.id) throw new Error('OUTPUT_RECEIPT_PERSISTENCE_FAILED')
+
   if (outRow?.id) {
     try {
       const updatePayload = {
-        status: 'ready',
+        status: outputVerified ? 'ready' : 'needs_review',
         public_url: `/api/ai-media/outputs/${outRow.id}`,
         payload: {
           job_id: job.id,
@@ -1118,6 +1126,7 @@ async function runCreativeVideoExecution(
         .from('creatives')
         .update(updatePayload)
         .eq('id', job.id)
+        .eq('org_id', job.org_id)
         .select('id')
 
       if (!updated || updated.length === 0) {
@@ -1156,7 +1165,7 @@ async function runCreativeVideoExecution(
   // COMPLETED transition
   await transitionJob(
     supabase, job.id, job.org_id,
-    currentState, JobState.COMPLETED,
+    currentState, outputVerified ? JobState.COMPLETED : JobState.NEEDS_REVIEW,
     `Creative Video Orchestration completed successfully in ${Math.round((Date.now() - startTime) / 1000)}s (UUID: ${realFlowUuid})`,
     { duration_seconds: finalProbe.duration, sha256: finalSha256, real_flow_project_uuid: realFlowUuid, post_production: Boolean(postProductionManifest) },
     attemptId
