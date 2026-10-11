@@ -1,6 +1,6 @@
 # CREATIVE DNA DECISION ENGINE — MULTI-DIMENSIONAL RECOMMENDATION SYSTEM
 **Mesajify Creative Intelligence & Decision Systems**  
-*Document Version: 3.0.0 — Production Specification*  
+*Document Version: 4.0.0 — Final Quality Cleanup*  
 *Date: 2026-10-11*  
 *Target Environment: OmniStudio Wizard Integration | Veo 3.1 Fast*
 
@@ -68,7 +68,7 @@ Sistem kullanıcıya her zaman 3 ana yaklaşım ve her biri için seçilebilir 3
 * **Neden Seçildi?** Sezon başında çiftçi tüm parçaları hazır, eksiksiz bir teslimat ister.
 * **Kanca Alternatifleri (Seçilebilir):**
   - *Kanca 1 (Kutu Açılışı):* Bofe kutusundan çıkan pırıl pırıl 16L açık mavi depo gövdesi.
-  - *Kanca 2 (Aksesuar Dizilimi):* 4 pirinç nozul, teleskopik boru ve şarj aletinin düzenli sergisi.
+  - *Kanca 2 (Aksesuar Dizilimi):* Pirinç nozul seti, teleskopik boru ve şarj aletinin düzenli sergisi.
   - *Kanca 3 (Çalışmaya Hazır):* Borunun tek klikle depoya takılıp anında hazır olması.
 
 ---
@@ -89,7 +89,7 @@ Sistem kullanıcıya her zaman 3 ana yaklaşım ve her biri için seçilebilir 3
   - *Kanca 2 (Terazi Dengesi):* Su terazisinin duvara yaslandığında dengeli merkezde duruşu.
   - *Kanca 3 (Yükselen Duvar):* Milimetrik düzlükte yükselen sağlam duvar hattı.
 
-#### YAKLAŞIM 3: Tedarik / Kampanya Fırsatı (Fabrikadan Şantiyeye Sevk & 3 Günde Teslim)
+#### YAKLAŞIM 3: Tedarik / Kampanya Fırsatı (Fabrikadan Şantiyeye Sevk & Kapıya Teslim)
 * **Neden Seçildi?** Müteahhit için doğrudan fabrikadan teslimat hızı ve toptan fiyat esastır.
 * **Kanca Alternatifleri (Seçilebilir):**
   - *Kanca 1 (Vinç İndirme):* Paletlerin şantiye sahasına güvenle indirilmesi anı.

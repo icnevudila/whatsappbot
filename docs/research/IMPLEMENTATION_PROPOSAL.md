@@ -151,4 +151,38 @@ Kullanıcı: "Bofe" -> "16L Şarjlı Sırt Pompası" seçer.
 
 ---
 
+## 5. Kapsamlı Entegrasyon Test Planı (Integration Test Plan)
+
+Bu test planı, gelecekte `@mesajify/creative-dna` paketi kodlandığında üretim öncesinde çalıştırılacak izole doğrulama adımlarını belirler:
+
+### 5.1 Birim Testleri (Unit Tests)
+* **Heuristik Skorlama Doğrulaması:**
+  - Farklı ürün geometrileri (`liquid_spray`, `solid_block`, `food_culinary`, `digital_ui`) verildiğinde beklenen yaklaşımların en yüksek puanı aldığının doğrulanması.
+  - Sektörel ton ve kampanya hedefi ağırlıklarının başlangıç formülüne uygun hesaplanması.
+* **Çeşitlilik & Yorgunluk Testi:**
+  - Aynı işletme için ardışık 3 çağrıda son kullanılan modelin soft-penalty ($\times 0.70$) aldığının ve alternatif yaklaşımların listede üst sıraya geçtiğinin doğrulanması.
+  - Zorunlu çeşitlilik yüzünden ürünle alakasız bir modelin asla 1. sıraya sıçramadığının sınır testi.
+
+### 5.2 Şema & Veri Bütünlüğü Testleri (Schema & Contract Validation)
+* **Zorunlu Referans Eşleşmesi:**
+  - Derlenen payload içinde `canonicalProductRefUrl` ve `canonicalLogoRefUrl` alanlarının boş olamayacağının doğrulanması (`strict non-empty`).
+* **Kanonik Özellik Kilidi:**
+  - Bofe için uydurma bar basıncı veya Ayvazoğlu için uydurma tolerans rakamlarının prompt derleyicisine sızmadığının regex testi (`zero hallucinated claims`).
+* **Mod Ayrımı Testi:**
+  - `BRAND_FILM` modunda altyazı, fiyat ve WhatsApp butonunun render konfigürasyonundan tamamen çıkarıldığının doğrulanması.
+  - `PERFORMANCE_AD` modunda ise metinlerin Veo'ya değil, FFmpeg `postProductionConfig` alanına aktarıldığının doğrulanması.
+
+### 5.3 Mock Pipeline E2E Testi (Sıfır API Harcaması)
+* **Veo 3.1 Fast Mock Çalıştırıcısı:**
+  - Harici Google Flow / Veo API'si çağrılmadan, sentetik 8 saniyelik dikey video fixture'ı kullanılarak FFmpeg 2.0s outro dikişinin (stitching) yerel ortamda doğrulanması.
+  - Çıktı dosyasının 1080x1920 @ 30fps ve tam 10.00 saniye olduğunun `ffprobe` ile teyidi.
+
+---
+
+## 6. Sonuç ve Taahhüt
+
+Bu öneri; Master Bot'un çalışan mevcut üretim koduna en ufak bir müdahale yapmaksızın, ileride güvenle devreye alınabilecek tip-güvenli (type-safe) ve tam test kapsamlı bir altyapı sözleşmesi sunar.
+
+---
+
 *Belge Sonu — Mesajify Implementation Proposal.*

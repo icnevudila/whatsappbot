@@ -1,6 +1,6 @@
 # TWELVE BRAND CONCEPTS — PRODUCTION BLUEPRINT FOR 4 VERIFIED BUSINESSES
 **Mesajify Performance Creative Engineering**  
-*Document Version: 3.0.0 — Production Blueprint*  
+*Document Version: 4.0.0 — Final Quality Cleanup*  
 *Date: 2026-10-11*  
 *Target Engine: Google Veo 3.1 Fast (9:16 Vertical) | Native FFmpeg Deterministic Outro*
 
@@ -11,18 +11,21 @@
 Bu belge; sistemimizde kayıtlı **Bofe**, **Ayvazoğlu İnşaat**, **Mesajify** ve onaylı test markası olan **Usta Döner** için üçer adet olmak üzere toplam **12 özgün, güvenli reklam konseptini** içerir.
 
 ### Kanonik Doğruluk Taahhüdü:
-* **Uydurma Rakam Yok:** Bofe için doğrulanmamış bar basıncı rakamları (5 bar / 8 bar), Ayvazoğlu için uydurma kumpas toleransları (0.005 mm) veya laboratuvar ezilme testleri, Mesajify için "3 dakikada kampanya" veya kesin garanti iddiaları kaldırılmıştır. Yalnızca veritabanında ve katalogda kayıtlı kanonik ürün özellikleri kullanılmıştır.
-* **Müşteri Ayrımı:** HD İskender yerine sistemde kayıtlı gerçek test işletmesi **Usta Döner** kullanılmıştır.
-* **Üretim Motoru Uyumu:** Tüm konseptler **Google Veo 3.1 Fast** (9:16 Dikey) mimarisine ve deterministik FFmpeg post-prodüksiyon hattına tam uyumlu tasarlanmıştır.
+* **Uydurma Sayısal Vaatler Çıkarıldı:** 
+  - Bofe için daha önce varsayılan "4 nozül" çıkarıldı; veritabanındaki resmi kutu içeriği metnine (`1x Çok Amaçlı Pirinç Nozul Seti`) sadık kalındı. Bar basıncı uydurması tamamen kaldırıldı.
+  - Ayvazoğlu için "3 gün teslim" gibi belirsiz lojistik taahhütler ve 0.005mm tolerans iddiaları kaldırıldı; doğrudan katalogdaki *"Fabrikadan doğrudan şantiyeye toptan ve perakende kapıya teslim"* gerçeği esas alındı.
+  - Mesajify için "3 dakikada kampanya" ve kesin ban yememe garantileri çıkarıldı; onaylı sözlük terimleri kullanıldı.
+* **Müşteri Ayrımı:** Onaysız portföy sunumu engellendi; dördüncü işletme olarak veritabanında kayıtlı test markası **Usta Döner** kullanıldı.
+* **Üretim Standardı:** Tüm konseptler **Google Veo 3.1 Fast** mimarisine tam uyumlu olarak; **Mod A (Brand Film)** ve **Mod B (Performance Ad)** ayrımını destekleyecek biçimde kurgulanmıştır.
 
 ---
 
 ## MARKA 1: BOFE (Tarım & Çevre Sağlığı Ekipmanları)
 
 * **Kanonik Ürün:** Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası
-* **Kanonik Özellikler:** Geniş 16L açık mavi depo haznesi, lityum-iyon batarya, ayarlanabilir pirinç nozullu paslanmaz çelik teleskopik ilaçlama borusu, ergonomik sırt askısı, entegre basınç göstergesi.
-* **Kutu İçeriği:** 1x 16L Şarjlı Sırt Pompası, 1x Paslanmaz Çelik Teleskopik Uzatma Borusu, 1x Çok Amaçlı Pirinç Nozul Seti, 1x Hızlı Şarj Cihazı, 1x Ergonomik Sırt Askı Kemeri, 1x Yedek Conta & O-Ring Kiti.
-* **Zorunlu Referanslar:** `docs/evidence/bofe_catalog/bofe_logo.png` (Logo) + `docs/evidence/bofe_catalog/product_ref.jpg` (Ürün Formu).
+* **Kanonik Özellikler:** Geniş 16L açık mavi depo haznesi, güçlü lityum-iyon batarya, ayarlanabilir pirinç nozullu paslanmaz çelik teleskopik ilaçlama borusu, ergonomik sırt askısı, entegre basınç göstergesi.
+* **Doğrulanmış Kutu İçeriği:** 1x Bofe 16L Şarjlı Sırt Pompası, 1x Paslanmaz Çelik Teleskopik Uzatma Borusu, 1x Çok Amaçlı Pirinç Nozul Seti, 1x Hızlı Şarj Cihazı, 1x Ergonomik Sırt Askı Kemeri, 1x Yedek Conta & O-Ring Kiti.
+* **Zorunlu Referanslar:** `bofe_logo.png` (Logo) + `product_ref.jpg` (Kanonik Ürün Formu).
 
 ---
 
@@ -31,7 +34,7 @@ Bu belge; sistemimizde kayıtlı **Bofe**, **Ayvazoğlu İnşaat**, **Mesajify**
 * **Hook (0.0 – 2.2s):** Açık mavi 16L depodan uzanan paslanmaz çelik teleskopik borunun tetiğine basılmasıyla başlayan yoğun mikronize sis patlaması ve tok su akışı sesi.
 * **Kanıt / Ürün Demosu (2.2 – 5.8s):** Pirinç nozuldan çıkan sis bulutunun cam seradaki bitki yapraklarını eşit ve damlatmadan kaplaması; kullanıcının sırtındaki ergonomik askı ile rahat adımları.
 * **Marka Gösterimi:** 16L depo üzerindeki orijinal Bofe logosu ve entegre basınç göstergesi net odakta.
-* **CTA (8.0 – 10.0s):** Deterministik FFmpeg Outro: "Akülü Sırt Pompası ile Kolay İlaçlama · WhatsApp'tan Bilgi Alın."
+* **CTA (8.0 – 10.0s):** Deterministik FFmpeg Outro (Mod B): "Akülü Sırt Pompası ile Kolay İlaçlama · WhatsApp'tan Bilgi Alın."
 * **8 Saniyelik Storyboard (Google Veo 3.1 Fast):**
   - *0.0 – 2.2s:* Teleskopik boru ucundaki pirinç nozülden fışkıran sis kancası; kamera nozülden geri kayar.
   - *2.2 – 5.8s:* Sera içinde bitki sıraları boyunca yürüyen üretici; sisin yapraklara homojen yayılışı.
@@ -42,7 +45,7 @@ Bu belge; sistemimizde kayıtlı **Bofe**, **Ayvazoğlu İnşaat**, **Mesajify**
 
 ---
 
-### Konsept 2: Sorun ve Çözüm (Manuel Yorulma vs. Tek Tuş Akülü İlaçlama)
+### Konsept 2: Sorun ve Çözüm (Manuel Kol Yorulması vs. Tek Tuş Akülü İlaçlama)
 * **Türkçe Reklam Fikri:** Manuel kollu pompalarda sürekli basmaktan yorulan üreticiye, akülü sistemin tek parmak mandalıyla getirdiği kesintisiz ilaçlama rahatlığı.
 * **Hook (0.0 – 2.2s):** Eski usul mekanik kolu pompalamaya çalışırken duraksayan el hareketi ve yorulma gerilimi.
 * **Kanıt / Ürün Demosu (2.2 – 5.8s):** Bofe'nin tetiğine tek dokunuş; lityum-iyon bataryanın devreye girmesiyle kesintisiz, sarsıntısız püskürtme akışı.
@@ -59,33 +62,33 @@ Bu belge; sistemimizde kayıtlı **Bofe**, **Ayvazoğlu İnşaat**, **Mesajify**
 ---
 
 ### Konsept 3: Kampanya Fırsatı (Eksiksiz Kutu İçeriği & Sezon Hazırlığı)
-* **Türkçe Reklam Fikri:** İlaçlama sezonu öncesinde, çok amaçlı nozul seti ve teleskopik borusuyla eksiksiz teslim edilen Bofe kutu içeriği.
-* **Hook (0.0 – 2.2s):** Bofe kutusundan çıkan pırıl pırıl 16L açık mavi gövde ve masaya yerleştirilen paslanmaz çelik uzatma borusu.
-* **Kanıt / Ürün Demosu (2.2 – 5.8s):** Kutu içeriğindeki 4 farklı pirinç nozul başlığı, şarj cihazı ve sırt askı kemerinin eksiksiz sergilenmesi; nozulun boruya takılma kolaylığı.
-* **Marka Gösterimi:** Orijinal kutu yüzeyindeki ve depo üzerindeki kurumsal logo.
-* **CTA (8.0 – 10.0s):** "Eksiksiz Kutu İçeriği · Güncel Fiyat ve Sipariş İçin WhatsApp."
+* **Türkçe Reklam Fikri:** İlaçlama sezonu öncesinde, çok amaçlı pirinç nozul seti, teleskopik borusu ve şarj cihazıyla eksiksiz teslim edilen Bofe kutu içeriği.
+* **Hook (0.0 – 2.2s):** Bofe kutusundan çıkarılan pırıl pırıl 16L açık mavi depo gövdesi ve masaya konan paslanmaz çelik uzatma borusu.
+* **Kanıt / Ürün Demosu (2.2 – 5.8s):** Kutu içeriğindeki pirinç nozul seti, şarj adaptörü ve sırt askı kemerinin eksiksiz sergilenmesi; nozulun boruya takılma kolaylığı.
+* **Marka Gösterimi:** Orijinal kurumsal kutu yüzeyindeki ve depo üzerindeki logo.
+* **CTA (8.0 – 10.0s):** "Eksiksiz Kutu İçeriği · Bilgi ve Sipariş İçin WhatsApp."
 * **8 Saniyelik Storyboard (Google Veo 3.1 Fast):**
   - *0.0 – 2.2s:* Ürünün kutusundan masaya çıkarılışı kancası.
   - *2.2 – 5.8s:* Nozul seti ve teleskopik borunun takılması; çalışmaya hazır sağlam duruş.
   - *5.8 – 8.0s:* Cihaz ve aksesuarların düzenli kompozisyonu.
   - *8.0 – 10.0s:* Deterministik outro ve WhatsApp sipariş hattı.
-* **Veo 3.1 Fast Uyumluluk Notu:** Kutu üzerindeki yazılar karmaşık olmamalı; ürün aksesuarları temiz metal dokuda render edilmelidir.
+* **Veo 3.1 Fast Uyumluluk Notu:** Aksesuarlar temiz metal dokuda render edilmeli; sahte ek parçalar uydurulmamalıdır.
 * **Neden Bu Modele Uygun?** Alıcı ne satın aldığını ve hangi parçaların kutudan çıkacağını net gördüğünde karar süreci hızlanır.
 
 ---
 
 ## MARKA 2: AYVAZOĞLU İNŞAAT (İnşaat & Yapı Malzemeleri)
 
-* **Kanonik Ürün:** Tuğla (Fabrikadan toptan ve perakende satış tuğla. Kapıya teslim. 3 gün içinde teslim.)
-* **Kanonik Özellikler:** Standart fırınlanmış delikli kil yapı tuğlası, toptan paletli şantiye teslimatı, fabrika damgalı homojen kiremit rengi.
-* **Kaldırılan Uydurma İddialar:** 0.005 mm kumpas toleransı, ses/ısı laboratuvar katsayıları ve uydurma dayanım mukavemetleri kaldırılmıştır.
-* **Zorunlu Referanslar:** `ayvaz_logo_clean_dark.png` (Logo) + `ayvazoglu_library_ui.png` (Ürün Paleti).
+* **Kanonik Ürün:** Tuğla (Fabrikadan toptan ve perakende satış tuğla. Kapıya teslim.)
+* **Kanonik Özellikler:** Standart fırınlanmış delikli kil yapı tuğlası, toptan paletli şantiye teslimatı, homojen kiremit kırmızısı renk.
+* **Çıkarılan Belirsiz İddialar:** 0.005 mm tolerans, laboratuvar kırılma katsayıları ve "3 gün kesin teslim" gibi bölgesel garantiler çıkarılmıştır.
+* **Zorunlu Referanslar:** `ayvaz_logo_clean_dark.png` (Logo) + `ayvazoglu_library_ui.png` (Kanonik Ürün Paleti).
 
 ---
 
-### Konsept 4: Ürün Detayı (Fırınlanmış Kil Yapısı & Dikey Delikler)
+### Konsept 4: Ürün Detayı (Fırınlanmış Kil Dokusu & Dikey Gözenekler)
 * **Türkçe Reklam Fikri:** Fırınlanmış kilin sağlam gövdesi, düzgün hatları ve standart dikey delik yapısıyla güven veren temel inşaat tuğlası.
-* **Hook (0.0 – 2.2s):** Tuğlanın fırınlanmış pişmiş toprak rengi, pürüzsüz kenarları ve dikey deliklerinin net makro çekimi.
+* **Hook (0.0 – 2.2s):** Tuğlanın fırınlanmış pişmiş toprak rengi, düzgün kenarları ve dikey deliklerinin net makro çekimi.
 * **Kanıt / Ürün Demosu (2.2 – 5.8s):** Şantiye şefinin tuğlayı eline alıp sağlamlığını kontrol etmesi; çatlak ve dökülme barındırmayan tok kiremit gövde.
 * **Marka Gösterimi:** Tuğla paleti ambalajı üzerindeki kurumsal Ayvazoğlu İnşaat etiketi.
 * **CTA (8.0 – 10.0s):** "Fabrikadan Doğrudan Şantiyeye · Toptan Fiyat Teklifi İçin WhatsApp."
@@ -115,15 +118,15 @@ Bu belge; sistemimizde kayıtlı **Bofe**, **Ayvazoğlu İnşaat**, **Mesajify**
 
 ---
 
-### Konsept 6: Tedarik / Kampanya Fırsatı (Fabrikadan Şantiyeye Sevk & 3 Günde Teslim)
-* **Türkçe Reklam Fikri:** Aracı komisyonları olmadan fabrikadan doğrudan şantiyeye kapıya teslim toptan tuğla satışı.
-* **Hook (0.0 – 2.2s):** Fabrika sahasından şantiyeye sevk edilen korumalı paletlerin vincin veya forkliftin ucunda yükselmesi.
+### Konsept 6: Tedarik / Kampanya Fırsatı (Fabrikadan Şantiyeye Sevk & Kapıya Teslim)
+* **Türkçe Reklam Fikri:** Aracı komisyonları olmadan fabrikadan doğrudan şantiyeye kapıya teslim toptan ve perakende tuğla satışı.
+* **Hook (0.0 – 2.2s):** Fabrika sahasından şantiyeye sevk edilen korumalı paletlerin vinç veya forklift ile kaldırılması.
 * **Kanıt / Ürün Demosu (2.2 – 5.8s):** Sıralı, eksiksiz ambalajlanmış paletlerin şantiye zeminine güvenle indirilmesi; dağılmayan muntazam dizilim.
 * **Marka Gösterimi:** Palet ambalajlarındaki Ayvazoğlu kurumsal logosu.
 * **CTA (8.0 – 10.0s):** "Fabrikadan Toptan ve Perakende Satış · WhatsApp ile Teklif Alın."
 * **8 Saniyelik Storyboard (Google Veo 3.1 Fast):**
   - *0.0 – 2.2s:* Paletlerin vinçle indirilmesi kancası.
-  - *2.2 – 5.8s:* Şantiyeye sevk edilen sağlam palet sıraları ve şantiye şefinin teslimatı kontrolü.
+  - *2.2 – 5.8s:* Şantiyeye sevk edilen sağlam palet sıraları ve teslimat kontrolü.
   - *5.8 – 8.0s:* Ayvazoğlu logosuyla biten temiz şantiye görüntüsü.
   - *8.0 – 10.0s:* Deterministik B2B outro.
 * **Veo 3.1 Fast Uyumluluk Notu:** Araç plakaları ve fabrika tabelaları karmaşık metin içermemeli, logo outroya bırakılmalıdır.
@@ -135,8 +138,8 @@ Bu belge; sistemimizde kayıtlı **Bofe**, **Ayvazoğlu İnşaat**, **Mesajify**
 
 * **Kanonik Ürün:** Mesajify WhatsApp Tanıtım & Kitle Platformu / Gerçek Uygulama Arayüzü
 * **Kanonik Özellikler:** Akıllı hat yönetimi, çoklu hat üzerinden kontrollü tanıtım, izin yönetimi, liste doğrulama, kampanya kontrol merkezi, ortak gelen kutusu.
-* **Kaldırılan Uydurma İddialar:** "3 dakikada kampanya", "%100 ban yemez" ve abartılı garantiler kaldırılmıştır (Mesajify Design Skill Blacklist uyumlu).
-* **Zorunlu Referanslar:** `mesajify_logos/` şeffaf logo + gerçek panel arayüz görseli.
+* **Çıkarılan İfadeler:** "3 dakikada kampanya", "%100 güvenli", "spam engeli garantisi" gibi ifadeler çıkarılmıştır.
+* **Zorunlu Referanslar:** `mesajify_logos/` şeffaf logo + gerçek panel arayüz ekran görüntüsü.
 
 ---
 
@@ -173,7 +176,7 @@ Bu belge; sistemimizde kayıtlı **Bofe**, **Ayvazoğlu İnşaat**, **Mesajify**
 ---
 
 ### Konsept 9: İş Akışı Kolaylığı (Toplu Liste Yönetimi & Gönderim Görünürlüğü)
-* **Türkçe Reklam Fikri:** Civardaki işletmeleri bulma, liste oluşturma ve izinli kitleye kontrollü tanıtım yapmanın getirdiği zaman tasarrufu.
+* **Türkçe Reklam Fikri:** Müşteri listesi oluşturma ve izinli kitleye kontrollü tanıtım yapmanın getirdiği iş akışı düzeni.
 * **Hook (0.0 – 2.2s):** Mesajify panelinde filtrelenmiş doğrulanmış müşteri listesinin tek tıkla yüklenmesi kancası.
 * **Kanıt / Ürün Demosu (2.2 – 5.8s):** Liste doğrulama sisteminin hatalı numaraları ayıklaması ve onaylı şablon üzerinden gönderimin başlaması.
 * **Marka Gösterimi:** Mesajify Kampanya Kontrol Merkezi logosu.

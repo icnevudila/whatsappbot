@@ -38,7 +38,7 @@ Bu kütüphane, Mesajify'nin yapay zeka video üretim motorunda kullanılmak üz
   - *Tipografi / Altyazı:* "Hala bununla mı uğraşıyorsunuz?", "Günde 3 saatinizi alan bu hatayı bırakın."
   - *Duygu:* Gerginlik, yorgunluk veya zaman kaybı farkındalığı.
 * **Proof / Demo Mekanizması (2.2 – 5.8s):**
-  - Ürün devreye girer; tek bir hareketle işlem gerçekleşir (ör. bataryalı pompanın tetiğe basılmasıyla saniyede 5 bar mikronize sis çıkışı).
+  - Ürün devreye girer; tek bir hareketle işlem gerçekleşir (ör. bataryalı pompanın tetiğe basılmasıyla saniyede kesintisiz mikronize sis çıkışı).
   - Kamera ürünün fonksiyon noktasına makro yaklaşır; akışın pürüzsüzlüğü gösterilir.
 * **Ürün Görünürlüğü & Form:**
   - Ürün sahnenin merkezindedir (%45-60 kadraj kaplama oranı). Ergonomik tutuş noktaları ve gövde net seçilir.
@@ -59,7 +59,7 @@ Bu kütüphane, Mesajify'nin yapay zeka video üretim motorunda kullanılmak üz
 * **Temel Felsefe:** Sözlü iddiaya yer bırakmadan, ürünün fiziksel kalitesini, dayanıklılığını veya hassasiyetini çıplak gözle kanıtlamak.
 * **Hook Anatomisi (0.0 – 2.2s):**
   - *Görsel Tetikleyici:* Aşırı yakın plan (extreme macro) veya beklenmedik bir fiziksel temas (ör. tuğla üzerine darbe testi, bıçağın etten kayışı, 0.01 mm kumpas ölçümü).
-  - *Tipografi / Altyazı:* "0.005 mm Tolerans Testi", "Kırılma ve Çatlamaya Karşı Kanıt."
+  - *Tipografi / Altyazı:* "Fiziksel Dayanıklılık Testi", "Kırılma ve Çatlamaya Karşı Kanıt."
   - *Duygu:* Merak, teknik hayranlık ve kalite algısı.
 * **Proof / Demo Mekanizması (2.2 – 5.8s):**
   - Ürünün zorlu koşullardaki performansı: Basınç altında sızdırmazlık, yüksek ağırlık altında esnememe, kesintisiz çalışma.
@@ -70,7 +70,7 @@ Bu kütüphane, Mesajify'nin yapay zeka video üretim motorunda kullanılmak üz
   - Ürünün kabartma veya baskılı marka logosu makro kadrajda merkezdedir.
 * **Ses & Altyazı:**
   - *Ses:* Yüksek kaliteli ASMR efektleri (metal çarpması, kilit oturma sesi, su jeti fısıltısı).
-  - *Altyazı:* Teknik spesifikasyon etiketleri ("5 Bar Sabit Basınç", "TSE Standart Kil").
+  - *Altyazı:* Teknik spesifikasyon etiketleri ("Ayarlanabilir Pirinç Nozul", "Standart Fırınlanmış Kil").
 * **CTA Stratejisi (8.0 – 10.0s):**
   - "Fabrika Doğrulamalı Kalite · Numune ve Fiyat İçin WhatsApp".
 * **Etik & Doğruluk Sınırı:**

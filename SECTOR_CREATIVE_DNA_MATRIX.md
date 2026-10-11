@@ -48,7 +48,7 @@ Her kreatif konsept aşağıdaki 15 parametreyi eksiksiz taşımak zorundadır:
   "sector": "tarim",
   "audience_problem": "Geleneksel manuel sırt pompalarının sürekli kol gücü gerektirmesi, yorgunluk ve seralarda dengesiz ilaçlama yapması.",
   "hook_type": "physical_fatigue_contrast",
-  "proof_type": "continuous_5bar_micronized_mist",
+  "proof_type": "continuous_high_pressure_micronized_mist",
   "product_action": "Tetiğe tek dokunuşla lityum bataryalı pompadan cam sera bitkilerine homojen mikronize sis fışkırtması.",
   "human_presence": "Modern sera kıyafeti ve eldivenli üretici; sırtında ergonomik taşıma askısı ile dik ve yorulmadan ilerler.",
   "scene_structure": {
@@ -105,7 +105,7 @@ Her kreatif konsept aşağıdaki 15 parametreyi eksiksiz taşımak zorundadır:
   "audience_problem": "Şantiyeye gelen tuğlaların nakliyede kırılması, çatlaklar ve gözenek düzensizliği nedeniyle harç sarfiyatının artması.",
   "hook_type": "macro_structural_impact",
   "proof_type": "crush_resistance_and_pore_geometry",
-  "product_action": "Kasklı şantiye şefinin tuğlayı paletten alıp kumpasla dik açılı toleransını ve hatasız dikey gözeneklerini göstermesi.",
+  "product_action": "Kasklı şantiye şefinin tuğlayı paletten alıp düzgün fırınlanmış kenarlarını ve dikey gözenek peteklerini incelemesi.",
   "human_presence": "Sarı kasklı, iş yelekli inşaat mühendisi / usta; ellerinde güvenli kavrayış.",
   "scene_structure": {
     "0.0_2.2s_hook": "Aktif modern şantiye arka planı; vincin paleti indirmesi ve ustanın tuğlayı güvenle eline alması.",
