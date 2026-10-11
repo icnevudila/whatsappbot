@@ -1,0 +1,22 @@
+{
+  "test": "BOFE_REAL_VEO_VIDEO",
+  "orgId": "afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc",
+  "orgName": "Bofe",
+  "jobId": "6f8654c2-a94d-5233-a8d9-0839623d33ed",
+  "outputId": "ebd77172-8701-4c63-a251-27d9cc55f9d8",
+  "videoPath": "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\real_ai_production\\bofe_final_ad_ebd77172.mp4",
+  "bytes": 4399118,
+  "sha256": "6e4ec22d5c89d3b62f3446525decdd4543e4ebbe0463f876d6d99e41108a4ce6",
+  "durationSec": 10,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "resolution": "720x1280",
+  "playbackChecks": {
+    "hasVideo": true,
+    "src": "http://localhost:3025/api/ai-media/outputs/ebd77172-8701-4c63-a251-27d9cc55f9d8?preview=1",
+    "duration": null,
+    "readyState": 0,
+    "paused": true
+  },
+  "timestamp": "2026-10-11T17:22:25.570Z"
+}

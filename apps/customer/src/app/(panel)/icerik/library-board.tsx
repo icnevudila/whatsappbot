@@ -59,6 +59,14 @@ export function LibraryBoard({
   loadedCount.current = items.length
 
   useEffect(() => {
+    setItems(initial)
+    setHasMore(initialHasMore)
+    nextOffset.current = initialNextOffset ?? initial.length
+    setPageCursor(initialNextOffset ?? initial.length)
+    loadedCount.current = initial.length
+  }, [orgId, initial, initialHasMore, initialNextOffset])
+
+  useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 280)
     return () => window.clearTimeout(timer)
   }, [query])

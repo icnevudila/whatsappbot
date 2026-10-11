@@ -36,7 +36,6 @@ export async function GET(
     }
 
     const isCanliTakipAdmin = await checkIsAuthenticated().catch(() => false)
-    let isSuperAdmin = isCanliTakipAdmin
     let org: any = null
     let supabase: any = null
 
@@ -44,12 +43,9 @@ export async function GET(
     if (activeRes) {
       org = activeRes.org
       supabase = activeRes.supabase
-      if (activeRes.isPlatformAdmin) {
-        isSuperAdmin = true
-      }
     }
 
-    if (!isSuperAdmin && !org) {
+    if (!isCanliTakipAdmin && !org) {
       return new NextResponse('Yetkisiz: Giriş yapılmadı.', { status: 401 })
     }
 
@@ -101,10 +97,10 @@ export async function GET(
       })
     }
 
-    // 2. Strict Tenant Isolation Gate (FAIL CLOSED for normal tenants, Super Admin bypasses)
-    if (!isSuperAdmin) {
-      if (!org || output.org_id !== org.id) {
-        console.warn(`[SECURITY_ALERT] CROSS_ORG_CONTAMINATION attempt blocked: Org ${org?.id} tried to access output ${output.id} belonging to org ${output.org_id}`)
+    // 2. Strict Tenant Isolation Gate (FAIL CLOSED: any customer session is strictly bound to its own org)
+    if (org) {
+      if (output.org_id !== org.id) {
+        console.warn(`[SECURITY_ALERT] CROSS_ORG_CONTAMINATION attempt blocked: Org ${org.id} tried to access output ${output.id} belonging to org ${output.org_id}`)
         return new NextResponse('Yetkisiz erişim: Bu medya işletmenize ait değil.', { status: 403 })
       }
 
@@ -112,6 +108,8 @@ export async function GET(
       if (!isApprovedFinalVideoOutput(output) && !reviewPreview) {
         return new NextResponse('Medya henüz kalite kontrolünden geçmedi.', { status: 422 })
       }
+    } else if (!isCanliTakipAdmin) {
+      return new NextResponse('Yetkisiz: Giriş yapılmadı.', { status: 401 })
     }
 
     // 4. Resolve Upstream Video or Thumbnail

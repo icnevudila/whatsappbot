@@ -1,0 +1,58 @@
+{
+  "timestamp": "2026-10-11T16:59:37.996Z",
+  "tests": [
+    {
+      "id": "SEC-NEG-01",
+      "title": "Unauthenticated output access blocked with 401",
+      "status": "PASS",
+      "outputId": "2797c229-5757-43ef-80c6-9cd1a13e61ba",
+      "statusCode": 401,
+      "timestamp": "2026-10-11T16:59:46.288Z"
+    },
+    {
+      "id": "SEC-NEG-02",
+      "title": "Bofe session accessing Ayvazoğlu output blocked with 403",
+      "status": "PASS",
+      "activeOrg": "afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc",
+      "targetOutputOrg": "4a58b0dd-0931-4901-880a-686457d15010",
+      "targetOutputId": "d37ba66c-af2f-4a7e-b62e-dec034b98e40",
+      "statusCode": 403,
+      "responseText": "Yetkisiz erişim: Bu medya işletmenize ait değil.",
+      "timestamp": "2026-10-11T16:59:59.780Z"
+    },
+    {
+      "id": "SEC-NEG-03",
+      "title": "Ayvazoğlu session accessing Bofe output blocked with 403",
+      "status": "PASS",
+      "activeOrg": "4a58b0dd-0931-4901-880a-686457d15010",
+      "targetOutputOrg": "afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc",
+      "targetOutputId": "2797c229-5757-43ef-80c6-9cd1a13e61ba",
+      "statusCode": 403,
+      "responseText": "Yetkisiz erişim: Bu medya işletmenize ait değil.",
+      "timestamp": "2026-10-11T17:00:05.695Z"
+    },
+    {
+      "id": "SEC-NEG-04",
+      "title": "Bofe library has ZERO Ayvazoğlu data leakage",
+      "status": "PASS",
+      "cardCount": 4,
+      "timestamp": "2026-10-11T17:00:29.604Z"
+    },
+    {
+      "id": "SEC-NEG-05",
+      "title": "Ayvazoğlu library has ZERO Bofe data leakage",
+      "status": "PASS",
+      "cardCount": 10,
+      "timestamp": "2026-10-11T17:00:39.888Z"
+    },
+    {
+      "id": "SEC-NEG-06",
+      "title": "Cross-tenant creative detail view blocked",
+      "status": "PASS",
+      "targetCreativeId": "b599ab4d-f176-4d45-bf71-21fdc785f331",
+      "statusOrBodyBlocked": true,
+      "timestamp": "2026-10-11T17:00:50.562Z"
+    }
+  ],
+  "allPassed": true
+}

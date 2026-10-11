@@ -1,0 +1,22 @@
+{
+  "test": "AYVAZ_REAL_VEO_VIDEO",
+  "orgId": "4a58b0dd-0931-4901-880a-686457d15010",
+  "orgName": "Ayvazoğlu İnşaat",
+  "jobId": "9005770f-a73a-594b-aa1a-c8ab91b6b303",
+  "outputId": "d074451a-ad9d-45f8-82f3-6d80527048c2",
+  "videoPath": "C:\\Users\\TP2\\Documents\\whatsapp-codex-real-e2e-v2\\docs\\evidence\\real_ai_production\\ayvaz_final_ad_d074451a.mp4",
+  "bytes": 3722607,
+  "sha256": "0b9b06c90c07cedb4ff7b0f189798179c7a38c29282450ec63b06de34c04bf37",
+  "durationSec": 10,
+  "videoCodec": "h264",
+  "audioCodec": "aac",
+  "resolution": "720x1280",
+  "playbackChecks": {
+    "hasVideo": true,
+    "src": "http://localhost:3025/api/ai-media/outputs/d074451a-ad9d-45f8-82f3-6d80527048c2?preview=1",
+    "duration": 10,
+    "readyState": 4,
+    "paused": true
+  },
+  "timestamp": "2026-10-11T17:15:35.691Z"
+}
