@@ -1,0 +1,216 @@
+{
+  "total": 30,
+  "pass": 27,
+  "fail": 2,
+  "results": [
+    {
+      "id": "E2E-01",
+      "title": "Bofe oturumu açılır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-02",
+      "title": "Bofe Wizard açılır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-03",
+      "title": "Gerçek ürün referansı doğru seçilir",
+      "testType": "DB_INTEGRATION",
+      "status": "PASS",
+      "product": {
+        "id": "b68d4eb9-7cc0-491e-9ece-84b8c01068b1",
+        "name": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası"
+      }
+    },
+    {
+      "id": "E2E-04",
+      "title": "Önceden üretilmiş Bofe görseli açılır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "imgId": "aefa9578-07ea-56eb-abe5-cc500d638fca"
+    },
+    {
+      "id": "E2E-05",
+      "title": "Görsel güvenli şekilde indirilir",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "FAIL"
+    },
+    {
+      "id": "E2E-06",
+      "title": "Görsel Campaign Studio'ya aktarılır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "url": "http://localhost:3025/kampanyalar/yeni?creative_id=aefa9578-07ea-56eb-abe5-cc500d638fca"
+    },
+    {
+      "id": "E2E-07",
+      "title": "Kampanya adı ve bağlamı hazırlanır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "campName": "Unified Entegrasyon unified_1791750451866"
+    },
+    {
+      "id": "E2E-08",
+      "title": "Kişi grubu olmadan taslak kaydedilir",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "bofeDraftId": "50ace993-c310-4b1c-9edf-d1ab288c76cc"
+    },
+    {
+      "id": "E2E-09",
+      "title": "Hat olmadan taslak kaydedilir",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "bofeDraftId": "50ace993-c310-4b1c-9edf-d1ab288c76cc"
+    },
+    {
+      "id": "E2E-10",
+      "title": "Taslak yeniden açılır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "draftNameInput": "Unified Entegrasyon unified_1791750451866"
+    },
+    {
+      "id": "E2E-11",
+      "title": "Kayıtlı medya ve mesaj korunur",
+      "testType": "REAL_DB_INTEGRATION",
+      "status": "PASS",
+      "row": {
+        "id": "50ace993-c310-4b1c-9edf-d1ab288c76cc",
+        "media_url": "https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc/aefa9578-07ea-56eb-abe5-cc500d638fca/job_11adfea327db67bd.png",
+        "name": "Unified Entegrasyon unified_1791750451866",
+        "status": "draft"
+      }
+    },
+    {
+      "id": "E2E-12",
+      "title": "Bofe videosu oynatılır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "videoUrl": "/api/ai-media/outputs/5d84af15-cc2c-45ff-a4c2-06573b0754f4"
+    },
+    {
+      "id": "E2E-13",
+      "title": "Video 5. saniyeye seek edilir",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-14",
+      "title": "Video MP4 olarak indirilir",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "FAIL"
+    },
+    {
+      "id": "E2E-15",
+      "title": "Ayvazoğlu oturumuna geçilir",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "org": "Ayvazoğlu İnşaat"
+    },
+    {
+      "id": "E2E-16",
+      "title": "Ayvazoğlu medyası açılır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "ayvazPageTitle": "Görsel · Mesajify"
+    },
+    {
+      "id": "E2E-17",
+      "title": "Ayvazoğlu taslağı Bofe'de görünmez",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "crossStatus": 200
+    },
+    {
+      "id": "E2E-18",
+      "title": "Çapraz tenant medya erişimi reddedilir",
+      "testType": "API_INTEGRATION",
+      "status": "PASS",
+      "crossMediaStatus": 404
+    },
+    {
+      "id": "E2E-19",
+      "title": "Oturumsuz indirme reddedilir",
+      "testType": "API_INTEGRATION",
+      "status": "PASS",
+      "anonStatus": 401
+    },
+    {
+      "id": "E2E-20",
+      "title": "Marka görseli için ürün zorunluluğu kaldırılmıştır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-21",
+      "title": "Fiziksel ürün için gerçek fotoğraf zorunludur",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-22",
+      "title": "Yanlış referansla video üretimi engellenir",
+      "testType": "UNIT",
+      "status": "PASS",
+      "policy": "BRAND_VIDEO_UNAVAILABLE"
+    },
+    {
+      "id": "E2E-23",
+      "title": "Geçerli video manuel checkbox olmadan kullanılabilir",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS"
+    },
+    {
+      "id": "E2E-24",
+      "title": "Teknik olarak geçersiz video kullanılamaz",
+      "testType": "UNIT",
+      "status": "PASS",
+      "verifiedCheck": "automatic-video-release"
+    },
+    {
+      "id": "E2E-25",
+      "title": "V1 ödeme endpoint'leri etkisizdir",
+      "testType": "REAL_BROWSER_E2E",
+      "status": 404
+    },
+    {
+      "id": "E2E-26",
+      "title": "Taslak kaydı gerçek WhatsApp mesajı göndermez",
+      "testType": "DB_INTEGRATION",
+      "status": "PASS",
+      "queueJobs": 0
+    },
+    {
+      "id": "E2E-27",
+      "title": "F5 sonrası işletme ve medya kimliği korunur",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "reloadedInput": "Unified Entegrasyon unified_1791750451866"
+    },
+    {
+      "id": "E2E-28",
+      "title": "Çift kaydetme mükerrer kayıt üretmez",
+      "testType": "DB_INTEGRATION",
+      "status": "PASS",
+      "count": 1
+    },
+    {
+      "id": "E2E-29",
+      "title": "Mobilde temel iş akışı çalışır",
+      "testType": "REAL_BROWSER_E2E",
+      "status": "PASS",
+      "mobileNoOverflow": true
+    },
+    {
+      "id": "E2E-30",
+      "title": "Birleşmiş Next uygulaması build ve typecheck geçer",
+      "testType": "STATIC",
+      "status": "PASS",
+      "typecheck": "PASSED"
+    }
+  ]
+}

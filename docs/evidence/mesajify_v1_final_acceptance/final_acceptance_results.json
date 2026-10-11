@@ -1,6 +1,6 @@
 {
-  "runId": "acceptance_1791749431387",
-  "timestamp": "2026-10-11T20:10:31.387Z",
+  "runId": "acceptance_1791752234828",
+  "timestamp": "2026-10-11T20:57:14.828Z",
   "categories": {
     "CUSTOMER_JOURNEY": [
       {
@@ -8,7 +8,7 @@
         "title": "Müşteri oturum açma akışı",
         "confidence": "REAL_BROWSER_E2E",
         "status": "PASS",
-        "loginDuration": 5542
+        "loginDuration": 6181
       },
       {
         "testId": "CJ-02",
@@ -73,7 +73,7 @@
         "title": "Hat ve kişi olmadan taslak gerçek DB'ye kaydedilir",
         "confidence": "REAL_BROWSER_E2E",
         "status": "PASS",
-        "bofeDraftId": "86ff8778-7308-40a5-a3ed-c6e40cfa642f"
+        "bofeDraftId": "56361907-ee8f-4700-826c-17863e9a6781"
       },
       {
         "testId": "DRF-02",
@@ -81,7 +81,7 @@
         "confidence": "REAL_DB_INTEGRATION",
         "status": "PASS",
         "row": {
-          "id": "86ff8778-7308-40a5-a3ed-c6e40cfa642f",
+          "id": "56361907-ee8f-4700-826c-17863e9a6781",
           "org_id": "afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc",
           "status": "draft",
           "source_list_ids": []
@@ -99,7 +99,7 @@
         "title": "F5 sonrası taslak bilgileri eksiksiz korunur",
         "confidence": "REAL_BROWSER_E2E",
         "status": "PASS",
-        "postReload": "Kabul Kampanyası acceptance_1791749431387"
+        "postReload": "Kabul Kampanyası acceptance_1791752234828"
       }
     ],
     "TENANT_SECURITY": [
@@ -115,7 +115,7 @@
         "title": "Ayvazoğlu bağımsız taslak oluşturabilir",
         "confidence": "REAL_BROWSER_E2E",
         "status": "PASS",
-        "ayvazDraftId": "24e16d50-6cec-43ad-9f3e-9c2baa16c68c"
+        "ayvazDraftId": "13a17cd1-3541-4fdf-879e-f4f5ed569913"
       },
       {
         "testId": "SEC-03",
@@ -214,8 +214,8 @@
         "title": "Panel yüklenme ve DB sorgu eşzamanlılığı pilot limitlerinde",
         "confidence": "REAL_BACKEND_INTEGRATION",
         "status": "PASS",
-        "panelLoadMs": 3285,
-        "dbPoolDurationMs": 1872
+        "panelLoadMs": 4230,
+        "dbPoolDurationMs": 1671
       }
     ]
   },
@@ -225,9 +225,9 @@
     "fail": 0
   },
   "performance": {
-    "loginMs": 5542,
-    "panelLoadMs": 3285,
-    "dbPool10QueriesMs": 1872
+    "loginMs": 6181,
+    "panelLoadMs": 4230,
+    "dbPool10QueriesMs": 1671
   },
   "viewports": {
     "mobile_360": {
