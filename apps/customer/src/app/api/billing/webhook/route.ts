@@ -45,7 +45,9 @@ function resolvePlan(obj: StripeObject | undefined): PlanId {
   const meta = obj?.metadata
   const raw = (meta?.filo_plan || meta?.plan || '').toLowerCase()
   if (isPlanId(raw)) return raw
-  const priceId = obj?.items?.data?.[0]?.price?.id
+  const priceId =
+    obj?.items?.data?.[0]?.price?.id ??
+    (obj as any)?.lines?.data?.[0]?.price?.id
   return planFromStripePriceId(priceId)
 }
 
@@ -141,7 +143,17 @@ export async function POST(request: Request) {
     ? new Date(event.created * 1000).toISOString()
     : new Date().toISOString()
 
-  const status = obj?.status ?? (isPaymentDelinquent ? 'past_due' : isActive ? 'active' : '')
+  // Explicitly separate Stripe Invoice statuses ('open', 'paid', 'void') from Subscription statuses ('active', 'past_due', etc.)
+  let subscriptionStatus: string
+  if (isPaymentDelinquent) {
+    subscriptionStatus = 'past_due'
+  } else if (isCancellation) {
+    subscriptionStatus = 'canceled'
+  } else if (isActive) {
+    subscriptionStatus = 'active'
+  } else {
+    subscriptionStatus = obj?.status ?? ''
+  }
 
   const { data: result, error } = await admin.rpc('apply_stripe_subscription_atomic', {
     p_event_id: eventId,
@@ -153,7 +165,7 @@ export async function POST(request: Request) {
     p_monthly_message_quota: quotas.messages,
     p_stripe_customer_id: customerId(obj),
     p_stripe_subscription_id: isCancellation ? null : subscriptionId(obj),
-    p_status: status,
+    p_status: subscriptionStatus,
     p_is_upgrade: isActive,
     p_is_downgrade: isCancellation,
   })

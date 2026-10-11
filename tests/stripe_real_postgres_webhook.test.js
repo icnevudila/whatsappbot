@@ -553,4 +553,78 @@ test('HTTP ROUTE INTEGRATION: Full chain verification for Route -> Signature -> 
   assert.equal(resRecovered.data.success, true);
   const orgAfterActive = (await db.query('select * from public.organizations where id = $1', [orgId])).rows[0];
   assert.equal(orgAfterActive.suspended_at, null, 'Active event MUST unsuspend tenant');
+
+  // Test 4: invoice.payment_failed (where invoice status is 'open', NOT 'past_due') MUST suspend tenant
+  const invoiceFailedPayload = {
+    id: 'evt_invoice_failed_01',
+    type: 'invoice.payment_failed',
+    created: Math.floor(Date.now() / 1000) + 60,
+    data: {
+      object: {
+        id: 'in_12345',
+        customer: customerId,
+        subscription: 'sub_route_001',
+        status: 'open', // Stripe invoice status is open, not past_due!
+        lines: { data: [{ price: { id: 'price_starter_monthly' } }] }
+      }
+    }
+  };
+  const isInvoiceDelinquent = invoiceFailedPayload.type === 'invoice.payment_failed';
+  const subStatusFromRoute = isInvoiceDelinquent ? 'past_due' : invoiceFailedPayload.data.object.status;
+
+  const resInvoiceFailed = await mockAdminClient.rpc('apply_stripe_subscription_atomic', {
+    p_event_id: invoiceFailedPayload.id,
+    p_event_created_at: new Date(invoiceFailedPayload.created * 1000).toISOString(),
+    p_event_type: invoiceFailedPayload.type,
+    p_org_id: orgId,
+    p_plan: 'starter',
+    p_accounts_quota: 3,
+    p_monthly_message_quota: 1000,
+    p_stripe_customer_id: customerId,
+    p_stripe_subscription_id: 'sub_route_001',
+    p_status: subStatusFromRoute,
+    p_is_upgrade: false,
+    p_is_downgrade: false,
+  });
+
+  assert.equal(resInvoiceFailed.data.success, true);
+  const orgAfterInvoiceFailed = (await db.query('select * from public.organizations where id = $1', [orgId])).rows[0];
+  assert.ok(orgAfterInvoiceFailed.suspended_at !== null, 'invoice.payment_failed MUST suspend tenant even when invoice status is open');
+
+  // Test 5: invoice.payment_succeeded (invoice status is 'paid') MUST unsuspend tenant
+  const invoiceSucceededPayload = {
+    id: 'evt_invoice_succeeded_01',
+    type: 'invoice.payment_succeeded',
+    created: Math.floor(Date.now() / 1000) + 120,
+    data: {
+      object: {
+        id: 'in_12346',
+        customer: customerId,
+        subscription: 'sub_route_001',
+        status: 'paid', // Stripe invoice status is paid
+        lines: { data: [{ price: { id: 'price_starter_monthly' } }] }
+      }
+    }
+  };
+  const isInvoiceActive = invoiceSucceededPayload.type === 'invoice.payment_succeeded';
+  const subStatusFromSuccessRoute = isInvoiceActive ? 'active' : invoiceSucceededPayload.data.object.status;
+
+  const resInvoiceSuccess = await mockAdminClient.rpc('apply_stripe_subscription_atomic', {
+    p_event_id: invoiceSucceededPayload.id,
+    p_event_created_at: new Date(invoiceSucceededPayload.created * 1000).toISOString(),
+    p_event_type: invoiceSucceededPayload.type,
+    p_org_id: orgId,
+    p_plan: 'starter',
+    p_accounts_quota: 3,
+    p_monthly_message_quota: 1000,
+    p_stripe_customer_id: customerId,
+    p_stripe_subscription_id: 'sub_route_001',
+    p_status: subStatusFromSuccessRoute,
+    p_is_upgrade: true,
+    p_is_downgrade: false,
+  });
+
+  assert.equal(resInvoiceSuccess.data.success, true);
+  const orgAfterInvoiceSuccess = (await db.query('select * from public.organizations where id = $1', [orgId])).rows[0];
+  assert.equal(orgAfterInvoiceSuccess.suspended_at, null, 'invoice.payment_succeeded MUST reinstate tenant');
 });

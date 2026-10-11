@@ -104,9 +104,10 @@ begin
   end if;
 
   -- Step 3.5: Subscription ID mismatch guard
-  -- If event is a cancellation or failure for an older/different subscription ID, do not overwrite active subscription
+  -- If event is for an older/different subscription ID, do not overwrite active subscription
   if v_org.stripe_subscription_id is not null and p_stripe_subscription_id is not null and v_org.stripe_subscription_id != p_stripe_subscription_id then
-    if p_event_type = 'customer.subscription.deleted' or p_status in ('canceled', 'past_due', 'unpaid') then
+    -- Guard against cancellation, failure, or late updates belonging to a superseded subscription
+    if p_event_type in ('customer.subscription.deleted', 'invoice.payment_failed') or p_status in ('canceled', 'past_due', 'unpaid') or (not p_is_upgrade and p_event_type != 'checkout.session.completed') then
       insert into public.stripe_webhook_events (
         event_id, org_id, event_type, stripe_created_at, processed_at, subscription_id, status, plan
       ) values (
@@ -125,8 +126,8 @@ begin
   end if;
 
   -- Step 4: Calculate new state based on plan, status, and upgrade/downgrade flags
-  -- Priority 1: Payment Delinquency (past_due or unpaid) MUST SUSPEND the tenant immediately
-  if p_status in ('past_due', 'unpaid') then
+  -- Priority 1: Payment Delinquency (past_due, unpaid, or invoice.payment_failed) MUST SUSPEND the tenant immediately
+  if p_status in ('past_due', 'unpaid') or p_event_type = 'invoice.payment_failed' then
     v_new_plan := v_org.plan;
     v_new_sub_id := coalesce(p_stripe_subscription_id, v_org.stripe_subscription_id);
     v_new_suspended_at := coalesce(v_org.suspended_at, now());
