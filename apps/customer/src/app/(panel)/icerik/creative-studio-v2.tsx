@@ -1072,10 +1072,19 @@ export function CreativeStudioV2({
                 </div>
 
                 {/* Footer Nav */}
-                <div className="flex justify-end pt-3 border-t border-hairline">
+                <div className="flex flex-col gap-2 pt-3 border-t border-hairline sm:flex-row sm:items-center sm:justify-between">
+                  {!hasProduct || !hasLogo ? (
+                    <p className="text-[12px] font-medium text-amber-700 bg-amber-50 rounded-lg p-2 border border-amber-200">
+                      {!hasLogo && !hasProduct
+                        ? 'Devam etmek için önce işletme logonuzu ve en az bir ürününüzü ekleyin.'
+                        : !hasLogo
+                          ? 'Devam etmek için Ayarlar > Marka Kiti sayfasından işletme logonuzu ekleyin.'
+                          : 'Devam etmek için en az bir katalog ürünü seçin veya yeni ürün ekleyin.'}
+                    </p>
+                  ) : <div />}
                   <Button
                     type="button"
-                    className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-7 shadow-sm"
+                    className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-11 px-7 shadow-sm shrink-0"
                     disabled={!hasProduct || !hasLogo}
                     onClick={handleGoToStep2}
                   >

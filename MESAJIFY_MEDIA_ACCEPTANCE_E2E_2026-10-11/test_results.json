@@ -1,15 +1,15 @@
 {
-  "testDate": "2026-10-11T10:00:32.997Z",
+  "testDate": "2026-10-11T10:21:01.261Z",
   "browser": "Chromium Headless",
   "baseUrl": "http://localhost:3025",
   "tests": {
     "library": {
       "status": "PASS",
-      "itemCount": 10,
+      "itemCount": 4,
       "items": [
         {
-          "link": "/icerik/2b1e7b35-8a73-55b8-a047-a507577d1ab6",
-          "title": "Ayvazoğlu İnşaat - Tuğla Reklam Filmi",
+          "link": "/icerik/41a1d788-6a4e-54cb-a953-fab1c29ff9a2",
+          "title": "Bofe - Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası Reklam Filmi",
           "badges": [
             "0:10",
             "İnceleme bekliyor"
@@ -17,59 +17,20 @@
           "isVideo": false
         },
         {
-          "link": "/icerik/758ca50a-be63-5ae5-a9cf-f8a15a0a7343",
-          "title": "Tuğlanız Fabrikadan Kapınıza. Toptan ve perakende tuğla, fabrikadan kapınıza 3 gün içinde teslim.",
+          "link": "/icerik/be2d9e50-5990-4fc2-b2a2-6775932ff8cc",
+          "title": "Ayvazoğlu Tuğla ile Sağlam Temeller. Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.",
           "badges": [],
           "isVideo": false
         },
         {
-          "link": "/icerik/26693d93-f7ac-4193-98fc-561cebe83310",
-          "title": "Ayvazoğlu kaliteli inşaat tuğlası paletleri, şantiyede profesyonel dizilim, güve",
+          "link": "/icerik/82bd5aca-5c88-4b4e-bcb8-d7567930e50d",
+          "title": "Ayvazoğlu Tuğla ile Sağlam Temeller. Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.",
           "badges": [],
           "isVideo": false
         },
         {
-          "link": "/icerik/2e228656-8ffb-55f1-a9de-48568f36e00f",
-          "title": "Ayvazoğlu İnşaat - Tuğla Reklam Filmi",
-          "badges": [
-            "0:10",
-            "İnceleme bekliyor"
-          ],
-          "isVideo": false
-        },
-        {
-          "link": "/icerik/058e20fd-b88c-5159-ab45-beb68e858f6c",
-          "title": "Ayvazoğlu İnşaat Tuğla. Fabrikadan toptan ve perakende satış. Kapıya teslim.",
-          "badges": [],
-          "isVideo": false
-        },
-        {
-          "link": "/icerik/a052f552-82c1-5431-a3e4-e8028e4cc578",
-          "title": "Ayvazoğlu Klinker Tuğla — Doğrudan Fabrikadan. Fiyat ve sipariş bilgisi için bizimle iletişime geçin.",
-          "badges": [],
-          "isVideo": false
-        },
-        {
-          "link": "/icerik/8ea519d8-611a-5a94-aba6-51038ba74bea",
-          "title": "Ayvazoğlu Tuğla — Bilgi ve Sipariş. Fabrikadan Toptan ve Perakende Satış",
-          "badges": [],
-          "isVideo": false
-        },
-        {
-          "link": "/icerik/3d2d5d7e-8d5b-52cb-af8d-dff513b01317",
-          "title": "Ayvazoğlu Tuğla — Bilgi ve Sipariş. Fabrikadan Toptan ve Perakende Satış",
-          "badges": [],
-          "isVideo": false
-        },
-        {
-          "link": "/icerik/def9888e-b199-5dfa-a77d-031071ccbb3e",
-          "title": "Ayvazoğlu Tuğla — Bilgi ve Sipariş. Fabrikadan Toptan ve Perakende Satış",
-          "badges": [],
-          "isVideo": false
-        },
-        {
-          "link": "/icerik/5bdcec9d-147a-472e-8c9b-aca350b07103",
-          "title": "Tuğla — Ürün Özelliklerini İnceleyin. Fabrikadan toptan ve perakende tuğla. Kapıya teslim, 3 gün içinde teslimat.",
+          "link": "/icerik/d0db639d-ed88-4201-a146-c6d643d44cf0",
+          "title": "Bofe Akülü Sırt İlaçlama Pompası. Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.",
           "badges": [],
           "isVideo": false
         }
@@ -97,9 +58,9 @@
         "error": null
       },
       "seek": {
-        "before": 5.012909,
+        "before": 5.010873,
         "after": 7.5,
-        "seekDurationMs": 95
+        "seekDurationMs": 89
       },
       "networkRequests": [
         {
@@ -112,37 +73,7 @@
             "accept-ranges": "bytes",
             "content-length": "157992",
             "keep-alive": "timeout=5",
-            "date": "Sun, 11 Oct 2026 10:00:47 GMT",
-            "content-type": "image/jpeg",
-            "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
-          }
-        },
-        {
-          "url": "http://localhost:3025/api/ai-media/outputs/cf93f829-6ecd-4baa-8e3a-83a928249ddf?thumb=1",
-          "status": 200,
-          "statusText": "OK",
-          "headers": {
-            "cache-control": "private, max-age=3600",
-            "connection": "keep-alive",
-            "accept-ranges": "bytes",
-            "content-length": "148245",
-            "keep-alive": "timeout=5",
-            "date": "Sun, 11 Oct 2026 10:00:47 GMT",
-            "content-type": "image/jpeg",
-            "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
-          }
-        },
-        {
-          "url": "http://localhost:3025/api/ai-media/outputs/27f1624c-6f07-4675-91b3-57f775c4f0b4?thumb=1",
-          "status": 200,
-          "statusText": "OK",
-          "headers": {
-            "cache-control": "private, max-age=3600",
-            "connection": "keep-alive",
-            "accept-ranges": "bytes",
-            "content-length": "157992",
-            "keep-alive": "timeout=5",
-            "date": "Sun, 11 Oct 2026 10:00:47 GMT",
+            "date": "Sun, 11 Oct 2026 10:21:37 GMT",
             "content-type": "image/jpeg",
             "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
           }
@@ -160,7 +91,7 @@
             "accept-ranges": "bytes",
             "keep-alive": "timeout=5",
             "content-length": "3160757",
-            "date": "Sun, 11 Oct 2026 10:00:53 GMT",
+            "date": "Sun, 11 Oct 2026 10:21:38 GMT",
             "content-type": "video/mp4",
             "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
           }
@@ -178,7 +109,7 @@
             "accept-ranges": "bytes",
             "keep-alive": "timeout=5",
             "content-length": "1025",
-            "date": "Sun, 11 Oct 2026 10:01:04 GMT",
+            "date": "Sun, 11 Oct 2026 10:21:48 GMT",
             "content-type": "video/mp4",
             "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
           }
@@ -193,7 +124,7 @@
             "accept-ranges": "bytes",
             "content-length": "157992",
             "keep-alive": "timeout=5",
-            "date": "Sun, 11 Oct 2026 10:00:47 GMT",
+            "date": "Sun, 11 Oct 2026 10:21:37 GMT",
             "content-type": "image/jpeg",
             "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
           }
@@ -203,10 +134,12 @@
           "status": 200,
           "statusText": "OK",
           "headers": {
-            "accept-ranges": "bytes",
             "cache-control": "private, max-age=3600",
+            "connection": "keep-alive",
+            "accept-ranges": "bytes",
             "content-length": "148245",
-            "date": "Sun, 11 Oct 2026 10:00:47 GMT",
+            "keep-alive": "timeout=5",
+            "date": "Sun, 11 Oct 2026 10:21:52 GMT",
             "content-type": "image/jpeg",
             "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
           }
@@ -221,7 +154,7 @@
             "accept-ranges": "bytes",
             "content-length": "157992",
             "keep-alive": "timeout=5",
-            "date": "Sun, 11 Oct 2026 10:01:31 GMT",
+            "date": "Sun, 11 Oct 2026 10:22:10 GMT",
             "content-type": "image/jpeg",
             "vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"
           }

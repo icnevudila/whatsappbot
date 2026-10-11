@@ -165,7 +165,7 @@ export function cleanAiMessage(text: string, businessName?: string | null): stri
     : text
   return withoutBrandHeading
     .replace(/^["'`]+|["'`]+$/g, '')
-    .replace(/^(işte (mesajınız|metniniz)[:\s]*)/i, '')
+    .replace(/^(?:işte|İşte|iste|İste)\s+(?:mesajınız|metniniz)[:\s]*/iu, '')
     .replace(/^(?:(?:Samimi|Profesyonel|Satış\s+Odaklı|Kısa|Detaylı)\s+)?(?:WhatsApp\s+)?Kampanya\s+(?:Mesajı|Metni)\s*:?\s*\r?\n+/i, '')
     .trim()
 }
