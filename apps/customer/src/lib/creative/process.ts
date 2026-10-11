@@ -7,6 +7,8 @@ import { createHash } from 'node:crypto'
 import type { AiKeyBag } from '@/lib/ai/config'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { buildCreativePrompt, buildVideoPrompt, deriveVerifiedCampaignData } from './prompt'
+import { buildCreativePromptV3 } from './director/brief-v3'
+import { promotionPolicyError } from './promotion-policy'
 import { generateCampaignWhatsAppMessage } from '@/lib/ai/campaign-message'
 import { formatToAspect, type CreativePayload, type CreativeSnapshot } from './types'
 import { createVideoGenerationIdentity } from './video-generation-identity'
@@ -654,6 +656,12 @@ export async function processCreativeGeneration(
       }
     }
     const expectedLogo = Boolean(shouldIncludeLogo && expectedLogoPath)
+    if (snapshot.promotionMode === 'brand') {
+      const subjectError = promotionPolicyError({mode:'brand',video:creative.format === 'video' || snapshot.formatId === 'reels_video',
+        hasLogo:expectedLogo,hasOfferingReference:false,hasOfferingSelection:snapshot.products.length > 0,
+        hasBase:expectedBase || Boolean(snapshot.referenceImageUrls?.length)})
+      if (subjectError) throw new Error(subjectError)
+    }
     const expectedRefUrls = Array.isArray(snapshot.referenceImageUrls) ? snapshot.referenceImageUrls : []
     const expected_reference_count = (expectedBase ? 1 : 0) + expectedProducts.length + (expectedLogo ? 1 : 0) + expectedRefUrls.length
 
@@ -753,7 +761,8 @@ export async function processCreativeGeneration(
     // Use buildImagePromptV2 only if deterministic locked copy overlay is requested.
     const useLockedCopy = Boolean((payload as any).lockCopyOverlay)
 
-    const prompt = creative.template === 'ai_send' && payload.quickSendPrompt
+    const prompt = snapshot.promotionMode === 'brand' || snapshot.offeringKind === 'software' || snapshot.offeringKind === 'service' ? buildCreativePromptV3(snapshot).prompt
+      : creative.template === 'ai_send' && payload.quickSendPrompt
       ? payload.quickSendPrompt
       : useLockedCopy
         ? buildImagePromptV2({

@@ -71,6 +71,15 @@ async function resolveOrgId(
 }
 
 export async function POST(request: Request) {
+  // V1 Policy Gate: Automated Stripe webhook entitlement modification is disabled in V1
+  const enableStripeV2 = process.env.ENABLE_STRIPE_BILLING_V2 === 'true'
+  if (!enableStripeV2) {
+    return NextResponse.json(
+      { error: 'V1 sürümünde Stripe otomatik webhook işleme kapalıdır.', status: 'v1_disabled' },
+      { status: 503 }
+    )
+  }
+
   const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim()
   if (!secret) {
     return NextResponse.json({ error: 'STRIPE_WEBHOOK_SECRET yok' }, { status: 503 })

@@ -1,5 +1,6 @@
 'use server'
 import sharp from 'sharp'
+import { promotionMode, offeringKind, promotionPolicyError, BRAND_VIDEO_UNAVAILABLE } from '@/lib/creative/promotion-policy'
 
 import { after } from 'next/server'
 import { revalidatePath } from 'next/cache'
@@ -33,8 +34,7 @@ import { collectImageFiles, readImageFile } from '@/app/(panel)/ayarlar/upload-i
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } from './wizard-types'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
-import { isApprovedFinalVideoOutput, isReviewVideoOutput } from '@/lib/creative/video-output-approval'
-import { libraryVideoOutputId, loadVideoLibraryState } from '@/lib/creative/video-library-state'
+import { loadVideoLibraryState } from '@/lib/creative/video-library-state'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import {
   generateVideoScenarios,
@@ -167,6 +167,10 @@ export async function startCreativeGeneration(
 
   const authContext = { userId, org, supabase }
   const format = formatFromId(String(draft.formatId ?? 'wa'))
+  if (promotionMode(draft.promotionMode) === 'brand' && format.format === 'video') return {error:BRAND_VIDEO_UNAVAILABLE}
+  if (promotionMode(draft.promotionMode) === 'brand' && Array.isArray(draft.referenceImageUrls) && draft.referenceImageUrls.length) {
+    return {error:'Marka tanıtımında yalnız işletme logosu kullanılır; ek ürün görseli bağlanmaz.'}
+  }
   const kitId = String(draft.brandKitId ?? '').trim() || null
   const rawProductIds = parseIds(draft.productIds)
   const heroProductId = String(draft.heroProductId || '').trim()
@@ -447,10 +451,21 @@ export async function startCreativeGeneration(
   }
   const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
   const logoSource = String(kitRow?.logo_path || orgLogoPath || '').trim()
+  const subjectMode = promotionMode(draft.promotionMode)
+  // Brand-only is explicit, never inferred from an objective or missing product.
+  if (subjectMode === 'brand' || draft.promotionMode === 'offering') {
+    const subjectError = promotionPolicyError({ mode: subjectMode, video: format.format === 'video',
+      hasLogo: Boolean(logoSource) && draft.useLogo !== false,
+      hasOfferingReference: products.some(product => product.include.image && Boolean(product.imageUrl)),
+      hasOfferingSelection: products.length > 0 || rawProductIds.length > 0 || Boolean(heroProductId),
+      hasBase: Boolean(baseCreativeId) })
+    if (subjectError) return { error: subjectError }
+  }
   if (products.some(product => !product.include.image || !product.imageUrl || product.imageUrl.trim() === logoSource || /^\/?(?:brand|logos)\//i.test(product.imageUrl))) {
     return { error: 'Seçilen her ürün için gerçek ürün veya arayüz görseli ekleyin. İşletme logosu ürün referansı yerine kullanılamaz.' }
   }
   const imageAssetGate = requiredImageAssets({
+    promotionMode: subjectMode,
     useLogo: draft.useLogo !== false, hasLogo: Boolean(kitRow?.logo_path || orgLogoPath),
     hasProductReference: products.some((product) => product.include.image && Boolean(product.imageUrl)),
     hasValidBase: Boolean(baseCreativeId),
@@ -489,6 +504,8 @@ export async function startCreativeGeneration(
 
   const tInsertStart = Date.now()
   const snapshot: CreativePayload = {
+    promotionMode: subjectMode,
+    offeringKind: offeringKind(draft.offeringKind),
     brief,
     style: String(draft.style ?? 'auto'),
     formatId: format.id,
@@ -538,7 +555,7 @@ export async function startCreativeGeneration(
     customSupporting: (draft.customSupporting as string) || null,
     heroProductId: heroProductId || (products[0]?.id as string) || null,
     stylePreset: (draft.stylePreset as string) || null,
-    objective: (draft.objective as string) || null,
+    objective: subjectMode === 'brand' ? 'BRAND_AWARENESS' : (draft.objective as string) || null,
     artDirectionPlan: artDirectionPlan || null,
     art_direction_source: artDirectionSource,
     submissionMetrics: {
@@ -804,48 +821,6 @@ export async function approveReviewedImage(formData: FormData): Promise<Creative
   if (error || !approved) return {error:'Kayıt değişti; yeniden inceleyin.'}
   revalidateLibrary(id)
   return {ok:'Görsel inceleme onayınız kaydedildi.'}
-}
-
-export async function approveReviewedVideo(formData: FormData): Promise<CreativeActionState> {
-  if (formData.get('identity') !== 'on' || formData.get('commerce') !== 'on')
-    return { error: 'Ürün/marka ve ticari bilgileri videoda kontrol ettiğinizi doğrulayın.' }
-  const { org, userId, supabase } = await requireActiveOrg()
-  if (!isOrgAdminRole(org.role)) return { error: 'Onay yetkiniz yok.' }
-  const id = String(formData.get('id') || '').trim()
-  if (!id) return { error: 'Geçersiz video ID.' }
-
-  const { data: row, error: readError } = await supabase
-    .from('creatives')
-    .select('id, format, status, public_url, payload, updated_at')
-    .eq('org_id', org.id)
-    .eq('id', id)
-    .maybeSingle()
-
-  if (readError || !row || row.status !== 'needs_review')
-    return { error: 'Video kaydı bulunamadı veya onay durumunda değil.' }
-
-  const serviceClient = createSupabaseServiceClient() || supabase
-  const outputId = libraryVideoOutputId(row.public_url)
-  if (row.format !== 'video' || !outputId) return { error: 'Doğrulanabilir video çıktısı bulunamadı.' }
-  const { data: out, error: outputError } = await (serviceClient as any)
-    .from('ai_media_outputs')
-    .select('id,job_id,org_id,verified,is_approved,sha256,storage_url,file_path,duration_seconds,width,height,product_type')
-    .eq('id', outputId).eq('org_id', org.id).maybeSingle()
-  if (outputError || !out) return { error: 'Video çıktısı doğrulanamadı.' }
-  const { data: job, error: jobError } = await (serviceClient as any)
-    .from('ai_media_jobs').select('id,org_id,state')
-    .eq('id', out.job_id).eq('org_id', org.id).maybeSingle()
-  if (jobError || !isReviewVideoOutput(out, job, org.id) ||
-      !isApprovedFinalVideoOutput({ ...out, is_approved: true }) ||
-      !(out.storage_url || out.file_path)) return { error: 'Video kalite ve iş kimliği doğrulamasından geçmedi.' }
-
-  const { data: approved, error: approvalError } = await (serviceClient as any).rpc('approve_creative_video_review', {
-    p_org: org.id, p_creative: id, p_output: outputId, p_sha: out.sha256,
-    p_updated: row.updated_at, p_reviewer: userId,
-  })
-  if (approvalError || approved !== true) return { error: 'Onay kaydedilemedi veya kayıt değişti; yeniden inceleyin.' }
-  revalidateLibrary(id)
-  return { ok: 'Video inceleme onayınız kaydedildi.' }
 }
 
 export async function renameCreative(formData: FormData): Promise<CreativeActionState> {

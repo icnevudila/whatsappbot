@@ -134,6 +134,8 @@ export type CreativeSnapshotProduct = {
 }
 
 export type CreativeSnapshot = {
+  promotionMode?: import('./promotion-policy').PromotionMode
+  offeringKind?: import('./promotion-policy').OfferingKind
   creativeDirectorVersion?: 'V3'
   brandName?: string | null
   companyName?: string | null

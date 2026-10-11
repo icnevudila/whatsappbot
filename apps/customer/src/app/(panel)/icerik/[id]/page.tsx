@@ -58,7 +58,7 @@ export default async function CreativeDetailPage({
     submissionRequestKey: typeof payload?.requestKey === 'string' ? payload.requestKey : null,
     id: row.id,
     title: displayTitle,
-    publicUrl: (videoState?.status === 'needs_review' || row.status === 'needs_review') && row.public_url && !row.public_url.includes('preview=')
+    publicUrl: ((videoState?.status || row.status) === 'needs_review') && row.public_url && !row.public_url.includes('preview=')
       ? `${row.public_url}${row.public_url.includes('?') ? '&' : '?'}preview=1`
       : row.public_url,
     status: videoState?.status || row.status,

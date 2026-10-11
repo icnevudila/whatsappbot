@@ -23,6 +23,8 @@ const { DurableJobStore } = require('./durable_job_store.js');
 const { VideoJobPersistence, videoRequestHash } = require('./video_job_persistence.js');
 const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
+const { publicHealthStats } = require('./public_health.js');
+const { isMediaFilename, isPublicMediaFilename, registerMediaOwner, getMediaOwner, verifyMediaAccess } = require('./public_output_access.js');
 const { loadAllCompanyChats, getExpectedChatTitle } = require('./chat_manager.js');
 
 if (!process.env.CHATGPT_API_KEY) {
@@ -226,7 +228,10 @@ function sanitizeConversationHistory(history, maxChars = 3000) {
 
 const PORT = parseInt(process.env.PORT || '3456', 10);
 const PUBLIC_HOST = process.env.PUBLIC_HOST || '167.233.201.31';
-const OUTPUT_DIR = path.resolve(__dirname, 'outputs');
+function getOutputDir() {
+  return process.env.OUTPUT_DIR ? path.resolve(process.env.OUTPUT_DIR) : path.resolve(__dirname, 'outputs');
+}
+const OUTPUT_DIR = getOutputDir();
 const MONITOR_HTML_PATH = path.resolve(__dirname, 'monitor.html');
 
 if (!fs.existsSync(OUTPUT_DIR)) {
@@ -3050,9 +3055,9 @@ const server = http.createServer(async (req, res) => {
       });
     }
 
-    // 2. Durum ve İlerleme Sorgulama: GET /v1/images/status/:id, /v1/jobs/:id, /jobs/:id
-    if (method === 'GET' && (pathname.startsWith('/v1/images/status/') || pathname.startsWith('/v1/jobs/') || pathname.startsWith('/jobs/'))) {
-      const jobId = pathname.replace('/v1/images/status/', '').replace('/v1/jobs/', '').replace('/jobs/', '');
+    // 2. Durum ve İlerleme Sorgulama: GET /v1/images/status/:id
+    if (method === 'GET' && pathname.startsWith('/v1/images/status/')) {
+      const jobId = pathname.replace('/v1/images/status/', '');
       const job = queue.getJob(jobId);
       if (!job) {
         return sendJson(res, 404, { error: 'Job not found' });
@@ -3185,6 +3190,9 @@ const server = http.createServer(async (req, res) => {
 
       if (jobId) {
         const completed = queue.completeJob(jobId, filename, buffer, timings, referenceReceipt);
+        if (completed?.tenantId) {
+          registerMediaOwner(filename, completed.tenantId);
+        }
         return sendJson(res, 200, { ok: true, filename, url: completed?.resultUrl });
       }
 
@@ -3204,16 +3212,64 @@ const server = http.createServer(async (req, res) => {
 
     // 7. Statik Dosya / Video / Görsel Sunumu: GET/HEAD /outputs/:filename veya /public/:filename
     if ((method === 'GET' || method === 'HEAD') && (pathname.startsWith('/outputs/') || pathname.startsWith('/public/'))) {
-      const prefix = pathname.startsWith('/outputs/') ? '/outputs/' : '/public/';
+      const isPublicDir = pathname.startsWith('/public/');
+      const prefix = isPublicDir ? '/public/' : '/outputs/';
       const filename = path.basename(pathname.replace(prefix, ''));
-      let filePath = path.join(OUTPUT_DIR, filename);
+
+      if (!isMediaFilename(filename) && !isInternalWorkerRequest(req)) {
+        res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+        return res.end(JSON.stringify({ error: 'File not found' }));
+      }
+
+      let filePath = path.join(getOutputDir(), filename);
+      let isFileInPublicDir = false;
       if (!fs.existsSync(filePath)) {
         filePath = path.join(__dirname, 'public', filename);
+        if (fs.existsSync(filePath)) isFileInPublicDir = true;
       }
 
       if (!fs.existsSync(filePath)) {
         res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         return res.end(JSON.stringify({ error: 'File not found' }));
+      }
+
+      // Private tenant media in OUTPUT_DIR must be strictly authorized
+      if (!isFileInPublicDir || !isPublicDir) {
+        let ownerTenant = getMediaOwner(filename, getOutputDir());
+        if (!ownerTenant) {
+          for (const job of queue.jobs.values()) {
+            if (job.filename === filename || (job.resultUrl && path.basename(job.resultUrl) === filename)) {
+              ownerTenant = job.tenantId;
+              if (ownerTenant) registerMediaOwner(filename, ownerTenant, getOutputDir());
+              break;
+            }
+          }
+        }
+        if (!ownerTenant) {
+          for (const vjob of videoQueue.jobs.values()) {
+            if (vjob.rawFileName === filename || vjob.outputPath === filename) {
+              ownerTenant = vjob.tenantId;
+              if (ownerTenant) registerMediaOwner(filename, ownerTenant, getOutputDir());
+              break;
+            }
+          }
+        }
+
+        const authCheck = verifyMediaAccess({
+          req,
+          filename,
+          ownerTenant,
+          isInternalWorker: isInternalWorkerRequest(req),
+          outputDir: getOutputDir(),
+        });
+
+        if (!authCheck.allowed) {
+          res.writeHead(authCheck.statusCode || 401, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          });
+          return res.end(JSON.stringify({ error: authCheck.error || 'UNAUTHORIZED_MEDIA_ACCESS' }));
+        }
       }
 
       const stat = fs.statSync(filePath);
@@ -3225,12 +3281,36 @@ const server = http.createServer(async (req, res) => {
       if (ext === '.mp4') mime = 'video/mp4';
       if (ext === '.webm') mime = 'video/webm';
 
-      // Video range streaming support (HTTP 206)
+      // Video range streaming support (HTTP 206) with RFC 7233 range bounds check
       const range = req.headers.range;
       if (range && mime.startsWith('video/')) {
-        const parts = range.replace(/bytes=/, '').split('-');
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : stat.size - 1;
+        const match = range.match(/^bytes=(\d*)-(\d*)$/);
+        if (!match) {
+          res.writeHead(416, { 'Content-Range': `bytes */${stat.size}` });
+          return res.end();
+        }
+        let start = match[1] ? parseInt(match[1], 10) : NaN;
+        let end = match[2] ? parseInt(match[2], 10) : NaN;
+
+        if (isNaN(start) && isNaN(end)) {
+          res.writeHead(416, { 'Content-Range': `bytes */${stat.size}` });
+          return res.end();
+        } else if (isNaN(start)) {
+          // Suffix range: bytes=-500 (last 500 bytes)
+          start = Math.max(0, stat.size - end);
+          end = stat.size - 1;
+        } else if (isNaN(end)) {
+          // Open range: bytes=500-
+          end = stat.size - 1;
+        }
+
+        if (start < 0 || start >= stat.size || end < start) {
+          res.writeHead(416, { 'Content-Range': `bytes */${stat.size}` });
+          return res.end();
+        }
+
+        // Clamp end to file size - 1
+        end = Math.min(end, stat.size - 1);
         const chunksize = (end - start) + 1;
         res.writeHead(206, {
           'Content-Range': `bytes ${start}-${end}/${stat.size}`,
@@ -3241,6 +3321,10 @@ const server = http.createServer(async (req, res) => {
         });
         if (method === 'HEAD') return res.end();
         const file = fs.createReadStream(filePath, { start, end });
+        file.on('error', () => {
+          if (!res.headersSent) res.writeHead(500);
+          res.end();
+        });
         return file.pipe(res);
       }
 
@@ -3269,7 +3353,7 @@ const server = http.createServer(async (req, res) => {
       if (!ai_ready && activeWorkerKeys.length > 0) {
         alert = 'ChatGPT oturumu kapalı! Lütfen noVNC (port 6080) üzerinden giriş yapın.';
       } else if (canaryStatus.ok === false) {
-        alert = `Kanarya Testi Başarısız: ${canaryStatus.error}. ChatGPT arayüzü değişmiş olabilir! Kontrol: port 6080`;
+        alert = 'Kanarya testi başarısız; operatör incelemesi gerekiyor.';
       }
 
       return sendJson(res, 200, {
@@ -3277,10 +3361,10 @@ const server = http.createServer(async (req, res) => {
         status: 'online',
         ai_ready,
         alert,
-        canary: canaryStatus,
+        canary: { ok: canaryStatus.ok },
         port: PORT,
         memory: { freeMb, totalMb },
-        ...stats,
+        ...publicHealthStats(stats),
       });
     }
 

@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation'
 import { AccentLink, Badge, Button, Field, Notice, Textarea } from '@/components/ui'
 import { Icon, type IconName } from '@/components/icon'
 import { CreativeGenerating } from '@/components/creative-generating'
+import { CreativeDownload } from '@/components/creative-download'
+import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
@@ -19,7 +21,6 @@ import {
   reconcileCreative,
   startCreativeGeneration,
   approveReviewedImage,
-  approveReviewedVideo,
 } from './actions'
 
 const DETAIL_STAGES = [
@@ -145,16 +146,11 @@ export function CreativeMoreMenu({
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
           {publicUrl ? (
-            <a
-              role="menuitem"
-              href={publicUrl}
-              download=""
+            <CreativeDownload
+              creativeId={creativeId} role="menuitem"
               className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-              onClick={() => setOpen(false)}
-            >
-              <Icon name="download" className="size-4 text-ink-muted" />
-              İndir
-            </a>
+              onStarted={() => setOpen(false)}
+            />
           ) : null}
           {canManage ? (
             <button
@@ -370,7 +366,7 @@ export function CreativeDetail({
       error?: string
     } | null
     if (!response.ok || json?.ok === false || json?.error) {
-      return { error: json?.error ?? 'Görsel üretilemedi.', pending: false }
+      return { error: isVideo ? videoFailureUserMessage(json?.error) : json?.error ?? 'Görsel üretilemedi.', pending: false }
     }
     if (json?.pending || response.status === 202) {
       return {
@@ -380,7 +376,9 @@ export function CreativeDetail({
         progressInfo: json?.progressInfo ?? null,
       }
     }
-    if (json?.needsReview) return { error: null, pending: false, publicUrl: json.publicUrl }
+    if (json?.needsReview) return isVideo
+      ? {error:'Video dosyası doğrulanamadı veya bir sorun tespit edildi. Kampanyada kullanmadan önce yeniden oluşturun.',pending:false}
+      : { error: null, pending: false, publicUrl: json.publicUrl }
     if (!hasConfirmedRenderResult({ ready: json?.ready, publicUrl: json?.publicUrl })) {
       return { error: null, pending: true, retryAfterSeconds: 5 }
     }
@@ -592,7 +590,7 @@ export function CreativeDetail({
 
       {shownError && !spinning ? (
         <Notice tone="danger">
-          <p className="text-[13.5px] font-semibold">Görsel oluşturulamadı</p>
+          <p className="text-[13.5px] font-semibold">{isVideo ? 'Video kullanıma hazır değil' : 'Görsel oluşturulamadı'}</p>
           <p className="mt-1 whitespace-pre-wrap break-words text-[13px]">{shownError}</p>
           {canManage ? (
             <Button
@@ -624,20 +622,8 @@ export function CreativeDetail({
 
       {creative.status === 'needs_review' ? (
         <Notice tone="warn">
-          <p className="text-[13.5px] font-semibold">{isVideo ? 'Video' : 'Görsel'} inceleme bekliyor</p>
-          <p className="mt-1 text-[13px]">Dosya oluşturuldu. Gerçek ürün, logo, metin ve ticari bilgilerin doğruluğu onaylanmadan kampanyada kullanılamaz.</p>
-          {isVideo && canManage ? (
-            <form className="mt-3 space-y-2" action={async (form) => {
-              form.set('id', creative.id)
-              const result = await approveReviewedVideo(form)
-              if (result?.error) toast(result.error, 'danger')
-              else router.refresh()
-            }}>
-              <label className="block"><input type="checkbox" name="identity" required /> Gerçek ürünü, logoyu ve marka kimliğini videoda kontrol ettim.</label>
-              <label className="block"><input type="checkbox" name="commerce" required /> Metin, fiyat ve sesli senaryo doğru; uydurma iddia yok.</label>
-              <Button type="submit">İnceledim, videonun kampanyada kullanımını onayla</Button>
-            </form>
-          ) : null}
+          <p className="text-[13.5px] font-semibold">{isVideo ? 'Video kullanıma hazır değil' : 'Görsel inceleme bekliyor'}</p>
+          <p className="mt-1 text-[13px]">{isVideo ? 'Videoda bir sorun tespit edildi veya dosya doğrulaması tamamlanamadı. Kampanyada kullanmadan önce yeniden oluşturun.' : 'Dosya oluşturuldu. Gerçek ürün, logo, metin ve ticari bilgilerin doğruluğu onaylanmadan kampanyada kullanılamaz.'}</p>
           {!isVideo && creative.imageReviewRequired && canManage && <form className="mt-3 space-y-2" action={async (form) => {
             form.set('id',creative.id)
             const result = await approveReviewedImage(form)
@@ -680,7 +666,7 @@ export function CreativeDetail({
                   className="w-full rounded-[var(--radius-card)] object-contain"
                 />
               </button>
-              <DetailImageMenu publicUrl={getSafeMediaUrl(displayPublicUrl) || displayPublicUrl} />
+              <DetailImageMenu creativeId={creative.id} />
               <ImageLightbox
                 open={lightboxOpen}
                 src={getSafeMediaUrl(displayPublicUrl) || displayPublicUrl}
@@ -1005,7 +991,7 @@ function ImageLightbox({
   )
 }
 
-function DetailImageMenu({ publicUrl }: { publicUrl: string }) {
+function DetailImageMenu({ creativeId }: { creativeId: string }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -1042,16 +1028,11 @@ function DetailImageMenu({ publicUrl }: { publicUrl: string }) {
           role="menu"
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
-          <a
-            role="menuitem"
-            href={publicUrl}
-            download=""
+          <CreativeDownload
+            creativeId={creativeId} role="menuitem"
             className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
-            onClick={() => setOpen(false)}
-          >
-            <Icon name="download" className="size-4 text-ink-muted" />
-            İndir
-          </a>
+            onStarted={() => setOpen(false)}
+          />
         </div>
       ) : null}
     </div>

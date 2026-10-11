@@ -40,10 +40,10 @@ export function ProductionProgress({
       {/* 2. Authoritative Header */}
       <div className="mesajify-prod-header">
         <h3 className="mesajify-prod-title">
-          {viewModel.display_title || (kind === 'video' ? 'Reklam Videonuz Prodüksiyonda' : 'Görseliniz Hazırlanıyor')}
+          {kind === 'video' ? (isCompleted ? 'Videonuz hazır' : isFailed || isNeedsReview ? 'Video kullanıma hazır değil' : 'Videonuz hazırlanıyor') : viewModel.display_title || 'Görseliniz Hazırlanıyor'}
         </h3>
         <p className="mesajify-prod-subtitle">
-          {viewModel.display_message || 'İşlemler stüdyoda aşama aşama yürütülüyor.'}
+          {kind === 'video' ? (isCompleted ? 'Videonuzu oynatabilir, indirebilir ve kampanyanızda kullanabilirsiniz.' : isFailed || isNeedsReview ? 'Video doğrulanamadı veya bir sorun tespit edildi. Yeniden oluşturmayı deneyin.' : 'Tamamlandığında videonuz içerik kütüphanenizde görünecek.') : viewModel.display_message || 'İşlemler stüdyoda aşama aşama yürütülüyor.'}
         </p>
       </div>
 
@@ -74,7 +74,7 @@ export function ProductionProgress({
       ) : null}
 
       {/* 5. Authoritative Stage Checklist */}
-      {!isFailed && !isNeedsReview ? (
+      {kind !== 'video' && !isFailed && !isNeedsReview ? (
         <ProductionStageList
           currentStageIndex={viewModel.stage_index}
           displayMessage={viewModel.display_message}

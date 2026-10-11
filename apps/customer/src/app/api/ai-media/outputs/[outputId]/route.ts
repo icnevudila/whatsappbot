@@ -61,7 +61,7 @@ export async function GET(
     let output: any = null
     const { data, error } = await (supabase as any)
       .from('ai_media_outputs')
-      .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type')
+      .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type, visual_qa_report')
       .eq('id', outputId)
       .single()
 
@@ -70,7 +70,7 @@ export async function GET(
       if (serviceClient && serviceClient !== supabase) {
         const { data: sData } = await serviceClient
           .from('ai_media_outputs')
-          .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type')
+          .select('id, job_id, org_id, file_path, storage_url, verified, is_approved, sha256, byte_size, duration_seconds, width, height, product_type, visual_qa_report')
           .eq('id', outputId)
           .single()
         output = sData

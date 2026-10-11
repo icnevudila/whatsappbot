@@ -10,6 +10,7 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { CreativeGenerating } from '@/components/creative-generating'
+import { CreativeDownload } from '@/components/creative-download'
 import { deleteCreative, listLibraryCreatives } from './actions'
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
 import { getSafeMediaUrl } from './detail-view'
@@ -364,7 +365,7 @@ function LibraryCard({
               failed ? 'bg-[#fff5f4] text-danger' : 'bg-surface/90 text-ink-muted'
             }`}
           >
-            {statusLabel(failed ? 'failed' : item.status)}
+            {isVideo && item.status === 'needs_review' ? 'Kullanıma hazır değil' : statusLabel(failed ? 'failed' : item.status)}
           </span>
         ) : null}
         <ItemMenu item={item} canManage={canManage} pending={pending} onDelete={onDelete} />
@@ -421,7 +422,7 @@ function ItemMenu({
     })
     items.push({ key: 'revise', label: 'Revize et', href: `/icerik/${item.id}?revize=1` })
     items.push({ key: 'vary', label: 'Varyasyon', href: `/icerik/${item.id}` })
-    items.push({ key: 'download', label: 'İndir', href: item.publicUrl, download: true })
+    items.push({ key: 'download', label: 'İndir', download: true })
   }
   if (canManage) items.push({ key: 'delete', label: 'Sil', danger: true, onSelect: onDelete })
   if (items.length === 0) return null
@@ -445,7 +446,11 @@ function ItemMenu({
           className="absolute right-0 z-30 mt-1 min-w-[11.5rem] rounded-md border border-hairline bg-surface p-1 shadow-[var(--shadow-md)]"
         >
           {items.map((entry) =>
-            entry.href ? (
+            entry.download ? (
+              <CreativeDownload key={entry.key} creativeId={item.id} role="menuitem"
+                className="flex w-full items-center gap-2 rounded px-2.5 py-2 text-left text-[13px] font-medium text-ink hover:bg-canvas"
+                onStarted={() => setOpen(false)} />
+            ) : entry.href ? (
               <a
                 key={entry.key}
                 role="menuitem"
@@ -516,8 +521,8 @@ function GeneratingFrame({ status, error }: { status: string; error: string | nu
       {status === 'needs_review' ? (
         <div className="flex h-full flex-col items-center justify-center bg-canvas px-4 text-center">
           <Icon name="video" className="mb-3 size-7 text-ink-muted" />
-          <p className="text-[13px] font-semibold text-ink">Video inceleme bekliyor</p>
-          <p className="mt-2 text-[12.5px] text-ink-muted">Kalite kontrolü tamamlanmadan kullanılamaz.</p>
+          <p className="text-[13px] font-semibold text-ink">Video kullanıma hazır değil</p>
+          <p className="mt-2 text-[12.5px] text-ink-muted">Dosya doğrulanamadı veya bir sorun tespit edildi.</p>
         </div>
       ) : status === 'failed' ? (
         <div className="flex h-full flex-col items-center justify-center bg-canvas px-3 text-center">
