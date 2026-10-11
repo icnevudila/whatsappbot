@@ -1,0 +1,438 @@
+
+> @wa/ai-media-control@1.0.0 test
+> node --import tsx --test test/*.test.ts
+
+TAP version 13
+# Subtest: busy capacity waits then acquires without retrying generation
+ok 1 - busy capacity waits then acquires without retrying generation
+  ---
+  duration_ms: 6.1403
+  type: 'test'
+  ...
+# Subtest: persistent contention returns deferred within bounded deadline, not an execution failure
+ok 2 - persistent contention returns deferred within bounded deadline, not an execution failure
+  ---
+  duration_ms: 2.2417
+  type: 'test'
+  ...
+# Subtest: lost or cancelled lease never acquires capacity
+ok 3 - lost or cancelled lease never acquires capacity
+  ---
+  duration_ms: 1.2137
+  type: 'test'
+  ...
+# Subtest: defer requeues only owned pre-provider lease with tenant CAS and audit
+ok 4 - defer requeues only owned pre-provider lease with tenant CAS and audit
+  ---
+  duration_ms: 7.3554
+  type: 'test'
+  ...
+# Subtest: defer cannot overwrite generating/completed/other-account jobs after CAS loss
+ok 5 - defer cannot overwrite generating/completed/other-account jobs after CAS loss
+  ---
+  duration_ms: 0.7068
+  type: 'test'
+  ...
+# Subtest: lease claim requires matched row, not merely absence of DB error
+ok 6 - lease claim requires matched row, not merely absence of DB error
+  ---
+  duration_ms: 0.7652
+  type: 'test'
+  ...
+# Subtest: a hung ownership check is bounded by the operation timeout and never calls provider capacity
+ok 7 - a hung ownership check is bounded by the operation timeout and never calls provider capacity
+  ---
+  duration_ms: 21.2358
+  type: 'test'
+  ...
+# Subtest: a late capacity acquisition is released after timeout and cannot resume generation
+ok 8 - a late capacity acquisition is released after timeout and cannot resume generation
+  ---
+  duration_ms: 87.6764
+  type: 'test'
+  ...
+# Subtest: defer DB failure leaves authoritative job untouched and emits no false capacity receipt
+ok 9 - defer DB failure leaves authoritative job untouched and emits no false capacity receipt
+  ---
+  duration_ms: 5.0429
+  type: 'test'
+  ...
+# Subtest: preparation CAS rejects account ownership loss with no fallback
+ok 10 - preparation CAS rejects account ownership loss with no fallback
+  ---
+  duration_ms: 2.8787
+  type: 'test'
+  ...
+# Subtest: preparation cannot proceed after audit transaction failure
+ok 11 - preparation cannot proceed after audit transaction failure
+  ---
+  duration_ms: 1.0741
+  type: 'test'
+  ...
+# Subtest: JSON text paths are quoted as keys, not unbound SQL identifiers
+ok 12 - JSON text paths are quoted as keys, not unbound SQL identifiers
+  ---
+  duration_ms: 3.8972
+  type: 'test'
+  ...
+# Subtest: publication OR is parameterized and retains legacy missing-field compatibility
+ok 13 - publication OR is parameterized and retains legacy missing-field compatibility
+  ---
+  duration_ms: 3.5378
+  type: 'test'
+  ...
+# Subtest: customer master requires 8s raw, 10s final, vertical minimum resolution and different hashes
+ok 14 - customer master requires 8s raw, 10s final, vertical minimum resolution and different hashes
+  ---
+  duration_ms: 5.1727
+  type: 'test'
+  ...
+# Subtest: immutable attempt files preserve both raw/final and reject overwriting an existing identity
+ok 15 - immutable attempt files preserve both raw/final and reject overwriting an existing identity
+  ---
+  duration_ms: 80.1389
+  type: 'test'
+  ...
+# Subtest: processing checkpoint requires the same tenant, locked speech, references and actual bytes
+ok 16 - processing checkpoint requires the same tenant, locked speech, references and actual bytes
+  ---
+  duration_ms: 65.1222
+  type: 'test'
+  ...
+# Subtest: maps isolated Flow accounts to their verified source browser ports
+ok 17 - maps isolated Flow accounts to their verified source browser ports
+  ---
+  duration_ms: 2.714
+  type: 'test'
+  ...
+# Subtest: classifies account chooser and expired Flow sessions as recoverable auth failures
+ok 18 - classifies account chooser and expired Flow sessions as recoverable auth failures
+  ---
+  duration_ms: 1.3502
+  type: 'test'
+  ...
+# Subtest: refreshes the matching source profile and retries an auth failure exactly once
+ok 19 - refreshes the matching source profile and retries an auth failure exactly once
+  ---
+  duration_ms: 83.0008
+  type: 'test'
+  ...
+# Subtest: fails closed without a paid retry when source profile repair is not verified
+ok 20 - fails closed without a paid retry when source profile repair is not verified
+  ---
+  duration_ms: 3.833
+  type: 'test'
+  ...
+# Subtest: does not repair or retry non-authentication failures
+ok 21 - does not repair or retry non-authentication failures
+  ---
+  duration_ms: 1.2746
+  type: 'test'
+  ...
+# [mov,mp4,m4a,3gp,3g2,mj2 @ 00000247818f8fc0] moov atom not found
+# C:\\Users\\TP2\\AppData\\Local\\Temp\\gen-ws-test-ofwtNY\\job\\attempt\\raw.mp4: Invalid data found when processing input
+# Subtest: GenerationWorkspace
+    # Subtest: creates dedicated attempt directory and writes prompt, provider, events, and results
+    ok 1 - creates dedicated attempt directory and writes prompt, provider, events, and results
+      ---
+      duration_ms: 2603.7891
+      type: 'test'
+      ...
+    # Subtest: missing current source cannot reuse a stale raw or final file
+    ok 2 - missing current source cannot reuse a stale raw or final file
+      ---
+      duration_ms: 16.7972
+      type: 'test'
+      ...
+    # Subtest: corrupt bytes never receive a success SHA receipt
+    ok 3 - corrupt bytes never receive a success SHA receipt
+      ---
+      duration_ms: 172.5198
+      type: 'test'
+      ...
+    # Subtest: job and attempt traversal is rejected before workspace creation
+    ok 4 - job and attempt traversal is rejected before workspace creation
+      ---
+      duration_ms: 3.3606
+      type: 'test'
+      ...
+    1..4
+ok 22 - GenerationWorkspace
+  ---
+  duration_ms: 2800.2018
+  type: 'suite'
+  ...
+# [historical-video-director] Gateway director unavailable or failed (fetch failed), falling back to deterministic historical prompt
+# Subtest: historical video director generates execution contract with fallback
+ok 23 - historical video director generates execution contract with fallback
+  ---
+  duration_ms: 200.4637
+  type: 'test'
+  ...
+# Subtest: twenty overlapping ticks execute one task; next tick runs after release
+ok 24 - twenty overlapping ticks execute one task; next tick runs after release
+  ---
+  duration_ms: 3.4981
+  type: 'test'
+  ...
+# Subtest: failure reports once and releases ownership for a later tick
+ok 25 - failure reports once and releases ownership for a later tick
+  ---
+  duration_ms: 0.815
+  type: 'test'
+  ...
+# Subtest: publication merges the existing snapshot and scopes the exact tenant mirror
+ok 26 - publication merges the existing snapshot and scopes the exact tenant mirror
+  ---
+  duration_ms: 25.9007
+  type: 'test'
+  ...
+# Subtest: missing or foreign mirror cannot become a ghost ready creative
+ok 27 - missing or foreign mirror cannot become a ghost ready creative
+  ---
+  duration_ms: 2.1244
+  type: 'test'
+  ...
+# Subtest: unapproved output is published for review rather than campaign use
+ok 28 - unapproved output is published for review rather than campaign use
+  ---
+  duration_ms: 1.5507
+  type: 'test'
+  ...
+# Subtest: one product and one logo remain attached to Flow in either upload order
+ok 29 - one product and one logo remain attached to Flow in either upload order
+  ---
+  duration_ms: 4.151
+  type: 'test'
+  ...
+# Subtest: state transition rejects a lost CAS and never falls back to unscoped update
+ok 30 - state transition rejects a lost CAS and never falls back to unscoped update
+  ---
+  duration_ms: 5.3434
+  type: 'test'
+  ...
+# Subtest: state and audit failure stops worker advancement
+ok 31 - state and audit failure stops worker advancement
+  ---
+  duration_ms: 0.6821
+  type: 'test'
+  ...
+# Subtest: owned transition includes its attempt and physical evidence in atomic call
+ok 32 - owned transition includes its attempt and physical evidence in atomic call
+  ---
+  duration_ms: 3.0299
+  type: 'test'
+  ...
+# Subtest: only a committed lease with audit can start processing
+ok 33 - only a committed lease with audit can start processing
+  ---
+  duration_ms: 0.6557
+  type: 'test'
+  ...
+# Subtest: staged or malformed submissions never enter provider processing
+ok 34 - staged or malformed submissions never enter provider processing
+  ---
+  duration_ms: 2.6314
+  type: 'test'
+  ...
+# Subtest: existing legacy pending jobs remain compatible without a staged marker
+ok 35 - existing legacy pending jobs remain compatible without a staged marker
+  ---
+  duration_ms: 0.4749
+  type: 'test'
+  ...
+# Subtest: expired staging is fenced by tenant, state, ready flag and deadline and audited
+ok 36 - expired staging is fenced by tenant, state, ready flag and deadline and audited
+  ---
+  duration_ms: 4.5395
+  type: 'test'
+  ...
+# Subtest: simultaneous publication wins without being overwritten or falsely audited
+ok 37 - simultaneous publication wins without being overwritten or falsely audited
+  ---
+  duration_ms: 0.5374
+  type: 'test'
+  ...
+# Subtest: unexpired submission is not updated
+ok 38 - unexpired submission is not updated
+  ---
+  duration_ms: 0.4187
+  type: 'test'
+  ...
+# Subtest: database and audit failures are not reported as successful expiry
+ok 39 - database and audit failures are not reported as successful expiry
+  ---
+  duration_ms: 1.2107
+  type: 'test'
+  ...
+# Subtest: durable audit marker retries insertion after failure and acknowledges duplicate receipt safely
+ok 40 - durable audit marker retries insertion after failure and acknowledges duplicate receipt safely
+  ---
+  duration_ms: 1.241
+  type: 'test'
+  ...
+# Subtest: installed Supabase HTTP builder sends snapshot JSON, never object-string coercion
+ok 41 - installed Supabase HTTP builder sends snapshot JSON, never object-string coercion
+  ---
+  duration_ms: 58.8028
+  type: 'test'
+  ...
+# Subtest: supervisor token is present with redirects rejected
+ok 42 - supervisor token is present with redirects rejected
+  ---
+  duration_ms: 12.2932
+  type: 'test'
+  ...
+# Subtest: production supervisor calls fail closed before network without token
+ok 43 - production supervisor calls fail closed before network without token
+  ---
+  duration_ms: 2.6758
+  type: 'test'
+  ...
+# Subtest: read-only mounted secret works without environment token and does not permit redirects
+ok 44 - read-only mounted secret works without environment token and does not permit redirects
+  ---
+  duration_ms: 0.7059
+  type: 'test'
+  ...
+# Subtest: explicit environment token takes precedence over mounted secret
+ok 45 - explicit environment token takes precedence over mounted secret
+  ---
+  duration_ms: 0.9949
+  type: 'test'
+  ...
+# Subtest: Turkish Voiceover Contract: valid tr-TR + Turkish sentence -> PASS
+ok 46 - Turkish Voiceover Contract: valid tr-TR + Turkish sentence -> PASS
+  ---
+  duration_ms: 3.812
+  type: 'test'
+  ...
+# Subtest: Turkish Voiceover Contract: missing voiceover_text -> reject before provider
+ok 47 - Turkish Voiceover Contract: missing voiceover_text -> reject before provider
+  ---
+  duration_ms: 2.7491
+  type: 'test'
+  ...
+# Subtest: Turkish Voiceover Contract: empty voiceover_text -> reject
+ok 48 - Turkish Voiceover Contract: empty voiceover_text -> reject
+  ---
+  duration_ms: 0.7096
+  type: 'test'
+  ...
+# Subtest: Turkish Voiceover Contract: placeholder voiceover_text -> reject
+ok 49 - Turkish Voiceover Contract: placeholder voiceover_text -> reject
+  ---
+  duration_ms: 1.1445
+  type: 'test'
+  ...
+# Subtest: Turkish Voiceover Contract: English-only voiceover -> reject
+ok 50 - Turkish Voiceover Contract: English-only voiceover -> reject
+  ---
+  duration_ms: 1.0325
+  type: 'test'
+  ...
+# Subtest: Turkish Voiceover Contract: finalized provider prompt missing exact sentence -> reject
+ok 51 - Turkish Voiceover Contract: finalized provider prompt missing exact sentence -> reject
+  ---
+  duration_ms: 1.1658
+  type: 'test'
+  ...
+# Subtest: Turkish Voiceover Contract: prompt contains translation instruction -> reject
+ok 52 - Turkish Voiceover Contract: prompt contains translation instruction -> reject
+  ---
+  duration_ms: 1.1817
+  type: 'test'
+  ...
+# Subtest: Gemini AVAILABLE selects Gemini and never calls Flow
+ok 53 - Gemini AVAILABLE selects Gemini and never calls Flow
+  ---
+  duration_ms: 4.8859
+  type: 'test'
+  ...
+# Subtest: Gemini NO_QUOTA selects Flow with explicit fallback provenance
+ok 54 - Gemini NO_QUOTA selects Flow with explicit fallback provenance
+  ---
+  duration_ms: 1.0554
+  type: 'test'
+  ...
+# Subtest: Gemini FEATURE_UNAVAILABLE selects Flow with explicit fallback provenance
+ok 55 - Gemini FEATURE_UNAVAILABLE selects Flow with explicit fallback provenance
+  ---
+  duration_ms: 0.4798
+  type: 'test'
+  ...
+# Subtest: INVALID_JOB calls neither provider
+ok 56 - INVALID_JOB calls neither provider
+  ---
+  duration_ms: 1.8008
+  type: 'test'
+  ...
+# Subtest: POLICY_REJECTED calls neither provider
+ok 57 - POLICY_REJECTED calls neither provider
+  ---
+  duration_ms: 0.5678
+  type: 'test'
+  ...
+# Subtest: TENANT_MISMATCH calls neither provider
+ok 58 - TENANT_MISMATCH calls neither provider
+  ---
+  duration_ms: 0.7144
+  type: 'test'
+  ...
+# Subtest: ambiguous Gemini error does not blindly bypass to Flow
+ok 59 - ambiguous Gemini error does not blindly bypass to Flow
+  ---
+  duration_ms: 2.1703
+  type: 'test'
+  ...
+# Subtest: temporary Gemini execution outage may fallback once to Flow
+ok 60 - temporary Gemini execution outage may fallback once to Flow
+  ---
+  duration_ms: 0.7365
+  type: 'test'
+  ...
+# Subtest: provider-specific syntax is selected without changing the routing plan
+ok 61 - provider-specific syntax is selected without changing the routing plan
+  ---
+  duration_ms: 7.3391
+  type: 'test'
+  ...
+# Subtest: real Gemini and Flow provider payloads preserve vertical format and exact locked dialogue
+ok 62 - real Gemini and Flow provider payloads preserve vertical format and exact locked dialogue
+  ---
+  duration_ms: 3.3438
+  type: 'test'
+  ...
+# Subtest: real provider payload builders fail closed on a missing dialogue lock
+ok 63 - real provider payload builders fail closed on a missing dialogue lock
+  ---
+  duration_ms: 1.5327
+  type: 'test'
+  ...
+# Subtest: SIMPLE ffprobe expectation accepts portrait output and rejects landscape output
+ok 64 - SIMPLE ffprobe expectation accepts portrait output and rejects landscape output
+  ---
+  duration_ms: 0.3882
+  type: 'test'
+  ...
+# Subtest: Gemini-01 runtime blocked -> Gemini-02 selected
+ok 65 - Gemini-01 runtime blocked -> Gemini-02 selected
+  ---
+  duration_ms: 3.5857
+  type: 'test'
+  ...
+# Subtest: Gemini-01/02/03 runtime blocked -> Flow selected
+ok 66 - Gemini-01/02/03 runtime blocked -> Flow selected
+  ---
+  duration_ms: 2.2351
+  type: 'test'
+  ...
+1..66
+# tests 69
+# suites 1
+# pass 69
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6256.8349

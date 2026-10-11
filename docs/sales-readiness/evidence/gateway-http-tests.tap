@@ -1,0 +1,94 @@
+TAP version 13
+# Subtest: unauthenticated health endpoints never expose tenant job contents
+ok 1 - unauthenticated health endpoints never expose tenant job contents
+  ---
+  duration_ms: 359.9258
+  type: 'test'
+  ...
+# Subtest: public output routes do not publish queue metadata or audit logs
+ok 2 - public output routes do not publish queue metadata or audit logs
+  ---
+  duration_ms: 35.7975
+  type: 'test'
+  ...
+# Subtest: normal WhatsApp reply preserves company, tone and supplied history
+ok 3 - normal WhatsApp reply preserves company, tone and supplied history
+  ---
+  duration_ms: 32.7967
+  type: 'test'
+  ...
+# Subtest: product, price and unknown-product messages remain distinct worker inputs
+ok 4 - product, price and unknown-product messages remain distinct worker inputs
+  ---
+  duration_ms: 73.3791
+  type: 'test'
+  ...
+# Subtest: missing company context is accepted and remains empty
+ok 5 - missing company context is accepted and remains empty
+  ---
+  duration_ms: 29.0734
+  type: 'test'
+  ...
+# Subtest: worker errors complete the synchronous text request with the existing 500 contract
+ok 6 - worker errors complete the synchronous text request with the existing 500 contract
+  ---
+  duration_ms: 31.5761
+  type: 'test'
+  ...
+# Subtest: image reference metadata and brand kit reach the leased worker unchanged
+ok 7 - image reference metadata and brand kit reach the leased worker unchanged
+  ---
+  duration_ms: 11.6872
+  type: 'test'
+  ...
+# Subtest: image generation remains an async queue contract and returns a URL after upload
+ok 8 - image generation remains an async queue contract and returns a URL after upload
+  ---
+  duration_ms: 12.2026
+  type: 'test'
+  ...
+# Subtest: malformed worker text result preserves the existing pass-through response shape
+ok 9 - malformed worker text result preserves the existing pass-through response shape
+  ---
+  duration_ms: 36.3069
+  type: 'test'
+  ...
+# Subtest: same customer display name from different tenants cannot cancel each other
+ok 10 - same customer display name from different tenants cannot cancel each other
+  ---
+  duration_ms: 34.5635
+  type: 'test'
+  ...
+# Subtest: a duplicate tenant/request/operation is executed once and shares its result
+ok 11 - a duplicate tenant/request/operation is executed once and shares its result
+  ---
+  duration_ms: 26.4388
+  type: 'test'
+  ...
+# Subtest: generic chat keeps the full prompt, system directive and tenant aliases
+ok 12 - generic chat keeps the full prompt, system directive and tenant aliases
+  ---
+  duration_ms: 28.3354
+  type: 'test'
+  ...
+# Subtest: image disconnect after submit intent holds the exact job instead of retrying a paid generation
+ok 13 - image disconnect after submit intent holds the exact job instead of retrying a paid generation
+  ---
+  duration_ms: 12.3853
+  type: 'test'
+  ...
+# Subtest: completed jobs expire without deleting an active response
+ok 14 - completed jobs expire without deleting an active response
+  ---
+  duration_ms: 49.4646
+  type: 'test'
+  ...
+1..14
+# tests 14
+# suites 0
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 966.7545

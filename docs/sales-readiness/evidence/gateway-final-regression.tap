@@ -1,0 +1,403 @@
+TAP version 13
+# Subtest: external aliases share canonical leases and never fall back to another account
+ok 1 - external aliases share canonical leases and never fall back to another account
+  ---
+  duration_ms: 34.1349
+  type: 'test'
+  ...
+# Subtest: 1. cold browser incoming job boots, validates and executes only after READY
+ok 2 - 1. cold browser incoming job boots, validates and executes only after READY
+  ---
+  duration_ms: 14.4777
+  type: 'test'
+  ...
+# Subtest: failed video browser shutdown retains process ownership and future exit tracking
+ok 3 - failed video browser shutdown retains process ownership and future exit tracking
+  ---
+  duration_ms: 6.1353
+  type: 'test'
+  ...
+# Subtest: 2. warm browser incoming job reuses browser and canonical tab
+ok 4 - 2. warm browser incoming job reuses browser and canonical tab
+  ---
+  duration_ms: 3.3491
+  type: 'test'
+  ...
+# Subtest: 3. same account + two jobs -> second waits
+ok 5 - 3. same account + two jobs -> second waits
+  ---
+  duration_ms: 30.3668
+  type: 'test'
+  ...
+# Subtest: 4. two different accounts -> real parallel scheduling
+ok 6 - 4. two different accounts -> real parallel scheduling
+  ---
+  duration_ms: 34.2656
+  type: 'test'
+  ...
+# Subtest: 5. third tab -> rejected or safe orphan cleaned
+ok 7 - 5. third tab -> rejected or safe orphan cleaned
+  ---
+  duration_ms: 18.7692
+  type: 'test'
+  ...
+# Subtest: 6. active generation -> TTL cannot close browser
+ok 8 - 6. active generation -> TTL cannot close browser
+  ---
+  duration_ms: 3.9078
+  type: 'test'
+  ...
+# Subtest: 7. active download -> reaper cannot close browser
+ok 9 - 7. active download -> reaper cannot close browser
+  ---
+  duration_ms: 4.5822
+  type: 'test'
+  ...
+# Subtest: 8. idle 20 minutes -> graceful Browser.close
+ok 10 - 8. idle 20 minutes -> graceful Browser.close
+  ---
+  duration_ms: 4.023
+  type: 'test'
+  ...
+# Subtest: 9. graceful shutdown and restart reuse the same persistent profile
+ok 11 - 9. graceful shutdown and restart reuse the same persistent profile
+  ---
+  duration_ms: 2.6933
+  type: 'test'
+  ...
+# Subtest: 10. expired auth becomes AUTH_REQUIRED and alternate account is selected
+ok 12 - 10. expired auth becomes AUTH_REQUIRED and alternate account is selected
+  ---
+  duration_ms: 4.1316
+  type: 'test'
+  ...
+# Subtest: 10b. expired auth retries once with Chrome last-session restore
+ok 13 - 10b. expired auth retries once with Chrome last-session restore
+  ---
+  duration_ms: 2.6101
+  type: 'test'
+  ...
+# Subtest: 10c. persistent auth failure is bounded and remains AUTH_REQUIRED
+ok 14 - 10c. persistent auth failure is bounded and remains AUTH_REQUIRED
+  ---
+  duration_ms: 3.2753
+  type: 'test'
+  ...
+# Subtest: 10d. non-video auth failures do not trigger video session restore
+ok 15 - 10d. non-video auth failures do not trigger video session restore
+  ---
+  duration_ms: 1.9432
+  type: 'test'
+  ...
+# Subtest: 10e. auth restore kills an orphaned CDP browser before relaunch
+ok 16 - 10e. auth restore kills an orphaned CDP browser before relaunch
+  ---
+  duration_ms: 3.2306
+  type: 'test'
+  ...
+# Subtest: 10f. unexpected CDP disconnect arms restore on the next launch
+ok 17 - 10f. unexpected CDP disconnect arms restore on the next launch
+  ---
+  duration_ms: 2.3137
+  type: 'test'
+  ...
+# Subtest: auth recovery runs under an existing reservation before provider execution
+ok 18 - auth recovery runs under an existing reservation before provider execution
+  ---
+  duration_ms: 3.1326
+  type: 'test'
+  ...
+# Subtest: a terminal auth failure clears STARTING and does not loop on later readiness calls
+ok 19 - a terminal auth failure clears STARTING and does not loop on later readiness calls
+  ---
+  duration_ms: 4.7832
+  type: 'test'
+  ...
+# Subtest: reserved startup permission never shuts down provider execution
+ok 20 - reserved startup permission never shuts down provider execution
+  ---
+  duration_ms: 2.9376
+  type: 'test'
+  ...
+# Subtest: 11. startup failure preserves provider execution and selects alternate account
+ok 21 - 11. startup failure preserves provider execution and selects alternate account
+  ---
+  duration_ms: 4.8698
+  type: 'test'
+  ...
+# Subtest: 12. Gemini account NO_QUOTA -> another Gemini account tried first
+ok 22 - 12. Gemini account NO_QUOTA -> another Gemini account tried first
+  ---
+  duration_ms: 3.1662
+  type: 'test'
+  ...
+# Subtest: 13. whole Gemini pool unavailable -> Flow fallback
+ok 23 - 13. whole Gemini pool unavailable -> Flow fallback
+  ---
+  duration_ms: 3.6014
+  type: 'test'
+  ...
+# Subtest: 14. heartbeat does not create tab leak
+ok 24 - 14. heartbeat does not create tab leak
+  ---
+  duration_ms: 4.2129
+  type: 'test'
+  ...
+# Subtest: 15. maintenance scan does not refresh real lastActivity
+ok 25 - 15. maintenance scan does not refresh real lastActivity
+  ---
+  duration_ms: 4.7258
+  type: 'test'
+  ...
+# Subtest: 16. duplicate recovery cannot execute the same job twice
+ok 26 - 16. duplicate recovery cannot execute the same job twice
+  ---
+  duration_ms: 2.1961
+  type: 'test'
+  ...
+# Subtest: idle shutdown never closes STARTING, BUSY, GENERATING, DOWNLOADING or VERIFYING workers
+ok 27 - idle shutdown never closes STARTING, BUSY, GENERATING, DOWNLOADING or VERIFYING workers
+  ---
+  duration_ms: 5.6892
+  type: 'test'
+  ...
+# Subtest: queue-aware prewarm starts an eligible Gemini worker only when queue has work
+ok 28 - queue-aware prewarm starts an eligible Gemini worker only when queue has work
+  ---
+  duration_ms: 0.9899
+  type: 'test'
+  ...
+# Subtest: 17. VNC disabled -> normal mocked job path works
+ok 29 - 17. VNC disabled -> normal mocked job path works
+  ---
+  duration_ms: 1.7788
+  type: 'test'
+  ...
+# Subtest: mocked stress test: 100 sequential jobs across 4 accounts
+ok 30 - mocked stress test: 100 sequential jobs across 4 accounts
+  ---
+  duration_ms: 35.4143
+  type: 'test'
+  ...
+# Subtest: 21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions
+ok 31 - 21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions
+  ---
+  duration_ms: 74.4343
+  type: 'test'
+  ...
+# Subtest: 22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL
+ok 32 - 22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL
+  ---
+  duration_ms: 3.798
+  type: 'test'
+  ...
+# Subtest: 23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions
+ok 33 - 23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions
+  ---
+  duration_ms: 3.8996
+  type: 'test'
+  ...
+# Subtest: 24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently
+ok 34 - 24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently
+  ---
+  duration_ms: 60.8239
+  type: 'test'
+  ...
+# Subtest: RPC failure cannot overwrite an account leased by another host
+ok 35 - RPC failure cannot overwrite an account leased by another host
+  ---
+  duration_ms: 4.7395
+  type: 'test'
+  ...
+# Subtest: production cannot silently use a process-local simulated lock
+ok 36 - production cannot silently use a process-local simulated lock
+  ---
+  duration_ms: 220.039
+  type: 'test'
+  ...
+# Subtest: unauthenticated health endpoints never expose tenant job contents
+ok 37 - unauthenticated health endpoints never expose tenant job contents
+  ---
+  duration_ms: 625.4519
+  type: 'test'
+  ...
+# Subtest: public output routes do not publish queue metadata or audit logs
+ok 38 - public output routes do not publish queue metadata or audit logs
+  ---
+  duration_ms: 77.1219
+  type: 'test'
+  ...
+# Subtest: cross-tenant operational event stream requires worker authentication
+ok 39 - cross-tenant operational event stream requires worker authentication
+  ---
+  duration_ms: 23.098
+  type: 'test'
+  ...
+# Subtest: normal WhatsApp reply preserves company, tone and supplied history
+ok 40 - normal WhatsApp reply preserves company, tone and supplied history
+  ---
+  duration_ms: 35.7181
+  type: 'test'
+  ...
+# Subtest: product, price and unknown-product messages remain distinct worker inputs
+ok 41 - product, price and unknown-product messages remain distinct worker inputs
+  ---
+  duration_ms: 122.3032
+  type: 'test'
+  ...
+# Subtest: missing company context is accepted and remains empty
+ok 42 - missing company context is accepted and remains empty
+  ---
+  duration_ms: 40.3843
+  type: 'test'
+  ...
+# Subtest: worker errors complete the synchronous text request with the existing 500 contract
+ok 43 - worker errors complete the synchronous text request with the existing 500 contract
+  ---
+  duration_ms: 31.1942
+  type: 'test'
+  ...
+# Subtest: image reference metadata and brand kit reach the leased worker unchanged
+ok 44 - image reference metadata and brand kit reach the leased worker unchanged
+  ---
+  duration_ms: 20.044
+  type: 'test'
+  ...
+# Subtest: image generation remains an async queue contract and returns a URL after upload
+ok 45 - image generation remains an async queue contract and returns a URL after upload
+  ---
+  duration_ms: 23.3634
+  type: 'test'
+  ...
+# Subtest: malformed worker text result preserves the existing pass-through response shape
+ok 46 - malformed worker text result preserves the existing pass-through response shape
+  ---
+  duration_ms: 28.3438
+  type: 'test'
+  ...
+# Subtest: same customer display name from different tenants cannot cancel each other
+ok 47 - same customer display name from different tenants cannot cancel each other
+  ---
+  duration_ms: 21.2127
+  type: 'test'
+  ...
+# Subtest: a duplicate tenant/request/operation is executed once and shares its result
+ok 48 - a duplicate tenant/request/operation is executed once and shares its result
+  ---
+  duration_ms: 25.9539
+  type: 'test'
+  ...
+# Subtest: generic chat keeps the full prompt, system directive and tenant aliases
+ok 49 - generic chat keeps the full prompt, system directive and tenant aliases
+  ---
+  duration_ms: 27.3328
+  type: 'test'
+  ...
+# Subtest: image disconnect after submit intent holds the exact job instead of retrying a paid generation
+ok 50 - image disconnect after submit intent holds the exact job instead of retrying a paid generation
+  ---
+  duration_ms: 14.4452
+  type: 'test'
+  ...
+# Subtest: completed jobs expire without deleting an active response
+ok 51 - completed jobs expire without deleting an active response
+  ---
+  duration_ms: 45.6244
+  type: 'test'
+  ...
+# Subtest: public health excludes tenant jobs, prompts, assets, tokens and worker details
+ok 52 - public health excludes tenant jobs, prompts, assets, tokens and worker details
+  ---
+  duration_ms: 3.9813
+  type: 'test'
+  ...
+# Subtest: untrusted status and counter strings cannot become public data
+ok 53 - untrusted status and counter strings cannot become public data
+  ---
+  duration_ms: 0.5451
+  type: 'test'
+  ...
+# {"event":"omnistudio_runtime_metric","operation":"text_reply","tenant_id":"tenant-a","request_id":"request-1","result":"success","error_code":null,"prompt_sizes":{"system_prompt_chars":0,"context_chars":7,"conversation_chars":12,"product_count_injected":2,"input_prompt_chars":7},"stages":{"request_received_ms":null,"tenant_resolve_ms":null,"brand_context_ms":null,"product_context_ms":null,"prompt_build_ms":null,"queue_wait_ms":13,"ai_request_ms":null,"response_parse_ms":null,"media_generation_ms":null,"result_delivery_ms":null},"worker_stages":{},"total_ms":45}
+# Subtest: metrics preserve only request metadata and prompt sizes
+ok 54 - metrics preserve only request metadata and prompt sizes
+  ---
+  duration_ms: 5.8557
+  type: 'test'
+  ...
+# Subtest: unknown or negative stages are rejected without corrupting metrics
+ok 55 - unknown or negative stages are rejected without corrupting metrics
+  ---
+  duration_ms: 0.5145
+  type: 'test'
+  ...
+# Subtest: SESSION COORDINATOR: acquireSessionFlightLease ensures single-flight on same session
+ok 56 - SESSION COORDINATOR: acquireSessionFlightLease ensures single-flight on same session
+  ---
+  duration_ms: 182.2331
+  type: 'test'
+  ...
+# Subtest: SESSION COORDINATOR: same profile A/B/C executes in FIFO order with zero overlap
+ok 57 - SESSION COORDINATOR: same profile A/B/C executes in FIFO order with zero overlap
+  ---
+  duration_ms: 247.8947
+  type: 'test'
+  ...
+# [BrandManifest] 🏢 Tenant Registry Başlatıldı (4 kurum, 1 varlık)
+# {"event":"omnistudio_runtime_metric","operation":"text_reply","tenant_id":null,"request_id":null,"result":"success","error_code":null,"prompt_sizes":{"system_prompt_chars":0,"context_chars":0,"conversation_chars":0,"product_count_injected":0,"input_prompt_chars":8},"stages":{"request_received_ms":0,"tenant_resolve_ms":null,"brand_context_ms":null,"product_context_ms":null,"prompt_build_ms":0,"queue_wait_ms":4,"ai_request_ms":null,"response_parse_ms":null,"media_generation_ms":null,"result_delivery_ms":null},"worker_stages":{},"session_telemetry":{"session_queue_depth":1,"session_wait_ms":4,"session_active_job_id":"job_95a42705018a639f","session_rate_limit_count":0,"session_cooldown_ms":0},"total_ms":5}
+# Subtest: SESSION COORDINATOR: different profiles A and B are allowed to execute concurrently
+ok 58 - SESSION COORDINATOR: different profiles A and B are allowed to execute concurrently
+  ---
+  duration_ms: 162.3519
+  type: 'test'
+  ...
+# Subtest: SESSION COORDINATOR: failed first request safely releases lease for next job
+ok 59 - SESSION COORDINATOR: failed first request safely releases lease for next job
+  ---
+  duration_ms: 64.555
+  type: 'test'
+  ...
+# Subtest: SESSION COORDINATOR: timed out lease is reclaimed without deadlocking
+ok 60 - SESSION COORDINATOR: timed out lease is reclaimed without deadlocking
+  ---
+  duration_ms: 24.099
+  type: 'test'
+  ...
+# Subtest: GATEWAY QUEUE: same profile A & B submitted simultaneously -> B waits in queue until A completes
+ok 61 - GATEWAY QUEUE: same profile A & B submitted simultaneously -> B waits in queue until A completes
+  ---
+  duration_ms: 191.6231
+  type: 'test'
+  ...
+# Subtest: GATEWAY QUEUE: different profile workers can execute text jobs concurrently
+ok 62 - GATEWAY QUEUE: different profile workers can execute text jobs concurrently
+  ---
+  duration_ms: 3.3157
+  type: 'test'
+  ...
+# Subtest: GATEWAY QUEUE: rate limit error triggers WEB_SESSION_RATE_LIMITED and session cooldown
+ok 63 - GATEWAY QUEUE: rate limit error triggers WEB_SESSION_RATE_LIMITED and session cooldown
+  ---
+  duration_ms: 5.1114
+  type: 'test'
+  ...
+# Subtest: GATEWAY QUEUE: cancelled pending request is cleaned up without blocking session
+ok 64 - GATEWAY QUEUE: cancelled pending request is cleaned up without blocking session
+  ---
+  duration_ms: 9.3664
+  type: 'test'
+  ...
+# Subtest: supervisor cleanup preserves another process active image target even under force cap
+ok 65 - supervisor cleanup preserves another process active image target even under force cap
+  ---
+  duration_ms: 15.2379
+  type: 'test'
+  ...
+1..65
+# tests 65
+# suites 0
+# pass 65
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1526.3539

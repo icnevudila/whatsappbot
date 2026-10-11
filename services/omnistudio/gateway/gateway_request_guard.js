@@ -8,7 +8,7 @@ function typedError(code, statusCode, message = code) {
 function isWorkerControlPath(pathname) {
   // Protect whole control namespaces, including future claim/fail/reconcile routes.
   // Public generation/status receipts are not worker-control endpoints.
-  return pathname === '/job' || pathname.startsWith('/job/')
+  return pathname === '/events' || pathname === '/job' || pathname.startsWith('/job/')
     || pathname === '/worker' || pathname.startsWith('/worker/')
     || ['/upload', '/v1/upload'].includes(pathname)
     || pathname === '/v1/browser-workers' || pathname.startsWith('/v1/browser-workers/');

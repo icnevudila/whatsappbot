@@ -128,6 +128,22 @@ export async function POST(request: Request) {
   const planKey: PlanId = downgrade ? 'free' : resolvePlan(obj)
   const quotas = PLAN_QUOTAS[planKey]
 
+  // 1. Idempotency Check: if event id is provided, ensure we avoid redundant application
+  if (event.id) {
+    try {
+      const { data: existingEvent } = await admin
+        .from('stripe_webhook_events')
+        .select('event_id')
+        .eq('event_id', event.id)
+        .maybeSingle()
+      if (existingEvent?.event_id) {
+        return NextResponse.json({ received: true, idempotent: true, skipped: 'already_processed' })
+      }
+    } catch {
+      // ledger query fallback if table is not yet migrated
+    }
+  }
+
   const { error } = await admin.rpc('apply_stripe_subscription', {
     p_org_id: orgId,
     p_plan: planKey,
@@ -140,6 +156,16 @@ export async function POST(request: Request) {
   if (error) {
     console.error('[stripe-webhook] apply failed', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  if (event.id) {
+    try {
+      await admin
+        .from('stripe_webhook_events')
+        .insert({ event_id: event.id, org_id: orgId, event_type: type })
+    } catch {
+      // ignore recording failures
+    }
   }
 
   // Ödeme gecikmesi / unpaid → askı (gönderim + claim kesilir).

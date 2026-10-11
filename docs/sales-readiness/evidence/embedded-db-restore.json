@@ -1,0 +1,22 @@
+{
+  "observedAt": "2026-10-11T08:08:08.868Z",
+  "classification": "ISOLATED_PGLITE_REAL_POSTGRES_SELECTED_POLICIES",
+  "migration": "20260904160000_organizations_tenancy.sql",
+  "migrationSha256": "4e49990a3cfa15822af431c34b46a9dcd5d4f671008cf82389380148bea64d4a",
+  "rows": 2,
+  "tenants": 2,
+  "readIsolation": "PASS",
+  "crossTenantUpdate": "DENIED",
+  "crossTenantInsert": "DENIED",
+  "backup": {
+    "bytes": 4579905,
+    "sha256": "fb272e51579ec6aae6dca17006f211786631a4d093327a3974085f6c8dd9bd50",
+    "milliseconds": 1043.5761999999995
+  },
+  "restore": {
+    "milliseconds": 903.8689999999997,
+    "rowCounts": "MATCH",
+    "policies": "RETESTED"
+  },
+  "caveat": "Selected historical contacts policies in embedded Postgres with a fixture auth.uid(), not full/current Supabase schema, JWT or remote backup/Storage recovery."
+}

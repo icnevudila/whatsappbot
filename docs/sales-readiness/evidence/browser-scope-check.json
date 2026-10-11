@@ -1,0 +1,9 @@
+{
+  "date": "2026-10-11",
+  "customerDeployedSha": "bb28a21b65b89d7af0c50cb3387797e4fa22a1af",
+  "creativeId": "b36d86ad-6e65-441f-bd29-0de8d36d9948",
+  "negative": {"activeOrg": "Ayvazoğlu İnşaat", "visibleResult": "404 · SAYFA BULUNAMADI", "screenshot": "cross-tenant-media-denied.png"},
+  "positive": {"activeOrg": "Bofe", "action": "switch then reload", "visibleResult": "Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası Tanıtım Filmi", "timestamp": "21.09.2026 13:36:29", "screenshot": "owned-media-positive.png"},
+  "restoredActiveOrg": "Ayvazoğlu İnşaat",
+  "limitations": "One authenticated user belongs to both organizations. Active-org detail routing only; not separate-principal JWT/RLS, Storage or all job APIs. No generation or message sent."
+}

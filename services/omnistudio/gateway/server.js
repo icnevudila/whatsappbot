@@ -23,6 +23,8 @@ const { DurableJobStore } = require('./durable_job_store.js');
 const { VideoJobPersistence, videoRequestHash } = require('./video_job_persistence.js');
 const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
+const { publicHealthStats } = require('./public_health.js');
+const { isPublicMediaFilename } = require('./public_output_access.js');
 const { loadAllCompanyChats, getExpectedChatTitle } = require('./chat_manager.js');
 
 if (!process.env.CHATGPT_API_KEY) {
@@ -3206,6 +3208,10 @@ const server = http.createServer(async (req, res) => {
     if ((method === 'GET' || method === 'HEAD') && (pathname.startsWith('/outputs/') || pathname.startsWith('/public/'))) {
       const prefix = pathname.startsWith('/outputs/') ? '/outputs/' : '/public/';
       const filename = path.basename(pathname.replace(prefix, ''));
+      if (!isPublicMediaFilename(filename) && !isInternalWorkerRequest(req)) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ error: 'File not found' }));
+      }
       let filePath = path.join(OUTPUT_DIR, filename);
       if (!fs.existsSync(filePath)) {
         filePath = path.join(__dirname, 'public', filename);
@@ -3269,7 +3275,7 @@ const server = http.createServer(async (req, res) => {
       if (!ai_ready && activeWorkerKeys.length > 0) {
         alert = 'ChatGPT oturumu kapalı! Lütfen noVNC (port 6080) üzerinden giriş yapın.';
       } else if (canaryStatus.ok === false) {
-        alert = `Kanarya Testi Başarısız: ${canaryStatus.error}. ChatGPT arayüzü değişmiş olabilir! Kontrol: port 6080`;
+        alert = 'Kanarya testi başarısız; operatör incelemesi gerekiyor.';
       }
 
       return sendJson(res, 200, {
@@ -3277,10 +3283,10 @@ const server = http.createServer(async (req, res) => {
         status: 'online',
         ai_ready,
         alert,
-        canary: canaryStatus,
+        canary: { ok: canaryStatus.ok },
         port: PORT,
         memory: { freeMb, totalMb },
-        ...stats,
+        ...publicHealthStats(stats),
       });
     }
 

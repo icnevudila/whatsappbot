@@ -1,0 +1,384 @@
+{
+  "timestamp": "2026-10-11T08:58:53.169531+00:00",
+  "memory": "MemTotal:        3900644 kB\nMemFree:         1047896 kB\nMemAvailable:    2170172 kB\nBuffers:           54100 kB\nCached:          1185936 kB\nSwapCached:         8544 kB\nActive:          1452584 kB\nInactive:         841064 kB\nActive(anon):     678136 kB\nInactive(anon):   476680 kB\nActive(file):     774448 kB\nInactive(file):   364384 kB\nUnevictable:        9912 kB\nMlocked:            5912 kB\nSwapTotal:       2097148 kB\nSwapFree:        1217256 kB\nZswap:                 0 kB\nZswapped:              0 kB\nDirty:              2912 kB\nWriteback:             0 kB\nAnonPages:       1056856 kB\nMapped:           432360 kB\nShmem:             97492 kB\nKReclaimable:     276168 kB\nSlab:             408232 kB\nSReclaimable:     276168 kB\nSUnreclaim:       132064 kB\nKernelStack:       11832 kB\nPageTables:        38468 kB\nSecPageTables:         0 kB\nNFS_Unstable:          0 kB\nBounce:                0 kB\nWritebackTmp:          0 kB\nCommitLimit:     4047468 kB\nCommitted_AS:   10380316 kB\nVmallocTotal:   13743895347199 kB\nVmallocUsed:       28236 kB\nVmallocChunk:          0 kB\nPercpu:             2776 kB\nHardwareCorrupted:     0 kB\nAnonHugePages:         0 kB\nShmemHugePages:        0 kB\nShmemPmdMapped:        0 kB\nFileHugePages:         0 kB\nFilePmdMapped:         0 kB\nCmaTotal:              0 kB\nCmaFree:          123656 kB\nUnaccepted:            0 kB\nBalloon:               0 kB\nHugePages_Total:       0\nHugePages_Free:        0\nHugePages_Rsvd:        0\nHugePages_Surp:        0\nHugepagesize:       2048 kB\nHugetlb:               0 kB\nDirectMap4k:      143012 kB\nDirectMap2M:     3948544 kB\nDirectMap1G:           0 kB\n",
+  "load": "0.30 0.64 1.00 3/739 3116567\n",
+  "disk": {
+    "exit": 0,
+    "output": "Filesystem       1B-blocks        Used   Available Use% Mounted on\n/dev/sda1      80279486464 52225957888 24755228672  68% /\n"
+  },
+  "stats": {
+    "exit": 0,
+    "output": "{\"BlockIO\":\"3.58GB / 735MB\",\"CPUPerc\":\"0.18%\",\"Container\":\"a6c1e66a7e9d80c2825d22ba548043d19ab80bc7f6d2919a616ff4953ab8dcab\",\"ID\":\"a6c1e66a7e9d\",\"MemPerc\":\"1.64%\",\"MemUsage\":\"62.34MiB / 3.72GiB\",\"Name\":\"wa-service\",\"NetIO\":\"46.3MB / 50MB\",\"PIDs\":\"19\"}\n{\"BlockIO\":\"8.62GB / 1.49GB\",\"CPUPerc\":\"0.03%\",\"Container\":\"34cacba1992346a23105e2de89df764fe08508551bb009a3901e23ae510cfb1b\",\"ID\":\"34cacba19923\",\"MemPerc\":\"8.15%\",\"MemUsage\":\"83.5MiB / 1GiB\",\"Name\":\"ai-media-control\",\"NetIO\":\"323MB / 202MB\",\"PIDs\":\"55\"}\n{\"BlockIO\":\"614GB / 560GB\",\"CPUPerc\":\"0.12%\",\"Container\":\"f4deb252be133f490bc4b1b5b561a15c211232c9e55ee40a0334c3063b82325d\",\"ID\":\"f4deb252be13\",\"MemPerc\":\"8.05%\",\"MemUsage\":\"306.6MiB / 3.72GiB\",\"Name\":\"gflow-engine\",\"NetIO\":\"1.06GB / 227MB\",\"PIDs\":\"9\"}\n{\"BlockIO\":\"646GB / 538GB\",\"CPUPerc\":\"196.35%\",\"Container\":\"dfbdbf89d45ea6ee0f353c7447ab9a47977a1bfec764f05a4483212ef612c4b0\",\"ID\":\"dfbdbf89d45e\",\"MemPerc\":\"47.77%\",\"MemUsage\":\"1.777GiB / 3.72GiB\",\"Name\":\"omnistudio-engine\",\"NetIO\":\"10.4GB / 13.5GB\",\"PIDs\":\"336\"}\n{\"BlockIO\":\"10.9GB / 737MB\",\"CPUPerc\":\"0.00%\",\"Container\":\"c861543c2a574f842f2a97aaa607b97552c328ff43c7a8390d2da3431bb6670e\",\"ID\":\"c861543c2a57\",\"MemPerc\":\"0.32%\",\"MemUsage\":\"12.3MiB / 3.72GiB\",\"Name\":\"hetzner-caddy\",\"NetIO\":\"6.03GB / 5.27GB\",\"PIDs\":\"10\"}\n"
+  },
+  "containers": [
+    {
+      "name": "wa-service",
+      "image": "wa-service:chat-auth-20261010",
+      "image_id": "sha256:1418998c63330d76132a240ab3cfcd775a9958b8c416f351cdb52b8343b3adec",
+      "started_at": "2026-10-10T07:44:35.476843413Z",
+      "status": "running",
+      "health": "healthy",
+      "oom_killed": false,
+      "restart_count": 0,
+      "restart_policy": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "memory_limit": 6442450944,
+      "pids_limit": null,
+      "log_config": {
+        "Type": "json-file",
+        "Config": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "ports": {
+        "8080/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "8080"
+          }
+        ]
+      },
+      "networks": [
+        "infra_default"
+      ],
+      "mounts": [],
+      "healthcheck_configured": true
+    },
+    {
+      "name": "ai-media-control",
+      "image": "infra-ai-media-control:outro-logo-1fc79bf",
+      "image_id": "sha256:9f1b8e62054ba79a5f3ecd41de37ea7a2d299f7546bfd9e4056fdee0f2b4038c",
+      "started_at": "2026-10-07T11:32:58.662169024Z",
+      "status": "running",
+      "health": "healthy",
+      "oom_killed": false,
+      "restart_count": 0,
+      "restart_policy": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "memory_limit": 1073741824,
+      "pids_limit": null,
+      "log_config": {
+        "Type": "json-file",
+        "Config": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "ports": {
+        "3460/tcp": [
+          {
+            "HostIp": "127.0.0.1",
+            "HostPort": "3460"
+          }
+        ]
+      },
+      "networks": [
+        "infra_default",
+        "infra_gflow-internal"
+      ],
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/infra_flow-outputs/_data",
+          "destination": "/shared/outputs",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/infra_flow-incidents/_data",
+          "destination": "/shared/incidents",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/infra_ai-media-workspaces/_data",
+          "destination": "/shared/jobs",
+          "rw": true
+        }
+      ],
+      "healthcheck_configured": true
+    },
+    {
+      "name": "gflow-engine",
+      "image": "infra-gflow-engine:integration-diagnostics-9f74b72",
+      "image_id": "sha256:9d102857648b8e83806ef12a786668e53c63d695264852ac97b241fbf7da10ff",
+      "started_at": "2026-10-05T09:49:53.115244061Z",
+      "status": "running",
+      "health": "healthy",
+      "oom_killed": false,
+      "restart_count": 0,
+      "restart_policy": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "memory_limit": 4294967296,
+      "pids_limit": null,
+      "log_config": {
+        "Type": "json-file",
+        "Config": {
+          "max-file": "3",
+          "max-size": "10m"
+        }
+      },
+      "ports": {
+        "3461/tcp": null
+      },
+      "networks": [
+        "infra_gflow-egress",
+        "infra_gflow-internal"
+      ],
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/infra_flow-outputs/_data",
+          "destination": "/shared/outputs",
+          "rw": true
+        },
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/infra_flow-incidents/_data",
+          "destination": "/shared/incidents",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/app/flow-profiles",
+          "destination": "/app/flow-profiles",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile",
+          "destination": "/source-profiles/port-9222",
+          "rw": false
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile-2",
+          "destination": "/source-profiles/port-9223",
+          "rw": false
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile-3",
+          "destination": "/source-profiles/port-9224",
+          "rw": false
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile-4",
+          "destination": "/source-profiles/port-9225",
+          "rw": false
+        }
+      ],
+      "healthcheck_configured": true
+    },
+    {
+      "name": "omnistudio-engine",
+      "image": "docker-omnistudio-worker",
+      "image_id": "sha256:3eb0db3b9397ec345b44c30462d57ad5dd177c74bfb72cd836d669471048563e",
+      "started_at": "2026-10-03T17:42:12.528753667Z",
+      "status": "running",
+      "health": null,
+      "oom_killed": false,
+      "restart_count": 0,
+      "restart_policy": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "memory_limit": 0,
+      "pids_limit": null,
+      "log_config": {
+        "Type": "json-file",
+        "Config": {}
+      },
+      "ports": {
+        "3456/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "3456"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "3456"
+          }
+        ],
+        "5900/tcp": null,
+        "6080/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "6080"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "6080"
+          }
+        ]
+      },
+      "networks": [
+        "docker_default",
+        "infra_gflow-internal"
+      ],
+      "mounts": [
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile",
+          "destination": "/data/chromium-profile",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile-2",
+          "destination": "/data/chromium-profile-2",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile-3",
+          "destination": "/data/chromium-profile-3",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile-4",
+          "destination": "/data/chromium-profile-4",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/outputs",
+          "destination": "/app/gateway/outputs",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/data/profile-flow",
+          "destination": "/data/chromium-profile-flow",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/gateway",
+          "destination": "/app/gateway",
+          "rw": true
+        },
+        {
+          "type": "bind",
+          "source": "/opt/whatsappbot/services/omnistudio/docker/entrypoint.sh",
+          "destination": "/app/entrypoint.sh",
+          "rw": true
+        }
+      ],
+      "healthcheck_configured": false
+    },
+    {
+      "name": "hetzner-caddy",
+      "image": "caddy:alpine",
+      "image_id": "sha256:6aeddd44c3078b0f9a35206472a11420648a79c184603ef95957d0a20044cb2b",
+      "started_at": "2026-09-27T08:07:50.644993034Z",
+      "status": "running",
+      "health": null,
+      "oom_killed": false,
+      "restart_count": 0,
+      "restart_policy": {
+        "Name": "unless-stopped",
+        "MaximumRetryCount": 0
+      },
+      "memory_limit": 0,
+      "pids_limit": null,
+      "log_config": {
+        "Type": "json-file",
+        "Config": {}
+      },
+      "ports": {
+        "2019/tcp": null,
+        "443/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "443"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "443"
+          }
+        ],
+        "443/udp": null,
+        "80/tcp": [
+          {
+            "HostIp": "0.0.0.0",
+            "HostPort": "80"
+          },
+          {
+            "HostIp": "::",
+            "HostPort": "80"
+          }
+        ]
+      },
+      "networks": [
+        "bridge"
+      ],
+      "mounts": [
+        {
+          "type": "volume",
+          "source": "/var/lib/docker/volumes/caddy_data/_data",
+          "destination": "/data",
+          "rw": true
+        }
+      ],
+      "healthcheck_configured": false
+    }
+  ],
+  "gateway_config_presence": {
+    "SUPABASE_URL": false,
+    "SUPABASE_SERVICE_ROLE_KEY": false,
+    "SUPABASE_SERVICE_KEY": false,
+    "SENTRY_DSN": false
+  },
+  "gateway_health": {
+    "status": "online",
+    "ai_ready": false,
+    "pending": 0,
+    "activeCount": 0,
+    "queued_jobs": 0,
+    "total": 25,
+    "completed": null,
+    "failed": null,
+    "workers": [
+      {
+        "id": "chatgpt-1",
+        "status": "offline"
+      }
+    ]
+  },
+  "private_output_head_checks": [
+    {
+      "filename": "audit_security_events.json",
+      "status": 200,
+      "content_length": "41190"
+    },
+    {
+      "filename": "video_1789992411766_flow_meta.json",
+      "status": 200,
+      "content_length": "25558"
+    }
+  ],
+  "source_hashes": {
+    "services/omnistudio/gateway/server.js": "7c2ae6c79c4902764ad6c63ceb05fa557c5cecfe9d4defa139748b41c340ce91",
+    "services/omnistudio/gateway/cdp_worker.js": "01573ad8469f38f338294dcf6dd58d46d177003feba105750bde86ea860a16a0",
+    "infra/docker-compose.yml": "d8e4765cad7f7a92cc0265611973c495c17305b91e09cff0f7ee840748a3fabd"
+  },
+  "lease_source": {
+    "sha256": "19aae36ccecb21ce06198ac5e3511f1c2807a4710c1ff8d2092896d08d7f2bcb",
+    "has_simulator_fallback": true,
+    "has_unconditional_upsert": true
+  },
+  "database_audit": {
+    "exit": 0,
+    "output": "{\"database_version\":\"PostgreSQL 17.6 on x86_64-pc-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit\",\"connections\":30,\"connection_limit\":\"60\",\"rls_tables\":[{\"schemaname\":\"public\",\"tablename\":\"accounts\",\"rowsecurity\":true},{\"schemaname\":\"public\",\"tablename\":\"ai_media_assets\",\"rowsecurity\":true},{\"schemaname\":\"public\",\"tablename\":\"ai_media_jobs\",\"rowsecurity\":true},{\"schemaname\":\"public\",\"tablename\":\"campaigns\",\"rowsecurity\":true},{\"schemaname\":\"public\",\"tablename\":\"contacts\",\"rowsecurity\":true},{\"schemaname\":\"public\",\"tablename\":\"creatives\",\"rowsecurity\":true},{\"schemaname\":\"public\",\"tablename\":\"jobs\",\"rowsecurity\":true},{\"schemaname\":\"public\",\"tablename\":\"message_log\",\"rowsecurity\":true},{\"schemaname\":\"public\",\"tablename\":\"organizations\",\"rowsecurity\":true}],\"rls_policy_counts\":[{\"tablename\":\"account_contacts\",\"policy_count\":4},{\"tablename\":\"account_events\",\"policy_count\":1},{\"tablename\":\"accounts\",\"policy_count\":4},{\"tablename\":\"ai_media_assets\",\"policy_count\":2},{\"tablename\":\"ai_media_attempts\",\"policy_count\":1},{\"tablename\":\"ai_media_events\",\"policy_count\":2},{\"tablename\":\"ai_media_jobs\",\"policy_count\":3},{\"tablename\":\"ai_media_outputs\",\"policy_count\":2},{\"tablename\":\"ai_reply_suggestion_library\",\"policy_count\":3},{\"tablename\":\"auto_reply_log\",\"policy_count\":1},{\"tablename\":\"auto_reply_rules\",\"policy_count\":4},{\"tablename\":\"blacklist\",\"policy_count\":4},{\"tablename\":\"brand_kits\",\"policy_count\":5},{\"tablename\":\"campaign_accounts\",\"policy_count\":3},{\"tablename\":\"campaign_targets\",\"policy_count\":1},{\"tablename\":\"campaigns\",\"policy_count\":4},{\"tablename\":\"channel_accounts\",\"policy_count\":2},{\"tablename\":\"channel_jobs\",\"policy_count\":2},{\"tablename\":\"channel_messages\",\"policy_count\":2},{\"tablename\":\"channel_webhook_events\",\"policy_count\":1},{\"tablename\":\"channel_worker_heartbeat\",\"policy_count\":1},{\"tablename\":\"contact_list_members\",\"policy_count\":4},{\"tablename\":\"contact_lists\",\"policy_count\":4},{\"tablename\":\"contacts\",\"policy_count\":4},{\"tablename\":\"creative_revisions\",\"policy_count\":3},{\"tablename\":\"creatives\",\"policy_count\":4},{\"tablename\":\"device_push_tokens\",\"policy_count\":4},{\"tablename\":\"flow_account_events\",\"policy_count\":1},{\"tablename\":\"flow_accounts\",\"policy_count\":1},{\"tablename\":\"flow_incidents\",\"policy_count\":1},{\"tablename\":\"flow_workers\",\"policy_count\":1},{\"tablename\":\"jobs\",\"policy_count\":3},{\"tablename\":\"list_requests\",\"policy_count\":2},{\"tablename\":\"message_log\",\"policy_count\":1},{\"tablename\":\"org_api_keys\",\"policy_count\":1},{\"tablename\":\"org_faqs\",\"policy_count\":4},{\"tablename\":\"org_invites\",\"policy_count\":3},{\"tablename\":\"org_product_images\",\"policy_count\":4},{\"tablename\":\"org_products\",\"policy_count\":4},{\"tablename\":\"org_social_accounts\",\"policy_count\":4},{\"tablename\":\"organization_members\",\"policy_count\":2},{\"tablename\":\"organizations\",\"policy_count\":3},{\"tablename\":\"profiles\",\"policy_count\":2},{\"tablename\":\"reply_product_knowledge\",\"policy_count\":3},{\"tablename\":\"server_metrics\",\"policy_count\":2}],\"job_states\":[{\"status\":\"done\",\"count\":250},{\"status\":\"failed\",\"count\":30}],\"video_states\":[{\"state\":\"ATTACHING_INGREDIENTS\",\"count\":1},{\"state\":\"FAILED\",\"count\":98},{\"state\":\"NEEDS_REVIEW\",\"count\":24},{\"state\":\"COMPLETED\",\"count\":64}]}\n"
+  }
+}

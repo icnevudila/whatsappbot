@@ -1,0 +1,22 @@
+{
+  "scope": "real bounded HTTP requests; health endpoints and unauthenticated customer entry only; NOT authenticated user/tenant capacity",
+  "timestamp": "2026-10-11T08:25:55.129356+00:00",
+  "stages": [],
+  "recovery_health": {
+    "gateway_health": {
+      "status": 200,
+      "ms": 27.48254220932722,
+      "timeout": false
+    },
+    "wa_ready": {
+      "status": 200,
+      "ms": 794.167956802994,
+      "timeout": false
+    },
+    "customer_entry": {
+      "status": 200,
+      "ms": 638.7826078571379,
+      "timeout": false
+    }
+  }
+}

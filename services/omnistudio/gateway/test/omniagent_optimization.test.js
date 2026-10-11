@@ -6,6 +6,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 
+process.env.CHATS_FILE = path.join(os.tmpdir(), `company_chats_opt_${Date.now()}_${Math.random().toString(36).slice(2)}.json`);
+
 const chatManager = require('../chat_manager.js');
 const runtimeMetrics = require('../runtime_metrics.js');
 

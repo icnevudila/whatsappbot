@@ -1,0 +1,17 @@
+{
+  "observedAt": "2026-10-11T07:57:47.213Z",
+  "mainSha": "5e79320b86298d472508275c1538beabedea9ebb",
+  "customer": {
+    "id": "dpl_89DAZR9e4PTuZdj9ui32365FAGwa",
+    "state": "READY",
+    "sha": "bb28a21b65b89d7af0c50cb3387797e4fa22a1af",
+    "branch": "test/mesajify-full-e2e-v1",
+    "alias": [
+      "app.mesajify.com",
+      "whatsappbot-customer-pi.vercel.app",
+      "whatsappbot-customer-mesajify.vercel.app",
+      "whatsappbot-customer-git-test-mesajify-full-e2e-v1-mesajify.vercel.app"
+    ]
+  },
+  "listIsPartial": true
+}

@@ -24,6 +24,7 @@ import { logger } from './logger.js'
 import { startScaler, stopScaler } from './scaler.js'
 import { sessionManager } from './session-manager.js'
 import { computeWorkerReady } from './health-ready.js'
+import { singleFlight } from './health-single-flight.js'
 import { initMonitoring, captureException, flushMonitoring } from './monitoring.js'
 import { isWabaConfigured } from './waba-config.js'
 import { runRetentionCleanup } from './retention.js'
@@ -139,10 +140,13 @@ async function buildHealthPayload(): Promise<{ status: number; body: unknown }> 
   }
 }
 
+const sharedHealthPayload = singleFlight(buildHealthPayload)
+
 function startHealthServer(): http.Server {
   const server = http.createServer((request, response) => {
     if (request.url === '/health' || request.url === '/' || request.url === '/ready') {
-      void buildHealthPayload()
+      // Drain must be visible immediately, independently of an in-flight DB probe.
+      void (shuttingDown ? buildHealthPayload() : sharedHealthPayload())
         .then(({ status, body }) => {
           const readyOnly = request.url === '/ready'
           const payload = body as { ready?: boolean }

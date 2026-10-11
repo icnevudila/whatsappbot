@@ -1,0 +1,500 @@
+{
+  "scope": "real bounded HTTP requests; health endpoints and unauthenticated customer entry only; NOT authenticated user/tenant capacity",
+  "timestamp": "2026-10-11T08:20:32.972740+00:00",
+  "stages": [
+    {
+      "concurrency": 5,
+      "before": {
+        "mem_available_kib": 948152,
+        "swap_free_kib": 684096,
+        "load": "3.99 2.14 1.58 5/1103 3081140",
+        "containers": [
+          {
+            "BlockIO": "3.42GB / 712MB",
+            "CPUPerc": "0.14%",
+            "Container": "a6c1e66a7e9d80c2825d22ba548043d19ab80bc7f6d2919a616ff4953ab8dcab",
+            "ID": "a6c1e66a7e9d",
+            "MemPerc": "0.85%",
+            "MemUsage": "32.49MiB / 3.72GiB",
+            "Name": "wa-service",
+            "NetIO": "45MB / 48.6MB",
+            "PIDs": "19"
+          },
+          {
+            "BlockIO": "8.28GB / 1.41GB",
+            "CPUPerc": "0.26%",
+            "Container": "34cacba1992346a23105e2de89df764fe08508551bb009a3901e23ae510cfb1b",
+            "ID": "34cacba19923",
+            "MemPerc": "3.45%",
+            "MemUsage": "35.3MiB / 1GiB",
+            "Name": "ai-media-control",
+            "NetIO": "320MB / 200MB",
+            "PIDs": "55"
+          },
+          {
+            "BlockIO": "610GB / 556GB",
+            "CPUPerc": "34.31%",
+            "Container": "f4deb252be133f490bc4b1b5b561a15c211232c9e55ee40a0334c3063b82325d",
+            "ID": "f4deb252be13",
+            "MemPerc": "24.80%",
+            "MemUsage": "944.7MiB / 3.72GiB",
+            "Name": "gflow-engine",
+            "NetIO": "1.05GB / 225MB",
+            "PIDs": "151"
+          },
+          {
+            "BlockIO": "642GB / 535GB",
+            "CPUPerc": "109.93%",
+            "Container": "dfbdbf89d45ea6ee0f353c7447ab9a47977a1bfec764f05a4483212ef612c4b0",
+            "ID": "dfbdbf89d45e",
+            "MemPerc": "47.55%",
+            "MemUsage": "1.769GiB / 3.72GiB",
+            "Name": "omnistudio-engine",
+            "NetIO": "10.4GB / 13.3GB",
+            "PIDs": "502"
+          },
+          {
+            "BlockIO": "10.9GB / 736MB",
+            "CPUPerc": "0.00%",
+            "Container": "c861543c2a574f842f2a97aaa607b97552c328ff43c7a8390d2da3431bb6670e",
+            "ID": "c861543c2a57",
+            "MemPerc": "0.25%",
+            "MemUsage": "9.512MiB / 3.72GiB",
+            "Name": "hetzner-caddy",
+            "NetIO": "6.03GB / 5.27GB",
+            "PIDs": "10"
+          }
+        ]
+      },
+      "endpoints": {
+        "gateway_health": {
+          "requests": 10,
+          "mean_ms": 166.6616383008659,
+          "p95_ms": 227.2191420197487,
+          "p99_ms": 227.2191420197487,
+          "errors": 0,
+          "timeouts": 0,
+          "statuses": {
+            "200": 10
+          }
+        },
+        "wa_ready": {
+          "requests": 10,
+          "mean_ms": 2050.607611145824,
+          "p95_ms": 2189.885549247265,
+          "p99_ms": 2189.885549247265,
+          "errors": 0,
+          "timeouts": 0,
+          "statuses": {
+            "200": 10
+          }
+        },
+        "customer_entry": {
+          "requests": 10,
+          "mean_ms": 1017.6972411107272,
+          "p95_ms": 2568.4360219165683,
+          "p99_ms": 2568.4360219165683,
+          "errors": 0,
+          "timeouts": 0,
+          "statuses": {
+            "200": 10
+          }
+        }
+      },
+      "after": {
+        "mem_available_kib": 984820,
+        "swap_free_kib": 608272,
+        "load": "4.61 2.34 1.64 15/1103 3081323",
+        "containers": [
+          {
+            "BlockIO": "3.42GB / 712MB",
+            "CPUPerc": "0.21%",
+            "Container": "a6c1e66a7e9d80c2825d22ba548043d19ab80bc7f6d2919a616ff4953ab8dcab",
+            "ID": "a6c1e66a7e9d",
+            "MemPerc": "0.93%",
+            "MemUsage": "35.57MiB / 3.72GiB",
+            "Name": "wa-service",
+            "NetIO": "45MB / 48.6MB",
+            "PIDs": "19"
+          },
+          {
+            "BlockIO": "8.28GB / 1.41GB",
+            "CPUPerc": "0.36%",
+            "Container": "34cacba1992346a23105e2de89df764fe08508551bb009a3901e23ae510cfb1b",
+            "ID": "34cacba19923",
+            "MemPerc": "3.49%",
+            "MemUsage": "35.7MiB / 1GiB",
+            "Name": "ai-media-control",
+            "NetIO": "320MB / 200MB",
+            "PIDs": "55"
+          },
+          {
+            "BlockIO": "610GB / 556GB",
+            "CPUPerc": "89.98%",
+            "Container": "f4deb252be133f490bc4b1b5b561a15c211232c9e55ee40a0334c3063b82325d",
+            "ID": "f4deb252be13",
+            "MemPerc": "23.69%",
+            "MemUsage": "902.3MiB / 3.72GiB",
+            "Name": "gflow-engine",
+            "NetIO": "1.05GB / 225MB",
+            "PIDs": "149"
+          },
+          {
+            "BlockIO": "642GB / 535GB",
+            "CPUPerc": "104.08%",
+            "Container": "dfbdbf89d45ea6ee0f353c7447ab9a47977a1bfec764f05a4483212ef612c4b0",
+            "ID": "dfbdbf89d45e",
+            "MemPerc": "47.66%",
+            "MemUsage": "1.773GiB / 3.72GiB",
+            "Name": "omnistudio-engine",
+            "NetIO": "10.4GB / 13.4GB",
+            "PIDs": "502"
+          },
+          {
+            "BlockIO": "10.9GB / 736MB",
+            "CPUPerc": "0.00%",
+            "Container": "c861543c2a574f842f2a97aaa607b97552c328ff43c7a8390d2da3431bb6670e",
+            "ID": "c861543c2a57",
+            "MemPerc": "0.25%",
+            "MemUsage": "9.512MiB / 3.72GiB",
+            "Name": "hetzner-caddy",
+            "NetIO": "6.03GB / 5.27GB",
+            "PIDs": "10"
+          }
+        ]
+      }
+    },
+    {
+      "concurrency": 10,
+      "before": {
+        "mem_available_kib": 1043252,
+        "swap_free_kib": 607908,
+        "load": "5.28 2.51 1.71 11/1100 3081331",
+        "containers": [
+          {
+            "BlockIO": "3.42GB / 712MB",
+            "CPUPerc": "0.15%",
+            "Container": "a6c1e66a7e9d80c2825d22ba548043d19ab80bc7f6d2919a616ff4953ab8dcab",
+            "ID": "a6c1e66a7e9d",
+            "MemPerc": "0.93%",
+            "MemUsage": "35.61MiB / 3.72GiB",
+            "Name": "wa-service",
+            "NetIO": "45MB / 48.7MB",
+            "PIDs": "19"
+          },
+          {
+            "BlockIO": "8.29GB / 1.41GB",
+            "CPUPerc": "0.21%",
+            "Container": "34cacba1992346a23105e2de89df764fe08508551bb009a3901e23ae510cfb1b",
+            "ID": "34cacba19923",
+            "MemPerc": "4.14%",
+            "MemUsage": "42.39MiB / 1GiB",
+            "Name": "ai-media-control",
+            "NetIO": "320MB / 200MB",
+            "PIDs": "55"
+          },
+          {
+            "BlockIO": "610GB / 556GB",
+            "CPUPerc": "69.81%",
+            "Container": "f4deb252be133f490bc4b1b5b561a15c211232c9e55ee40a0334c3063b82325d",
+            "ID": "f4deb252be13",
+            "MemPerc": "23.65%",
+            "MemUsage": "900.9MiB / 3.72GiB",
+            "Name": "gflow-engine",
+            "NetIO": "1.05GB / 225MB",
+            "PIDs": "149"
+          },
+          {
+            "BlockIO": "642GB / 535GB",
+            "CPUPerc": "45.85%",
+            "Container": "dfbdbf89d45ea6ee0f353c7447ab9a47977a1bfec764f05a4483212ef612c4b0",
+            "ID": "dfbdbf89d45e",
+            "MemPerc": "44.84%",
+            "MemUsage": "1.668GiB / 3.72GiB",
+            "Name": "omnistudio-engine",
+            "NetIO": "10.4GB / 13.4GB",
+            "PIDs": "500"
+          },
+          {
+            "BlockIO": "10.9GB / 736MB",
+            "CPUPerc": "0.00%",
+            "Container": "c861543c2a574f842f2a97aaa607b97552c328ff43c7a8390d2da3431bb6670e",
+            "ID": "c861543c2a57",
+            "MemPerc": "0.25%",
+            "MemUsage": "9.512MiB / 3.72GiB",
+            "Name": "hetzner-caddy",
+            "NetIO": "6.03GB / 5.27GB",
+            "PIDs": "10"
+          }
+        ]
+      },
+      "endpoints": {
+        "gateway_health": {
+          "requests": 20,
+          "mean_ms": 163.05984100326896,
+          "p95_ms": 236.46866157650948,
+          "p99_ms": 237.20539780333638,
+          "errors": 0,
+          "timeouts": 0,
+          "statuses": {
+            "200": 20
+          }
+        },
+        "wa_ready": {
+          "requests": 20,
+          "mean_ms": 4372.423262312077,
+          "p95_ms": 4992.768702562898,
+          "p99_ms": 4997.587133664638,
+          "errors": 0,
+          "timeouts": 0,
+          "statuses": {
+            "200": 20
+          }
+        },
+        "customer_entry": {
+          "requests": 20,
+          "mean_ms": 511.6298475069925,
+          "p95_ms": 633.9089637622237,
+          "p99_ms": 649.7529642656446,
+          "errors": 0,
+          "timeouts": 0,
+          "statuses": {
+            "200": 20
+          }
+        }
+      },
+      "after": {
+        "mem_available_kib": 996640,
+        "swap_free_kib": 547252,
+        "load": "5.20 2.63 1.76 6/1114 3081629",
+        "containers": [
+          {
+            "BlockIO": "3.43GB / 712MB",
+            "CPUPerc": "0.09%",
+            "Container": "a6c1e66a7e9d80c2825d22ba548043d19ab80bc7f6d2919a616ff4953ab8dcab",
+            "ID": "a6c1e66a7e9d",
+            "MemPerc": "1.13%",
+            "MemUsage": "43.03MiB / 3.72GiB",
+            "Name": "wa-service",
+            "NetIO": "45.1MB / 48.7MB",
+            "PIDs": "19"
+          },
+          {
+            "BlockIO": "8.29GB / 1.41GB",
+            "CPUPerc": "0.42%",
+            "Container": "34cacba1992346a23105e2de89df764fe08508551bb009a3901e23ae510cfb1b",
+            "ID": "34cacba19923",
+            "MemPerc": "4.18%",
+            "MemUsage": "42.75MiB / 1GiB",
+            "Name": "ai-media-control",
+            "NetIO": "320MB / 200MB",
+            "PIDs": "55"
+          },
+          {
+            "BlockIO": "610GB / 556GB",
+            "CPUPerc": "72.52%",
+            "Container": "f4deb252be133f490bc4b1b5b561a15c211232c9e55ee40a0334c3063b82325d",
+            "ID": "f4deb252be13",
+            "MemPerc": "25.31%",
+            "MemUsage": "964.2MiB / 3.72GiB",
+            "Name": "gflow-engine",
+            "NetIO": "1.05GB / 225MB",
+            "PIDs": "161"
+          },
+          {
+            "BlockIO": "642GB / 535GB",
+            "CPUPerc": "100.99%",
+            "Container": "dfbdbf89d45ea6ee0f353c7447ab9a47977a1bfec764f05a4483212ef612c4b0",
+            "ID": "dfbdbf89d45e",
+            "MemPerc": "46.25%",
+            "MemUsage": "1.72GiB / 3.72GiB",
+            "Name": "omnistudio-engine",
+            "NetIO": "10.4GB / 13.4GB",
+            "PIDs": "502"
+          },
+          {
+            "BlockIO": "10.9GB / 736MB",
+            "CPUPerc": "0.00%",
+            "Container": "c861543c2a574f842f2a97aaa607b97552c328ff43c7a8390d2da3431bb6670e",
+            "ID": "c861543c2a57",
+            "MemPerc": "0.25%",
+            "MemUsage": "9.512MiB / 3.72GiB",
+            "Name": "hetzner-caddy",
+            "NetIO": "6.03GB / 5.27GB",
+            "PIDs": "10"
+          }
+        ]
+      }
+    },
+    {
+      "concurrency": 30,
+      "before": {
+        "mem_available_kib": 994532,
+        "swap_free_kib": 553732,
+        "load": "5.35 2.71 1.79 13/1137 3081740",
+        "containers": [
+          {
+            "BlockIO": "3.43GB / 712MB",
+            "CPUPerc": "0.29%",
+            "Container": "a6c1e66a7e9d80c2825d22ba548043d19ab80bc7f6d2919a616ff4953ab8dcab",
+            "ID": "a6c1e66a7e9d",
+            "MemPerc": "1.13%",
+            "MemUsage": "43.07MiB / 3.72GiB",
+            "Name": "wa-service",
+            "NetIO": "45.1MB / 48.7MB",
+            "PIDs": "19"
+          },
+          {
+            "BlockIO": "8.29GB / 1.41GB",
+            "CPUPerc": "0.33%",
+            "Container": "34cacba1992346a23105e2de89df764fe08508551bb009a3901e23ae510cfb1b",
+            "ID": "34cacba19923",
+            "MemPerc": "4.18%",
+            "MemUsage": "42.82MiB / 1GiB",
+            "Name": "ai-media-control",
+            "NetIO": "320MB / 200MB",
+            "PIDs": "55"
+          },
+          {
+            "BlockIO": "610GB / 556GB",
+            "CPUPerc": "61.85%",
+            "Container": "f4deb252be133f490bc4b1b5b561a15c211232c9e55ee40a0334c3063b82325d",
+            "ID": "f4deb252be13",
+            "MemPerc": "25.38%",
+            "MemUsage": "966.8MiB / 3.72GiB",
+            "Name": "gflow-engine",
+            "NetIO": "1.05GB / 225MB",
+            "PIDs": "161"
+          },
+          {
+            "BlockIO": "642GB / 535GB",
+            "CPUPerc": "101.65%",
+            "Container": "dfbdbf89d45ea6ee0f353c7447ab9a47977a1bfec764f05a4483212ef612c4b0",
+            "ID": "dfbdbf89d45e",
+            "MemPerc": "44.77%",
+            "MemUsage": "1.665GiB / 3.72GiB",
+            "Name": "omnistudio-engine",
+            "NetIO": "10.4GB / 13.4GB",
+            "PIDs": "508"
+          },
+          {
+            "BlockIO": "10.9GB / 736MB",
+            "CPUPerc": "0.01%",
+            "Container": "c861543c2a574f842f2a97aaa607b97552c328ff43c7a8390d2da3431bb6670e",
+            "ID": "c861543c2a57",
+            "MemPerc": "0.25%",
+            "MemUsage": "9.512MiB / 3.72GiB",
+            "Name": "hetzner-caddy",
+            "NetIO": "6.03GB / 5.27GB",
+            "PIDs": "10"
+          }
+        ]
+      },
+      "endpoints": {
+        "gateway_health": {
+          "requests": 60,
+          "mean_ms": 445.33260345924646,
+          "p95_ms": 627.9783379286528,
+          "p99_ms": 647.5844536907971,
+          "errors": 0,
+          "timeouts": 0,
+          "statuses": {
+            "200": 60
+          }
+        },
+        "wa_ready": {
+          "requests": 60,
+          "mean_ms": 8008.372564373228,
+          "p95_ms": 8010.236696340144,
+          "p99_ms": 8012.391395866871,
+          "errors": 60,
+          "timeouts": 60,
+          "statuses": {
+            "None": 60
+          }
+        }
+      },
+      "after": {
+        "mem_available_kib": 936768,
+        "swap_free_kib": 507532,
+        "load": "5.70 2.98 1.90 9/966 3081896",
+        "containers": [
+          {
+            "BlockIO": "3.44GB / 712MB",
+            "CPUPerc": "0.41%",
+            "Container": "a6c1e66a7e9d80c2825d22ba548043d19ab80bc7f6d2919a616ff4953ab8dcab",
+            "ID": "a6c1e66a7e9d",
+            "MemPerc": "1.47%",
+            "MemUsage": "55.82MiB / 3.72GiB",
+            "Name": "wa-service",
+            "NetIO": "45.1MB / 48.7MB",
+            "PIDs": "20"
+          },
+          {
+            "BlockIO": "8.33GB / 1.41GB",
+            "CPUPerc": "6.88%",
+            "Container": "34cacba1992346a23105e2de89df764fe08508551bb009a3901e23ae510cfb1b",
+            "ID": "34cacba19923",
+            "MemPerc": "7.89%",
+            "MemUsage": "80.8MiB / 1GiB",
+            "Name": "ai-media-control",
+            "NetIO": "320MB / 200MB",
+            "PIDs": "56"
+          },
+          {
+            "BlockIO": "610GB / 556GB",
+            "CPUPerc": "110.91%",
+            "Container": "f4deb252be133f490bc4b1b5b561a15c211232c9e55ee40a0334c3063b82325d",
+            "ID": "f4deb252be13",
+            "MemPerc": "5.79%",
+            "MemUsage": "220.5MiB / 3.72GiB",
+            "Name": "gflow-engine",
+            "NetIO": "1.06GB / 226MB",
+            "PIDs": "9"
+          },
+          {
+            "BlockIO": "642GB / 535GB",
+            "CPUPerc": "38.97%",
+            "Container": "dfbdbf89d45ea6ee0f353c7447ab9a47977a1bfec764f05a4483212ef612c4b0",
+            "ID": "dfbdbf89d45e",
+            "MemPerc": "42.32%",
+            "MemUsage": "1.574GiB / 3.72GiB",
+            "Name": "omnistudio-engine",
+            "NetIO": "10.4GB / 13.4GB",
+            "PIDs": "502"
+          },
+          {
+            "BlockIO": "10.9GB / 736MB",
+            "CPUPerc": "0.02%",
+            "Container": "c861543c2a574f842f2a97aaa607b97552c328ff43c7a8390d2da3431bb6670e",
+            "ID": "c861543c2a57",
+            "MemPerc": "0.24%",
+            "MemUsage": "9.301MiB / 3.72GiB",
+            "Name": "hetzner-caddy",
+            "NetIO": "6.03GB / 5.27GB",
+            "PIDs": "10"
+          }
+        ]
+      }
+    }
+  ],
+  "stopped": "ERROR_RATE_ABOVE_5_PERCENT_OR_P95_ABOVE_5S",
+  "recovery_health": {
+    "gateway_health": {
+      "status": 200,
+      "ms": 17.355054151266813,
+      "timeout": false
+    },
+    "wa_ready": {
+      "status": null,
+      "ms": 8008.51109623909,
+      "timeout": true,
+      "error_type": "TimeoutError"
+    },
+    "customer_entry": {
+      "status": 200,
+      "ms": 430.4710538126528,
+      "timeout": false
+    }
+  }
+}

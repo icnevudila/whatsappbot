@@ -1,0 +1,356 @@
+
+> @wa/service@0.0.0 test
+> node --import tsx --test src/**/*.test.ts
+
+TAP version 13
+# Subtest: LID id + PN jid → telefon jid tercih edilir
+ok 1 - LID id + PN jid → telefon jid tercih edilir
+  ---
+  duration_ms: 28.8176
+  type: 'test'
+  ...
+# Subtest: yalnız LID id → telefon yok
+ok 2 - yalnız LID id → telefon yok
+  ---
+  duration_ms: 1.1741
+  type: 'test'
+  ...
+# Subtest: klasik PN id → telefon
+ok 3 - klasik PN id → telefon
+  ---
+  duration_ms: 4.1523
+  type: 'test'
+  ...
+# Subtest: pregenerateAiSuggestions exports correctly and handles empty inputs safely
+ok 4 - pregenerateAiSuggestions exports correctly and handles empty inputs safely
+  ---
+  duration_ms: 32138.3476
+  type: 'test'
+  ...
+# Subtest: auto-reply debounce sozlesmeleri ve cevre degiskenleri
+ok 5 - auto-reply debounce sozlesmeleri ve cevre degiskenleri
+  ---
+  duration_ms: 70.1022
+  type: 'test'
+  ...
+# Subtest: inbound.ts auto-reply cagrilarinda remoteJid ve sock iletir
+ok 6 - inbound.ts auto-reply cagrilarinda remoteJid ve sock iletir
+  ---
+  duration_ms: 46.9735
+  type: 'test'
+  ...
+# Subtest: auto-reply.ts tamponlama (debounce) ve composing varlik bildirimi icerir
+ok 7 - auto-reply.ts tamponlama (debounce) ve composing varlik bildirimi icerir
+  ---
+  duration_ms: 33.722
+  type: 'test'
+  ...
+# Subtest: countCampaignStatusBuckets: sent includes delivered and read
+ok 8 - countCampaignStatusBuckets: sent includes delivered and read
+  ---
+  duration_ms: 113.3514
+  type: 'test'
+  ...
+# Subtest: countCampaignStatusBuckets: failed and skipped are separate
+ok 9 - countCampaignStatusBuckets: failed and skipped are separate
+  ---
+  duration_ms: 0.77
+  type: 'test'
+  ...
+# Subtest: countCampaignStatusBuckets: empty and unknown statuses
+ok 10 - countCampaignStatusBuckets: empty and unknown statuses
+  ---
+  duration_ms: 0.6443
+  type: 'test'
+  ...
+# Subtest: CAMPAIGN_SENT_STATUSES matches reconcile SQL filter
+ok 11 - CAMPAIGN_SENT_STATUSES matches reconcile SQL filter
+  ---
+  duration_ms: 41.8032
+  type: 'test'
+  ...
+# Subtest: 50 overlapping probes perform one check, then a fresh check after settling
+ok 12 - 50 overlapping probes perform one check, then a fresh check after settling
+  ---
+  duration_ms: 13.7365
+  type: 'test'
+  ...
+# Subtest: a failed shared probe is retried rather than cached as success
+ok 13 - a failed shared probe is retried rather than cached as success
+  ---
+  duration_ms: 5.8894
+  type: 'test'
+  ...
+# Subtest: schedulePregenerateAiSuggestions buffers rapid messages without throwing
+ok 14 - schedulePregenerateAiSuggestions buffers rapid messages without throwing
+  ---
+  duration_ms: 35251.429
+  type: 'test'
+  ...
+# Subtest: inbound phone: PN remoteJid
+ok 15 - inbound phone: PN remoteJid
+  ---
+  duration_ms: 15.1274
+  type: 'test'
+  ...
+# Subtest: inbound phone: LID uses senderPn hint
+ok 16 - inbound phone: LID uses senderPn hint
+  ---
+  duration_ms: 3.3252
+  type: 'test'
+  ...
+# Subtest: inbound phone: LID without mapping stays null
+ok 17 - inbound phone: LID without mapping stays null
+  ---
+  duration_ms: 0.5885
+  type: 'test'
+  ...
+# Subtest: opt-out keywords match TR/EN including Unicode boundaries
+ok 18 - opt-out keywords match TR/EN including Unicode boundaries
+  ---
+  duration_ms: 8.0298
+  type: 'test'
+  ...
+# Subtest: messageSendSkipped: blacklist shape
+ok 19 - messageSendSkipped: blacklist shape
+  ---
+  duration_ms: 10.4444
+  type: 'test'
+  ...
+# Subtest: messageSendSkipped: not_on_whatsapp shape
+ok 20 - messageSendSkipped: not_on_whatsapp shape
+  ---
+  duration_ms: 3.7545
+  type: 'test'
+  ...
+# Subtest: job-consumer message.send uses messageSendSkipped helpers
+ok 21 - job-consumer message.send uses messageSendSkipped helpers
+  ---
+  duration_ms: 1.4462
+  type: 'test'
+  ...
+# Subtest: phone variations all yield identical last10 and valid withPlus
+ok 22 - phone variations all yield identical last10 and valid withPlus
+  ---
+  duration_ms: 5.8515
+  type: 'test'
+  ...
+# Subtest: invalid / short inputs handled safely
+ok 23 - invalid / short inputs handled safely
+  ---
+  duration_ms: 1.8848
+  type: 'test'
+  ...
+# Subtest: chat authentication is scoped and preserves caller credentials
+ok 24 - chat authentication is scoped and preserves caller credentials
+  ---
+  duration_ms: 759.0177
+  type: 'test'
+  ...
+# Subtest: outbound phone: PN remoteJid returns direct recipient phone
+ok 25 - outbound phone: PN remoteJid returns direct recipient phone
+  ---
+  duration_ms: 8931.7646
+  type: 'test'
+  ...
+# Subtest: outbound phone: LID with peerRecipientPn returns recipient phone, NOT senderPn
+ok 26 - outbound phone: LID with peerRecipientPn returns recipient phone, NOT senderPn
+  ---
+  duration_ms: 30.5434
+  type: 'test'
+  ...
+# Subtest: outbound phone: LID with resolveLidPn mapping resolves properly
+ok 27 - outbound phone: LID with resolveLidPn mapping resolves properly
+  ---
+  duration_ms: 8.5555
+  type: 'test'
+  ...
+# Subtest: statusFromAck: delivery + read + server
+ok 28 - statusFromAck: delivery + read + server
+  ---
+  duration_ms: 4.4845
+  type: 'test'
+  ...
+# Subtest: statusFromAck: ERROR maps to failed
+ok 29 - statusFromAck: ERROR maps to failed
+  ---
+  duration_ms: 0.6221
+  type: 'test'
+  ...
+# Subtest: fromMe false receipt should still be processable (id-only gate)
+ok 30 - fromMe false receipt should still be processable (id-only gate)
+  ---
+  duration_ms: 0.696
+  type: 'test'
+  ...
+# Subtest: sent message codec preserves binary fields for Baileys getMessage
+ok 31 - sent message codec preserves binary fields for Baileys getMessage
+  ---
+  duration_ms: 88.1191
+  type: 'test'
+  ...
+# Subtest: aylik kota org_send_gate RPC kullanir (message_log direction=out SQL tarafinda)
+ok 32 - aylik kota org_send_gate RPC kullanir (message_log direction=out SQL tarafinda)
+  ---
+  duration_ms: 333.0786
+  type: 'test'
+  ...
+# Subtest: reviveStale soft reopen kullanir (userRequested disconnect yok)
+ok 33 - reviveStale soft reopen kullanir (userRequested disconnect yok)
+  ---
+  duration_ms: 122.3315
+  type: 'test'
+  ...
+# Subtest: monitoring flushMonitoring export eder
+ok 34 - monitoring flushMonitoring export eder
+  ---
+  duration_ms: 21.1599
+  type: 'test'
+  ...
+# Subtest: AUTH_SCHEMA_VERSION Baileys 6 icin 7
+ok 35 - AUTH_SCHEMA_VERSION Baileys 6 icin 7
+  ---
+  duration_ms: 25.6239
+  type: 'test'
+  ...
+# Subtest: Baileys pin 6.7.24 (v7 rc uretime alinmaz)
+ok 36 - Baileys pin 6.7.24 (v7 rc uretime alinmaz)
+  ---
+  duration_ms: 36.093
+  type: 'test'
+  ...
+# Subtest: computeWorkerReady matrisi
+ok 37 - computeWorkerReady matrisi
+  ---
+  duration_ms: 8.1439
+  type: 'test'
+  ...
+# Subtest: /ready connectingCount healthReport.connecting aktarir
+ok 38 - /ready connectingCount healthReport.connecting aktarir
+  ---
+  duration_ms: 203.0685
+  type: 'test'
+  ...
+# Subtest: shuttingDown /ready 503 draining; /health liveness 200
+ok 39 - shuttingDown /ready 503 draining; /health liveness 200
+  ---
+  duration_ms: 43.8835
+  type: 'test'
+  ...
+# Subtest: REQUIRE_QUOTA_KNOWN null kotada claim atlar
+ok 40 - REQUIRE_QUOTA_KNOWN null kotada claim atlar
+  ---
+  duration_ms: 79.1363
+  type: 'test'
+  ...
+# Subtest: env int gecersiz sayida throw; SEND_CHANNEL whitelisti
+ok 41 - env int gecersiz sayida throw; SEND_CHANNEL whitelisti
+  ---
+  duration_ms: 26.43
+  type: 'test'
+  ...
+# Subtest: kit compose /ready + stop_grace 120s; small MAX_SESSIONS=15
+ok 42 - kit compose /ready + stop_grace 120s; small MAX_SESSIONS=15
+  ---
+  duration_ms: 119.308
+  type: 'test'
+  ...
+# Subtest: job-consumer tum JOB_TYPES case kapsar
+ok 43 - job-consumer tum JOB_TYPES case kapsar
+  ---
+  duration_ms: 27.9768
+  type: 'test'
+  ...
+# Subtest: session creds.update saveCreds baglar
+ok 44 - session creds.update saveCreds baglar
+  ---
+  duration_ms: 38.5778
+  type: 'test'
+  ...
+# Subtest: entrypoint WORKER_ID=auto hostname turetir
+ok 45 - entrypoint WORKER_ID=auto hostname turetir
+  ---
+  duration_ms: 49.7121
+  type: 'test'
+  ...
+# Subtest: isWabaConfigured token+phoneId ister
+ok 46 - isWabaConfigured token+phoneId ister
+  ---
+  duration_ms: 2.8185
+  type: 'test'
+  ...
+# Subtest: resolveWabaMessageSend: SEND_CHANNEL=waba eksik config fail (Baileys yedegi yok)
+ok 47 - resolveWabaMessageSend: SEND_CHANNEL=waba eksik config fail (Baileys yedegi yok)
+  ---
+  duration_ms: 2.289
+  type: 'test'
+  ...
+# Subtest: resolveWabaMessageSend: WABA medya fail (Baileys yedegi yok)
+ok 48 - resolveWabaMessageSend: WABA medya fail (Baileys yedegi yok)
+  ---
+  duration_ms: 1.8722
+  type: 'test'
+  ...
+# Subtest: resolveWabaMessageSend: SEND_CHANNEL yoksa baileys
+ok 49 - resolveWabaMessageSend: SEND_CHANNEL yoksa baileys
+  ---
+  duration_ms: 1.6708
+  type: 'test'
+  ...
+# Subtest: job-consumer WABA: delivery_attempted + resolveWabaMessageSend + NonRetryable fail
+ok 50 - job-consumer WABA: delivery_attempted + resolveWabaMessageSend + NonRetryable fail
+  ---
+  duration_ms: 41.5738
+  type: 'test'
+  ...
+# Subtest: docker compose healthcheck /ready kullanir
+ok 51 - docker compose healthcheck /ready kullanir
+  ---
+  duration_ms: 33.8267
+  type: 'test'
+  ...
+# Subtest: shutdown sending reclaim SQL session_lease holder kullanir
+ok 52 - shutdown sending reclaim SQL session_lease holder kullanir
+  ---
+  duration_ms: 2.9052
+  type: 'test'
+  ...
+# Subtest: shutdown in-flight sending failed yapar (queued degil; cift gonderim yok)
+ok 53 - shutdown in-flight sending failed yapar (queued degil; cift gonderim yok)
+  ---
+  duration_ms: 212.0709
+  type: 'test'
+  ...
+# Subtest: campaign target delivery_attempted sendMessage oncesi isaretlenir
+ok 54 - campaign target delivery_attempted sendMessage oncesi isaretlenir
+  ---
+  duration_ms: 59.5389
+  type: 'test'
+  ...
+# Subtest: ERROR receipt sonrasi campaign sayaclari reconcile edilir
+ok 55 - ERROR receipt sonrasi campaign sayaclari reconcile edilir
+  ---
+  duration_ms: 7.0336
+  type: 'test'
+  ...
+# Subtest: message.send ve campaign.bulk_reply gonderim oncesi 2-3sn composing varlik bildirimi gonderir
+ok 56 - message.send ve campaign.bulk_reply gonderim oncesi 2-3sn composing varlik bildirimi gonderir
+  ---
+  duration_ms: 142.807
+  type: 'test'
+  ...
+# Subtest: job-consumer stats ve health memory telemetrisi
+ok 57 - job-consumer stats ve health memory telemetrisi
+  ---
+  duration_ms: 88.9875
+  type: 'test'
+  ...
+1..57
+# tests 57
+# suites 0
+# pass 57
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 116073.3744
