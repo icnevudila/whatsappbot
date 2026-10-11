@@ -3235,12 +3235,12 @@ const server = http.createServer(async (req, res) => {
 
       // Private tenant media in OUTPUT_DIR must be strictly authorized
       if (!isFileInPublicDir || !isPublicDir) {
-        let ownerTenant = getMediaOwner(filename);
+        let ownerTenant = getMediaOwner(filename, getOutputDir());
         if (!ownerTenant) {
           for (const job of queue.jobs.values()) {
             if (job.filename === filename || (job.resultUrl && path.basename(job.resultUrl) === filename)) {
               ownerTenant = job.tenantId;
-              if (ownerTenant) registerMediaOwner(filename, ownerTenant);
+              if (ownerTenant) registerMediaOwner(filename, ownerTenant, getOutputDir());
               break;
             }
           }
@@ -3249,7 +3249,7 @@ const server = http.createServer(async (req, res) => {
           for (const vjob of videoQueue.jobs.values()) {
             if (vjob.rawFileName === filename || vjob.outputPath === filename) {
               ownerTenant = vjob.tenantId;
-              if (ownerTenant) registerMediaOwner(filename, ownerTenant);
+              if (ownerTenant) registerMediaOwner(filename, ownerTenant, getOutputDir());
               break;
             }
           }
@@ -3260,6 +3260,7 @@ const server = http.createServer(async (req, res) => {
           filename,
           ownerTenant,
           isInternalWorker: isInternalWorkerRequest(req),
+          outputDir: getOutputDir(),
         });
 
         if (!authCheck.allowed) {

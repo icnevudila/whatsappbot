@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
@@ -8,7 +9,7 @@ const MEDIA_EXTENSIONS = new Set([
   '.mp4', '.webm', '.mp3', '.wav', '.ogg', '.m4a'
 ]);
 
-// In-memory registry of output filename -> tenantId
+// In-memory registry of output filename -> tenantId (cache)
 const fileTenantRegistry = new Map();
 
 function isMediaFilename(filename) {
@@ -21,38 +22,72 @@ function isPublicMediaFilename(filename) {
   return isMediaFilename(filename);
 }
 
-function registerMediaOwner(filename, tenantId) {
+function registerMediaOwner(filename, tenantId, outputDir) {
   if (!filename || !tenantId) return;
   const base = path.basename(filename);
-  fileTenantRegistry.set(base, String(tenantId));
+  const tid = String(tenantId).trim();
+  fileTenantRegistry.set(base, tid);
+
+  // Persist disk sidecar so ownership survives gateway restarts
+  const dir = outputDir || process.env.OUTPUT_DIR;
+  if (dir) {
+    try {
+      const ownerPath = path.join(dir, `${base}.owner`);
+      fs.writeFileSync(ownerPath, tid, 'utf8');
+    } catch (_) {}
+  }
 }
 
-function getMediaOwner(filename) {
+function getMediaOwner(filename, outputDir) {
   if (!filename) return null;
   const base = path.basename(filename);
-  return fileTenantRegistry.get(base) || null;
+  const inMemory = fileTenantRegistry.get(base);
+  if (inMemory) return inMemory;
+
+  // Check persistent disk sidecar (survives gateway restarts)
+  const dir = outputDir || process.env.OUTPUT_DIR;
+  if (dir) {
+    try {
+      const ownerPath = path.join(dir, `${base}.owner`);
+      if (fs.existsSync(ownerPath)) {
+        const diskOwner = fs.readFileSync(ownerPath, 'utf8').trim();
+        if (diskOwner) {
+          fileTenantRegistry.set(base, diskOwner);
+          return diskOwner;
+        }
+      }
+    } catch (_) {}
+  }
+  return null;
 }
 
 function clearMediaRegistry() {
   fileTenantRegistry.clear();
 }
 
+/**
+ * Resolves the signing secret without hardcoded fallbacks.
+ * Throws a configuration error if no secret is configured.
+ */
 function getSigningSecret(customSecret) {
-  return String(
-    customSecret ||
-    process.env.MEDIA_SIGNING_SECRET ||
-    process.env.OMNISTUDIO_GATEWAY_TOKEN ||
-    'omnistudio-default-media-salt-2026'
-  );
+  const secret = (customSecret || process.env.MEDIA_SIGNING_SECRET || process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim();
+  if (!secret) {
+    const err = new Error('CONFIG_ERROR_MEDIA_SIGNING_SECRET_REQUIRED');
+    err.statusCode = 500;
+    throw err;
+  }
+  return secret;
 }
 
 /**
  * Creates a signed access token or query parameter string for media playback / downloads.
+ * Only callable by authorized backends that possess the signing secret.
  */
 function signMediaAccess({ filename, tenantId, ttlSeconds = 3600, secret }) {
   if (!filename) throw new Error('FILENAME_REQUIRED');
+  if (!tenantId) throw new Error('TENANT_ID_REQUIRED');
   const base = path.basename(filename);
-  const tid = String(tenantId || 'anonymous');
+  const tid = String(tenantId).trim();
   const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
   const signingSecret = getSigningSecret(secret);
 
@@ -71,33 +106,44 @@ function signMediaAccess({ filename, tenantId, ttlSeconds = 3600, secret }) {
 
 /**
  * Verifies whether an incoming HTTP request is authorized to read the requested media file.
+ * Enforces strict fail-closed security:
+ * 1. Internal workers or loopback control requests are authorized.
+ * 2. Gateway Master Token in Authorization header is authorized.
+ * 3. Client-supplied X-Tenant-Id header WITHOUT bearer/worker credentials is NOT authentication (rejected with 401).
+ * 4. Tenant ownership must be resolved on the server side. Unknown owner -> 403.
+ * 5. Signed URL requests verify HMAC signature and match the actual server-resolved owner.
  */
-function verifyMediaAccess({ req, filename, ownerTenant, isInternalWorker = false, secret }) {
+function verifyMediaAccess({ req, filename, ownerTenant, isInternalWorker = false, secret, outputDir }) {
   // 1. Internal worker or loopback control requests are always authorized
   if (isInternalWorker) {
     return { allowed: true, reason: 'internal_worker' };
   }
 
-  // 2. Gateway Master Token in Authorization header
+  // 2. Gateway Master / Admin Token in Authorization header
   const authHeader = req.headers?.['authorization'] || '';
-  const gatewayToken = process.env.OMNISTUDIO_GATEWAY_TOKEN || '';
-  if (gatewayToken && authHeader.toLowerCase() === `bearer ${gatewayToken.toLowerCase()}`) {
-    return { allowed: true, reason: 'gateway_admin_token' };
+  const gatewayToken = (process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim();
+  const isMasterToken = Boolean(gatewayToken && authHeader.toLowerCase() === `bearer ${gatewayToken.toLowerCase()}`);
+
+  if (isMasterToken) {
+    const reqTenant = req.headers?.['x-tenant-id'];
+    return { allowed: true, reason: 'gateway_admin_token', tenantId: reqTenant || null };
+  }
+
+  // 3. Client X-Tenant-Id header alone is UNTRUSTED and cannot be used to authenticate
+  const reqTenant = req.headers?.['x-tenant-id'];
+  if (reqTenant && !isMasterToken && !isInternalWorker) {
+    return { allowed: false, statusCode: 401, error: 'UNAUTHENTICATED_TENANT_HEADER' };
   }
 
   const base = path.basename(filename);
-  const actualOwner = ownerTenant || getMediaOwner(base);
+  const actualOwner = ownerTenant || getMediaOwner(base, outputDir);
 
-  // 3. Header-based Tenant Authorization
-  const reqTenant = req.headers?.['x-tenant-id'];
-  if (reqTenant) {
-    if (actualOwner && reqTenant !== actualOwner) {
-      return { allowed: false, statusCode: 403, error: 'CROSS_TENANT_ACCESS_DENIED' };
-    }
-    return { allowed: true, reason: 'tenant_header', tenantId: reqTenant };
+  // 4. Fail-closed: Media with unresolvable or unknown owner cannot be accessed publicly
+  if (!actualOwner) {
+    return { allowed: false, statusCode: 403, error: 'TENANT_OWNER_UNRESOLVABLE' };
   }
 
-  // 4. Query-based Signed Token Authorization (for <img>, <video>, downloads)
+  // 5. Query-based Signed Token Authorization (for <img>, <video>, downloads)
   const parsedUrl = new URL(req.url, 'http://localhost');
   const sig = parsedUrl.searchParams.get('sig');
   const expStr = parsedUrl.searchParams.get('exp');
@@ -123,7 +169,13 @@ function verifyMediaAccess({ req, filename, ownerTenant, isInternalWorker = fals
       return { allowed: false, statusCode: 401, error: 'MEDIA_SIGNATURE_EXPIRED' };
     }
 
-    const signingSecret = getSigningSecret(secret);
+    let signingSecret;
+    try {
+      signingSecret = getSigningSecret(secret);
+    } catch (cfgErr) {
+      return { allowed: false, statusCode: 500, error: cfgErr.message };
+    }
+
     const expectedPayload = `${base}:${tokenTenant}:${expiry}`;
     const expectedSig = crypto.createHmac('sha256', signingSecret).update(expectedPayload).digest('hex');
 
@@ -140,14 +192,14 @@ function verifyMediaAccess({ req, filename, ownerTenant, isInternalWorker = fals
     }
 
     // Check cross-tenant access against actual owner
-    if (actualOwner && tokenTenant !== actualOwner) {
+    if (tokenTenant !== actualOwner) {
       return { allowed: false, statusCode: 403, error: 'CROSS_TENANT_ACCESS_DENIED' };
     }
 
     return { allowed: true, reason: 'signed_url', tenantId: tokenTenant };
   }
 
-  // 5. If no authorization provided, deny anonymous access to private media
+  // 6. If no valid authorization provided, deny anonymous access
   return { allowed: false, statusCode: 401, error: 'UNAUTHORIZED_MEDIA_ACCESS' };
 }
 
@@ -157,6 +209,7 @@ module.exports = {
   registerMediaOwner,
   getMediaOwner,
   clearMediaRegistry,
+  getSigningSecret,
   signMediaAccess,
   verifyMediaAccess,
 };

@@ -23,6 +23,7 @@ const {
   getMediaOwner,
   signMediaAccess,
   verifyMediaAccess,
+  getSigningSecret,
   clearMediaRegistry
 } = require('../public_output_access.js');
 const { server } = require('../server.js');
@@ -52,7 +53,7 @@ test.after(async () => {
 test('GATEWAY MEDIA PRIVACY: Anonymous access to generated image is rejected (401)', async () => {
   const filename = 'brand_isolated_product.png';
   fs.writeFileSync(path.join(outputDir, filename), Buffer.from('fake-png-content'));
-  registerMediaOwner(filename, 'tenant-alpha');
+  registerMediaOwner(filename, 'tenant-alpha', outputDir);
 
   const res = await fetch(`${baseUrl}/outputs/${filename}`);
   assert.equal(res.status, 401);
@@ -60,57 +61,80 @@ test('GATEWAY MEDIA PRIVACY: Anonymous access to generated image is rejected (40
   assert.equal(data.error, 'UNAUTHORIZED_MEDIA_ACCESS');
 });
 
-test('GATEWAY MEDIA PRIVACY: Tenant B accessing Tenant A media is rejected (403 Cross-Tenant)', async () => {
-  const filename = 'alpha_confidential_design.png';
+test('GATEWAY MEDIA PRIVACY: Spoofed client X-Tenant-Id header alone is rejected (401)', async () => {
+  const filename = 'confidential_design.png';
   fs.writeFileSync(path.join(outputDir, filename), Buffer.from('alpha-secret-image'));
-  registerMediaOwner(filename, 'tenant-alpha');
+  registerMediaOwner(filename, 'tenant-alpha', outputDir);
 
-  const res = await fetch(`${baseUrl}/outputs/${filename}`, {
-    headers: { 'X-Tenant-Id': 'tenant-beta' }
-  });
-  assert.equal(res.status, 403);
-  const data = await res.json();
-  assert.equal(data.error, 'CROSS_TENANT_ACCESS_DENIED');
-});
-
-test('GATEWAY MEDIA PRIVACY: Tenant A accessing own media with X-Tenant-Id succeeds (200)', async () => {
-  const filename = 'alpha_allowed_design.png';
-  const content = 'alpha-verified-image-bytes';
-  fs.writeFileSync(path.join(outputDir, filename), Buffer.from(content));
-  registerMediaOwner(filename, 'tenant-alpha');
-
+  // Client attempts to claim identity by simply passing header without credentials
   const res = await fetch(`${baseUrl}/outputs/${filename}`, {
     headers: { 'X-Tenant-Id': 'tenant-alpha' }
   });
+  assert.equal(res.status, 401);
+  const data = await res.json();
+  assert.equal(data.error, 'UNAUTHENTICATED_TENANT_HEADER');
+});
+
+test('GATEWAY MEDIA PRIVACY: Authenticated internal proxy/worker with X-Tenant-Id succeeds (200)', async () => {
+  const filename = 'proxy_delivered_image.png';
+  const content = 'verified-customer-image';
+  fs.writeFileSync(path.join(outputDir, filename), Buffer.from(content));
+  registerMediaOwner(filename, 'tenant-alpha', outputDir);
+
+  const res = await fetch(`${baseUrl}/outputs/${filename}`, {
+    headers: {
+      'Authorization': 'Bearer test-gateway-admin-token',
+      'X-Tenant-Id': 'tenant-alpha'
+    }
+  });
+  assert.equal(res.status, 200);
+  const bodyText = await res.text();
+  assert.equal(bodyText, content);
+});
+
+test('GATEWAY MEDIA PRIVACY: Signed URL allows authorized tenant access (200)', async () => {
+  const filename = 'campaign_banner_signed.png';
+  const content = 'banner-pixels';
+  fs.writeFileSync(path.join(outputDir, filename), Buffer.from(content));
+  registerMediaOwner(filename, 'tenant-alpha', outputDir);
+
+  const signed = signMediaAccess({
+    filename,
+    tenantId: 'tenant-alpha',
+    ttlSeconds: 300,
+    secret: process.env.MEDIA_SIGNING_SECRET
+  });
+
+  const res = await fetch(`${baseUrl}/outputs/${filename}?${signed.queryString}`);
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('content-type'), 'image/png');
   const bodyText = await res.text();
   assert.equal(bodyText, content);
 });
 
-test('GATEWAY MEDIA PRIVACY: Signed URL allows HTML image tags for correct tenant (200)', async () => {
-  const filename = 'campaign_banner_signed.png';
-  const content = 'banner-pixels';
-  fs.writeFileSync(path.join(outputDir, filename), Buffer.from(content));
-  registerMediaOwner(filename, 'tenant-alpha');
+test('GATEWAY MEDIA PRIVACY: Signed URL for wrong tenant is rejected (403 Cross-Tenant)', async () => {
+  const filename = 'top_secret_product.png';
+  fs.writeFileSync(path.join(outputDir, filename), Buffer.from('private-stuff'));
+  registerMediaOwner(filename, 'tenant-alpha', outputDir);
 
+  // Signed for tenant-beta
   const signed = signMediaAccess({
     filename,
-    tenantId: 'tenant-alpha',
+    tenantId: 'tenant-beta',
     ttlSeconds: 300,
     secret: process.env.MEDIA_SIGNING_SECRET
   });
 
   const res = await fetch(`${baseUrl}/outputs/${filename}?${signed.queryString}`);
-  assert.equal(res.status, 200);
-  const bodyText = await res.text();
-  assert.equal(bodyText, content);
+  assert.equal(res.status, 403);
+  const data = await res.json();
+  assert.equal(data.error, 'CROSS_TENANT_ACCESS_DENIED');
 });
 
-test('GATEWAY MEDIA PRIVACY: Tampered signature on signed URL is rejected (401)', async () => {
-  const filename = 'secure_contract_asset.png';
-  fs.writeFileSync(path.join(outputDir, filename), Buffer.from('sensitive-bytes'));
-  registerMediaOwner(filename, 'tenant-alpha');
+test('GATEWAY MEDIA PRIVACY: Tampered signature is rejected (401)', async () => {
+  const filename = 'tamper_test.png';
+  fs.writeFileSync(path.join(outputDir, filename), Buffer.from('bytes'));
+  registerMediaOwner(filename, 'tenant-alpha', outputDir);
 
   const signed = signMediaAccess({
     filename,
@@ -119,66 +143,121 @@ test('GATEWAY MEDIA PRIVACY: Tampered signature on signed URL is rejected (401)'
     secret: process.env.MEDIA_SIGNING_SECRET
   });
 
-  // Tamper signature by changing last character
-  const badSig = signed.sig.slice(0, -1) + (signed.sig.endsWith('0') ? '1' : '0');
-  const res = await fetch(`${baseUrl}/outputs/${filename}?sig=${badSig}&exp=${signed.exp}&tid=${signed.tenantId}`);
+  const tamperedUrl = `${baseUrl}/outputs/${filename}?sig=bad${signed.sig.slice(3)}&exp=${signed.exp}&tid=tenant-alpha`;
+  const res = await fetch(tamperedUrl);
   assert.equal(res.status, 401);
   const data = await res.json();
   assert.equal(data.error, 'INVALID_MEDIA_SIGNATURE');
 });
 
-test('GATEWAY MEDIA PRIVACY: Expired signature on signed URL is rejected (401)', async () => {
-  const filename = 'expired_promo_video.mp4';
-  fs.writeFileSync(path.join(outputDir, filename), Buffer.from('video-bytes-chunk'));
-  registerMediaOwner(filename, 'tenant-alpha');
+test('GATEWAY MEDIA PRIVACY: Expired signed URL is rejected (401)', async () => {
+  const filename = 'expired_test.png';
+  fs.writeFileSync(path.join(outputDir, filename), Buffer.from('bytes'));
+  registerMediaOwner(filename, 'tenant-alpha', outputDir);
 
-  const signed = signMediaAccess({
+  const expired = signMediaAccess({
     filename,
     tenantId: 'tenant-alpha',
-    ttlSeconds: -10, // already expired in the past
+    ttlSeconds: -10, // already expired
     secret: process.env.MEDIA_SIGNING_SECRET
   });
 
-  const res = await fetch(`${baseUrl}/outputs/${filename}?${signed.queryString}`);
+  const res = await fetch(`${baseUrl}/outputs/${filename}?${expired.queryString}`);
   assert.equal(res.status, 401);
   const data = await res.json();
   assert.equal(data.error, 'MEDIA_SIGNATURE_EXPIRED');
 });
 
-test('GATEWAY MEDIA STREAMING: Authorized video supports HTTP 206 Partial Content range requests', async () => {
-  const filename = 'tenant_commercial_video.mp4';
-  const videoBuffer = Buffer.alloc(1000, 0x42); // 1000 bytes of dummy video
-  fs.writeFileSync(path.join(outputDir, filename), videoBuffer);
-  registerMediaOwner(filename, 'tenant-video-org');
+test('GATEWAY MEDIA PRIVACY: File with unresolvable/unknown owner is rejected (403 Fail-Closed)', async () => {
+  const filename = 'orphan_untracked_image.png';
+  fs.writeFileSync(path.join(outputDir, filename), Buffer.from('orphan-bytes'));
+  // Do NOT register owner; no owner metadata exists
+  clearMediaRegistry();
 
   const signed = signMediaAccess({
     filename,
-    tenantId: 'tenant-video-org',
-    ttlSeconds: 600,
+    tenantId: 'tenant-alpha',
+    ttlSeconds: 300,
     secret: process.env.MEDIA_SIGNING_SECRET
   });
 
-  // Request byte range 0-199 (first 200 bytes)
-  const res = await fetch(`${baseUrl}/outputs/${filename}?${signed.queryString}`, {
-    headers: { Range: 'bytes=0-199' }
-  });
-
-  assert.equal(res.status, 206, 'Should respond with 206 Partial Content');
-  assert.equal(res.headers.get('content-range'), 'bytes 0-199/1000');
-  assert.equal(res.headers.get('content-length'), '200');
-  assert.equal(res.headers.get('content-type'), 'video/mp4');
-
-  const arrayBuf = await res.arrayBuffer();
-  assert.equal(arrayBuf.byteLength, 200);
+  const res = await fetch(`${baseUrl}/outputs/${filename}?${signed.queryString}`);
+  assert.equal(res.status, 403);
+  const data = await res.json();
+  assert.equal(data.error, 'TENANT_OWNER_UNRESOLVABLE');
 });
 
-test('GATEWAY WORKER AUTH: Internal worker request with token accesses media directly', async () => {
-  const filename = 'worker_internal_output.png';
-  fs.writeFileSync(path.join(outputDir, filename), Buffer.from('worker-bytes'));
-  registerMediaOwner(filename, 'tenant-internal');
+test('GATEWAY MEDIA PRIVACY: Restart recovery restores owner from disk sidecar', async () => {
+  const filename = 'restart_resilient_video.mp4';
+  const content = 'video-payload-content';
+  fs.writeFileSync(path.join(outputDir, filename), Buffer.from(content));
+  registerMediaOwner(filename, 'tenant-gamma', outputDir);
 
-  const res = await fetch(`${baseUrl}/outputs/${filename}`, {
-    headers: { 'Authorization': `Bearer ${process.env.OMNISTUDIO_GATEWAY_TOKEN}` }
+  // Simulate Gateway restart by clearing in-memory registry
+  clearMediaRegistry();
+
+  // Owner should be recovered from outputDir on disk
+  const recoveredOwner = getMediaOwner(filename, outputDir);
+  assert.equal(recoveredOwner, 'tenant-gamma');
+
+  // Clear again and verify that HTTP route automatically recovers from disk sidecar
+  clearMediaRegistry();
+  const signed = signMediaAccess({
+    filename,
+    tenantId: 'tenant-gamma',
+    ttlSeconds: 300,
+    secret: process.env.MEDIA_SIGNING_SECRET
   });
+
+  const res = await fetch(`${baseUrl}/outputs/${filename}?${signed.queryString}`);
   assert.equal(res.status, 200);
+});
+
+test('GATEWAY MEDIA PRIVACY: Video Range streaming (HTTP 206) is preserved for authorized signed requests', async () => {
+  const filename = 'commercial_reel.mp4';
+  const dummyVideo = Buffer.alloc(1000, 42);
+  fs.writeFileSync(path.join(outputDir, filename), dummyVideo);
+  registerMediaOwner(filename, 'tenant-alpha', outputDir);
+
+  const signed = signMediaAccess({
+    filename,
+    tenantId: 'tenant-alpha',
+    ttlSeconds: 300,
+    secret: process.env.MEDIA_SIGNING_SECRET
+  });
+
+  const res = await fetch(`${baseUrl}/outputs/${filename}?${signed.queryString}`, {
+    headers: { 'Range': 'bytes=0-99' }
+  });
+
+  assert.equal(res.status, 206);
+  assert.equal(res.headers.get('content-range'), 'bytes 0-99/1000');
+  assert.equal(res.headers.get('accept-ranges'), 'bytes');
+  assert.equal(res.headers.get('content-length'), '100');
+  assert.equal(res.headers.get('content-type'), 'video/mp4');
+
+  const buf = Buffer.from(await res.arrayBuffer());
+  assert.equal(buf.length, 100);
+  assert.equal(buf[0], 42);
+});
+
+test('GATEWAY MEDIA PRIVACY: Missing MEDIA_SIGNING_SECRET throws configuration error without fallback', () => {
+  const originalSecret = process.env.MEDIA_SIGNING_SECRET;
+  const originalToken = process.env.OMNISTUDIO_GATEWAY_TOKEN;
+  delete process.env.MEDIA_SIGNING_SECRET;
+  delete process.env.OMNISTUDIO_GATEWAY_TOKEN;
+
+  try {
+    assert.throws(
+      () => getSigningSecret(),
+      (err) => {
+        assert.equal(err.message, 'CONFIG_ERROR_MEDIA_SIGNING_SECRET_REQUIRED');
+        assert.equal(err.statusCode, 500);
+        return true;
+      }
+    );
+  } finally {
+    process.env.MEDIA_SIGNING_SECRET = originalSecret;
+    process.env.OMNISTUDIO_GATEWAY_TOKEN = originalToken;
+  }
 });

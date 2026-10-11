@@ -103,20 +103,23 @@ export async function POST(request: Request) {
   const obj = event.data?.object
   const type = event.type ?? ''
 
-  const downgrade =
+  const isCancellation =
     type === 'customer.subscription.deleted' ||
     (type === 'customer.subscription.updated' &&
-      (obj?.status === 'past_due' ||
-        obj?.status === 'unpaid' ||
-        obj?.status === 'canceled' ||
-        obj?.status === 'incomplete_expired'))
+      (obj?.status === 'canceled' || obj?.status === 'incomplete_expired'))
 
-  const upgrade =
+  const isPaymentDelinquent =
+    type === 'invoice.payment_failed' ||
+    (type === 'customer.subscription.updated' &&
+      (obj?.status === 'past_due' || obj?.status === 'unpaid'))
+
+  const isActive =
     type === 'checkout.session.completed' ||
+    type === 'invoice.payment_succeeded' ||
     (type === 'customer.subscription.updated' &&
       (obj?.status === 'active' || obj?.status === 'trialing'))
 
-  if (!downgrade && !upgrade) {
+  if (!isCancellation && !isPaymentDelinquent && !isActive) {
     return NextResponse.json({ received: true, skipped: type })
   }
 
@@ -126,7 +129,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ received: true, skipped: 'no_org' })
   }
 
-  const planKey: PlanId = downgrade ? 'free' : resolvePlan(obj)
+  const planKey: PlanId = isCancellation ? 'free' : resolvePlan(obj)
   const quotas = PLAN_QUOTAS[planKey]
 
   const eventId = event.id
@@ -134,11 +137,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'event id missing' }, { status: 400 })
   }
 
-  const eventCreatedAt = event.created
+  const eventCreatedAt = typeof event.created === 'number' && Number.isFinite(event.created)
     ? new Date(event.created * 1000).toISOString()
     : new Date().toISOString()
 
-  const status = obj?.status ?? ''
+  const status = obj?.status ?? (isPaymentDelinquent ? 'past_due' : isActive ? 'active' : '')
 
   const { data: result, error } = await admin.rpc('apply_stripe_subscription_atomic', {
     p_event_id: eventId,
@@ -149,10 +152,10 @@ export async function POST(request: Request) {
     p_accounts_quota: quotas.accounts,
     p_monthly_message_quota: quotas.messages,
     p_stripe_customer_id: customerId(obj),
-    p_stripe_subscription_id: downgrade ? null : subscriptionId(obj),
+    p_stripe_subscription_id: isCancellation ? null : subscriptionId(obj),
     p_status: status,
-    p_is_upgrade: upgrade,
-    p_is_downgrade: downgrade,
+    p_is_upgrade: isActive,
+    p_is_downgrade: isCancellation,
   })
 
   if (error) {

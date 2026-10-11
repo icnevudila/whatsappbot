@@ -1,6 +1,6 @@
-# Mesajify — 3–5 Customer Pilot Acceptance Audit
+# Mesajify — 3–5 Customer Pilot Acceptance Audit (Updated)
 
-**Nihai Karar:** CONDITIONAL GO (Şartlı Kabul)  
+**Nihai Karar:** NO-GO (Canlı Dağıtım ve Anahtar Rotasyonu Tamamlanana Kadar Satış Başlatılamaz)  
 **Tarih:** 11 Ekim 2026  
 **Hedef Kitle:** İlk 3–5 Pilot İşletme  
 
@@ -10,34 +10,27 @@
 
 | Alan | Madde | Durum | Doğrulama Yöntemi | Pilot Satışına Etkisi |
 |---|---|---|---|---|
-| **Güvenlik** | SEC-01: Health Endpoint Veri Sızıntısı | **VERIFIED_INTEGRATION** | Gateway Test #107 (Prompt/Job gizlendi) | Bloke Edici Değil |
-| **Güvenlik** | SEC-02: Anonim JSON & Event Erişimi | **VERIFIED_INTEGRATION** | Gateway Route Auth Middleware | Bloke Edici Değil |
-| **Güvenlik** | SEC-03: Sızmış Servis ve Veritabanı Anahtarları | **OPEN (P0)** | Operatör Runbook Hazırlandı | **TEK KALAN KRİTİK BLOKER** |
-| **Güvenlik** | SEC-04: Distributed Lease & Fail-Closed | **VERIFIED_INTEGRATION** | Session Coordinator Testleri (111-119) | Bloke Edici Değil |
-| **Güvenlik** | SEC-05: Medya Gizliliği & Tenant İzolasyonu | **VERIFIED_INTEGRATION** | Media Tenant Security Testleri (8/8 PASS) | Bloke Edici Değil |
-| **Ödeme** | Stripe Webhook Atomik Transaction | **VERIFIED_INTEGRATION** | Real Postgres Testleri (6/6 PASS) | Bloke Edici Değil |
-| **Ödeme** | Çift Event & Sırasız Event Koruması | **VERIFIED_INTEGRATION** | Real Postgres Testleri (6/6 PASS) | Bloke Edici Değil |
-| **Ödeme** | Başarısız Ödeme Askıya Alma (Suspension) | **VERIFIED_INTEGRATION** | Real Postgres Testleri (6/6 PASS) | Bloke Edici Değil |
-| **Onboarding** | Yeni Müşteri Kaydı & Kota Tanımlama | **INTEGRATION_PASS** | Real Postgres E2E Testleri (4/4 PASS) | Bloke Edici Değil |
-| **Onboarding** | WhatsApp Hat Gate (Bağlantısız Gönderim Engeli) | **INTEGRATION_PASS** | Real Postgres E2E Testleri (4/4 PASS) | Bloke Edici Değil |
-| **Onboarding** | Çapraz Tenant Veri İzolasyonu | **INTEGRATION_PASS** | Real Postgres E2E Testleri (4/4 PASS) | Bloke Edici Değil |
-| **Altyapı** | WhatsApp Readiness Single-Flight | **VERIFIED_INTEGRATION** | `@wa/service` Testleri (63/63 PASS) | Bloke Edici Değil |
-| **Altyapı** | WhatsApp Soket Kopma & Backoff | **VERIFIED_INTEGRATION** | `@wa/service` Testleri (63/63 PASS) | Bloke Edici Değil |
+| **Güvenlik** | SEC-01: Health Endpoint Veri Sızıntısı | **VERIFIED_LOCAL** | Gateway Testleri (Prompt/Job gizlendi) | Yerel Çözüldü |
+| **Güvenlik** | SEC-02: Anonim JSON & Event Erişimi | **VERIFIED_LOCAL** | Gateway Route Auth Middleware | Yerel Çözüldü |
+| **Güvenlik** | SEC-03: Sızmış Servis ve Veritabanı Anahtarları | **AÇIK (OPEN P0)** | Operatör Runbook Hazırlandı | **CANLI SATIŞ BLOKERİ** |
+| **Güvenlik** | SEC-04: Distributed Lease & Fail-Closed | **VERIFIED_LOCAL** | Session Coordinator Testleri | Yerel Çözüldü |
+| **Güvenlik** | SEC-05: Medya Gizliliği & X-Tenant-Id Bypass | **VERIFIED_LOCAL** | Header Spoofing Reddi & Signed URL (11/11 PASS) | Yerel Çözüldü |
+| **Canlı Dağıtım** | Gateway Güvenlik Patch'leri Canlı VPS | **BEKLEMEDE (PENDING P0)** | Canlı deploy yapılmadı | **CANLI SATIŞ BLOKERİ** |
+| **Canlı Dağıtım** | Supabase Atomic Stripe Migrasyonu | **BEKLEMEDE (PENDING P0)** | Canlı DB'ye uygulanmadı | **CANLI SATIŞ BLOKERİ** |
+| **Ödeme** | Stripe past_due / unpaid Askı Kilidi | **VERIFIED_LOCAL** | Real Postgres Testleri (10/10 PASS) | Yerel Çözüldü |
+| **Ödeme** | Çift Event & Sırasız Event Koruması | **VERIFIED_LOCAL** | Real Postgres Testleri (10/10 PASS) | Yerel Çözüldü |
+| **Ödeme** | Abonelik Kimliği Uyuşmazlığı Koruması | **VERIFIED_LOCAL** | Real Postgres Testleri (10/10 PASS) | Yerel Çözüldü |
+| **Onboarding** | PostgreSQL Row Level Security (RLS) | **INTEGRATION_PASS** | Real Postgres RLS Testleri (4/4 PASS) | Yerel Çözüldü |
+| **Onboarding** | WhatsApp Hat Gate (Bağlantısız Gönderim Engeli) | **INTEGRATION_PASS** | Real Postgres Gate Testleri (4/4 PASS) | Yerel Çözüldü |
+| **Onboarding** | Çapraz Tenant Veri İzolasyonu | **INTEGRATION_PASS** | Real Postgres RLS Testleri (4/4 PASS) | Yerel Çözüldü |
+| **Altyapı** | WhatsApp Readiness Single-Flight | **VERIFIED_LOCAL** | `@wa/service` Testleri (63/63 PASS) | Yerel Çözüldü |
 
 ---
 
-## 2. 3–5 Müşteri İçin Kapasite Değerlendirmesi
+## 2. Satış Başlatılması İçin Zorunlu 3 Canlı Önkoşul
 
-- **İşlem Yükü:** 3–5 aktif işletmenin toplam tahmini aylık mesaj hacmi ~3.000–5.000 mesajdır. Bu, saniyede ortalama 0.05 mesaja tekabül eder.
-- **Sunucu Kaynakları:** Mevcut tek bir worker konteyneri (2 vCPU, 2GB RAM) 5 adet eşzamanlı Baileys WebSocket oturumunu ~400–600 MB bellek tüketimiyle rahatça yönetebilir.
-- **Veritabanı Bağlantıları:** Supabase havuzlayıcı (PgBouncer) 5 müşteri yükü altında connection starvation oluşturmaz.
-- **Kritik Sınır:** 3–5 müşteri için ek sharding veya altyapı yatırımı gerekmez. Ancak 10+ müşteriye geçişte oturum sharding'i planlanmalıdır.
+1. **SEC-03 Anahtar Rotasyonu:** Supabase JWT Secret, DB Şifresi ve Gateway Token operatör tarafından güncellenmelidir.
+2. **Canlı Gateway Deploy:** `public_output_access.js` ve `server.js` yamaları canlı sunucuya aktarılmalıdır.
+3. **Veritabanı Migrasyonu:** `supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql` canlı Supabase'e çalıştırılmalıdır.
 
----
-
-## 3. Kabul Şartı ve Eylem Planı
-
-İlk 3–5 müşteriye satışın başlatılması için **yalnızca 1 adet operasyonel şart** bulunmaktadır:
-> **ŞART:** Operatör, `docs/sales-readiness/SEC03_CREDENTIAL_ROTATION_RUNBOOK.md` dökümanında belirtilen adımları uygulayarak Supabase `service_role` anahtarını, veritabanı şifresini ve Gateway token'ını Vercel/Supabase panellerinden sıfırlamalıdır.
-
-Bu işlem tamamlandığı anda durum **FULL GO** statüsüne geçer ve pilot satışlar güvenle başlatılabilir.
+Bu 3 adım tamamlanana kadar sisteme hiçbir gerçek ödemeli müşteri kabul edilmemelidir.

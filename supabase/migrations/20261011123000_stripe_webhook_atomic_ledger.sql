@@ -103,26 +103,67 @@ begin
     );
   end if;
 
+  -- Step 3.5: Subscription ID mismatch guard
+  -- If event is a cancellation or failure for an older/different subscription ID, do not overwrite active subscription
+  if v_org.stripe_subscription_id is not null and p_stripe_subscription_id is not null and v_org.stripe_subscription_id != p_stripe_subscription_id then
+    if p_event_type = 'customer.subscription.deleted' or p_status in ('canceled', 'past_due', 'unpaid') then
+      insert into public.stripe_webhook_events (
+        event_id, org_id, event_type, stripe_created_at, processed_at, subscription_id, status, plan
+      ) values (
+        p_event_id, p_org_id, p_event_type, p_event_created_at, now(), p_stripe_subscription_id, 'skipped_mismatched_subscription', p_plan
+      );
+
+      return jsonb_build_object(
+        'success', true,
+        'status', 'skipped_mismatched_subscription',
+        'event_id', p_event_id,
+        'org_id', p_org_id,
+        'current_subscription_id', v_org.stripe_subscription_id,
+        'event_subscription_id', p_stripe_subscription_id
+      );
+    end if;
+  end if;
+
   -- Step 4: Calculate new state based on plan, status, and upgrade/downgrade flags
-  if p_is_downgrade then
+  -- Priority 1: Payment Delinquency (past_due or unpaid) MUST SUSPEND the tenant immediately
+  if p_status in ('past_due', 'unpaid') then
+    v_new_plan := v_org.plan;
+    v_new_sub_id := coalesce(p_stripe_subscription_id, v_org.stripe_subscription_id);
+    v_new_suspended_at := coalesce(v_org.suspended_at, now());
+    v_new_suspend_reason := case when p_status = 'unpaid' then 'stripe_unpaid' else 'stripe_past_due' end;
+
+  -- Priority 2: Subscription Cancellation / Deletion (downgrade to Free)
+  elsif p_is_downgrade or p_event_type = 'customer.subscription.deleted' or p_status in ('canceled', 'incomplete_expired') then
     v_new_plan := 'free';
     v_new_sub_id := null;
-    v_new_suspended_at := null;
-    v_new_suspend_reason := null;
-  else
-    v_new_plan := p_plan;
-    v_new_sub_id := coalesce(p_stripe_subscription_id, v_org.stripe_subscription_id);
-
-    if p_status in ('past_due', 'unpaid') then
-      v_new_suspended_at := coalesce(v_org.suspended_at, now());
-      v_new_suspend_reason := 'stripe_past_due';
-    elsif p_status in ('active', 'trialing') or p_is_upgrade then
+    -- Clear previous payment suspension as tenant transitions to the free tier
+    if v_org.suspend_reason in ('stripe_past_due', 'stripe_unpaid') then
       v_new_suspended_at := null;
       v_new_suspend_reason := null;
     else
       v_new_suspended_at := v_org.suspended_at;
       v_new_suspend_reason := v_org.suspend_reason;
     end if;
+
+  -- Priority 3: Active or Trialing Subscription / Upgrade / Checkout Completed
+  elsif p_status in ('active', 'trialing') or p_is_upgrade or p_event_type = 'checkout.session.completed' then
+    v_new_plan := p_plan;
+    v_new_sub_id := coalesce(p_stripe_subscription_id, v_org.stripe_subscription_id);
+    -- Reinstate tenant if suspended due to payment delinquency
+    if v_org.suspend_reason in ('stripe_past_due', 'stripe_unpaid') or v_org.suspend_reason is null then
+      v_new_suspended_at := null;
+      v_new_suspend_reason := null;
+    else
+      v_new_suspended_at := v_org.suspended_at;
+      v_new_suspend_reason := v_org.suspend_reason;
+    end if;
+
+  -- Priority 4: Retain current state
+  else
+    v_new_plan := v_org.plan;
+    v_new_sub_id := v_org.stripe_subscription_id;
+    v_new_suspended_at := v_org.suspended_at;
+    v_new_suspend_reason := v_org.suspend_reason;
   end if;
 
   -- Step 5: Atomically update organization
