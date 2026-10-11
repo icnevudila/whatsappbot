@@ -1,0 +1,11 @@
+{
+  "startedAt": "2026-10-11T11:17:27.822Z",
+  "baseUrl": "http://localhost:3025",
+  "results": {
+    "A01_auth_login": "PASS",
+    "A02_org_switch_ayvazoglu": "PASS",
+    "A03_studio_step1_rendered": "PASS",
+    "A04_library_ayvaz_loaded": "PASS"
+  },
+  "error": "page.waitForSelector: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('video') to be visible\u001b[22m\n"
+}
