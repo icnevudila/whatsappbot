@@ -24,7 +24,7 @@ const { VideoJobPersistence, videoRequestHash } = require('./video_job_persisten
 const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
 const { publicHealthStats } = require('./public_health.js');
-const { isPublicMediaFilename } = require('./public_output_access.js');
+const { isMediaFilename, isPublicMediaFilename, registerMediaOwner, getMediaOwner, verifyMediaAccess } = require('./public_output_access.js');
 const { loadAllCompanyChats, getExpectedChatTitle } = require('./chat_manager.js');
 
 if (!process.env.CHATGPT_API_KEY) {
@@ -228,7 +228,10 @@ function sanitizeConversationHistory(history, maxChars = 3000) {
 
 const PORT = parseInt(process.env.PORT || '3456', 10);
 const PUBLIC_HOST = process.env.PUBLIC_HOST || '167.233.201.31';
-const OUTPUT_DIR = path.resolve(__dirname, 'outputs');
+function getOutputDir() {
+  return process.env.OUTPUT_DIR ? path.resolve(process.env.OUTPUT_DIR) : path.resolve(__dirname, 'outputs');
+}
+const OUTPUT_DIR = getOutputDir();
 const MONITOR_HTML_PATH = path.resolve(__dirname, 'monitor.html');
 
 if (!fs.existsSync(OUTPUT_DIR)) {
@@ -3187,6 +3190,9 @@ const server = http.createServer(async (req, res) => {
 
       if (jobId) {
         const completed = queue.completeJob(jobId, filename, buffer, timings, referenceReceipt);
+        if (completed?.tenantId) {
+          registerMediaOwner(filename, completed.tenantId);
+        }
         return sendJson(res, 200, { ok: true, filename, url: completed?.resultUrl });
       }
 
@@ -3206,20 +3212,63 @@ const server = http.createServer(async (req, res) => {
 
     // 7. Statik Dosya / Video / Görsel Sunumu: GET/HEAD /outputs/:filename veya /public/:filename
     if ((method === 'GET' || method === 'HEAD') && (pathname.startsWith('/outputs/') || pathname.startsWith('/public/'))) {
-      const prefix = pathname.startsWith('/outputs/') ? '/outputs/' : '/public/';
+      const isPublicDir = pathname.startsWith('/public/');
+      const prefix = isPublicDir ? '/public/' : '/outputs/';
       const filename = path.basename(pathname.replace(prefix, ''));
-      if (!isPublicMediaFilename(filename) && !isInternalWorkerRequest(req)) {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
+
+      if (!isMediaFilename(filename) && !isInternalWorkerRequest(req)) {
+        res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         return res.end(JSON.stringify({ error: 'File not found' }));
       }
-      let filePath = path.join(OUTPUT_DIR, filename);
+
+      let filePath = path.join(getOutputDir(), filename);
+      let isFileInPublicDir = false;
       if (!fs.existsSync(filePath)) {
         filePath = path.join(__dirname, 'public', filename);
+        if (fs.existsSync(filePath)) isFileInPublicDir = true;
       }
 
       if (!fs.existsSync(filePath)) {
         res.writeHead(404, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
         return res.end(JSON.stringify({ error: 'File not found' }));
+      }
+
+      // Private tenant media in OUTPUT_DIR must be strictly authorized
+      if (!isFileInPublicDir || !isPublicDir) {
+        let ownerTenant = getMediaOwner(filename);
+        if (!ownerTenant) {
+          for (const job of queue.jobs.values()) {
+            if (job.filename === filename || (job.resultUrl && path.basename(job.resultUrl) === filename)) {
+              ownerTenant = job.tenantId;
+              if (ownerTenant) registerMediaOwner(filename, ownerTenant);
+              break;
+            }
+          }
+        }
+        if (!ownerTenant) {
+          for (const vjob of videoQueue.jobs.values()) {
+            if (vjob.rawFileName === filename || vjob.outputPath === filename) {
+              ownerTenant = vjob.tenantId;
+              if (ownerTenant) registerMediaOwner(filename, ownerTenant);
+              break;
+            }
+          }
+        }
+
+        const authCheck = verifyMediaAccess({
+          req,
+          filename,
+          ownerTenant,
+          isInternalWorker: isInternalWorkerRequest(req),
+        });
+
+        if (!authCheck.allowed) {
+          res.writeHead(authCheck.statusCode || 401, {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          });
+          return res.end(JSON.stringify({ error: authCheck.error || 'UNAUTHORIZED_MEDIA_ACCESS' }));
+        }
       }
 
       const stat = fs.statSync(filePath);

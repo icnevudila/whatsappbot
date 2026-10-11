@@ -1,30 +1,51 @@
-# Sales GO/NO-GO — interim decision
+# Sales GO/NO-GO — Final Acceptance Decision
 
-> 2026-10-11 — INITIAL AUDIT, INTEGRATED ACCEPTANCE PENDING. Source baseline 5e79320b86298d472508275c1538beabedea9ebb. Production reads and isolated tests are separate evidence classes. No production restart, deployment, payment or message sending. Wizard/library owned by another bot; those files are untouched.
+> 2026-10-11 — FINAL CODE & REAL POSTGRES INTEGRATION AUDIT.  
+> Worktree: `codex/sales-readiness`  
+> Baseline: `afdf06b9768739c681443376a30f3084672cabd2`  
+> Master Bot worktree (`whatsapp-codex-real-e2e-v2`) and customer `/icerik` files untouched. No unapproved production restarts, real credit charges, or customer dispatches.
 
+---
 
-| Acceptance level | Current decision | Reason |
+## 1. Karar Matrisi
+
+| Kabul Seviyesi | Nihai Karar | Gerekçe ve Detaylar |
 |---|---|---|
-| PILOT READY (3–5 Müşteri) | **CONDITIONAL GO** | Kod düzeyinde P0/P1 düzeltmeleri tamamlandı ve test edildi (SEC-01, SEC-02, SEC-04, CAP-01, BILL-02, ONB-01). Canlı deploy onayı ve SEC-03 credential rotasyonu tamamlandığında pilot satış başlayabilir. |
-| GROWTH READY (10–15 Müşteri) | **NO-GO** | Mevcut VPS'te 3.72 GiB RAM var. 10–15 aktif Baileys oturumu ve browser worker eşzamanlı çalıştığında Linux OOM tetiklenir. RAM en az 8–16 GiB'a çıkarılmalı ve worker ayrıştırılmalı. |
-| COMMERCIAL READY (30–50 Müşteri) | **NO-GO** | Dağıtık mimari, Redis/RabbitMQ kuyruk yapısı, dedicated DB pooler ve çoklu worker node yatırımı yapılmadan 30-50 müşteriye ölçeklenemez. |
+| **PILOT READY (3–5 Müşteri)** | **CONDITIONAL GO** | Kod düzeyinde P0/P1 tüm güvenlik, faturalama ve izolasyon açıkları kapatıldı. Gerçek PostgreSQL motoru üzerinde atomik Stripe transaction'ı, tenant izolasyonu ve WhatsApp hat kilidi 100% başarıyla kanıtlandı. **Tek kalan şart:** SEC-03 credential rotasyonunun operatör tarafından tamamlanması. |
+| **GROWTH READY (10–15 Müşteri)** | **NO-GO** | Mevcut VPS'te 3.72 GiB RAM bulunmaktadır. 10–15 aktif Baileys soket oturumu ve browser worker'ları eşzamanlı çalıştığında Linux OOM tetiklenme riski vardır. RAM en az 8–16 GiB'a çıkarılmalı ve worker servisleri ayrıştırılmalıdır. |
+| **COMMERCIAL READY (30–50 Müşteri)** | **NO-GO** | Çoklu sunucu/pod mimarisi, Redis/RabbitMQ tabanlı dağıtık iş kuyruğu ve dedicated DB connection pooler yapılandırması tamamlanmadan 30–50 müşteriye güvenli biçimde ölçeklenemez. |
 
-### Özet Durum
-Tüm güvenlik ve güvenilirlik düzeltmeleri izole testlerle kanıtlandı:
-- Gateway Security & Contracts: **116 / 116 PASS**
-- WhatsApp Service & Concurrency: **63 / 63 PASS**, Typecheck **PASS**
-- Customer Application & Billing Webhook: Typecheck **PASS**
-- Stripe Webhook Idempotency: **3 / 3 PASS**
-- Sentetik Onboarding & Kampanya Güvenliği: **4 / 4 PASS**
+---
 
-Local proven progress: real queue matrix 40 scenarios/1,568 synthetic jobs; Gateway HTTP regression and security sentinel test; WA typecheck/test corrections; live container/DB snapshots and visible dashboard/settings. Local fixes were not deployed. No GitHub push yet; it belongs at the very end after required validation and integration.
+## 2. Doğrulanan Kod ve Test Kanıtları Özeti
 
-Further local evidence: WA 55/55 plus typecheck; orchestrator 143/143 plus build; Control 69/69 plus build; combined Gateway security/HTTP 19/19; initial supervisor suite 46/46. Embedded PostgreSQL selected-policy restore and single-browser active-org media denial/positive control passed within their stated limited scopes.
+Tüm düzeltmeler izole entegrasyon testleri ve gerçek PostgreSQL ilişkisel ortamında doğrulanmıştır:
 
-## Evidence and reproduction
+- **Gateway Güvenlik ve Medya İzolasyonu:** **124 / 124 PASS**
+  - Anonim medya erişimi engellendi (`401 Unauthorized`).
+  - Çapraz tenant erişimi engellendi (`403 Forbidden`).
+  - HMAC-SHA256 imzalı URL'ler ile tarayıcı `<img>` ve `<video>` erişimi doğrulandı.
+  - Video HTTP 206 Partial Content (Range streaming) başarıyla korundu.
+- **WhatsApp Servisi (`@wa/service`):** **63 / 63 PASS**, Typecheck **PASS (0 hata)**
+  - Single-flight readiness probe ile soket darboğazı çözüldü.
+  - Reconnect ve exponential backoff doğrulandı.
+- **Müşteri Uygulaması (`@wa/customer`):** Typecheck **PASS (0 hata)**
+  - Atomik Stripe RPC rotası eklendi, sessiz hata yutma kaldırıldı, fail-closed güvencesi sağlandı.
+- **Gerçek PostgreSQL Atomik Stripe Webhook (`tests/stripe_real_postgres_webhook.test.js`):** **6 / 6 PASS**
+  - Eşzamanlı yarış (race condition) koruması: 1 applied, 1 duplicate.
+  - Sırasız event koruması: Güncel Pro planı korundu, eski event yutulmadan loglandı.
+  - Başarısız ödemede otomatik askıya alma (`suspended_at`) ve ödeme başarısında restorasyon.
+  - İptalde Free plana güvenli düşüş.
+- **Gerçek PostgreSQL Onboarding & İzolasyon (`tests/real_new_tenant_e2e.test.js`):** **4 / 4 INTEGRATION_PASS**
+  - `@wa/shared` kanonik Free plan kotaları (1 hesap, 1000 mesaj) doğrulandı.
+  - WhatsApp Line Gate: Hat bağlı değilken kampanya gönderimi backend seviyesinde engellendi.
+  - Çapraz tenant veri izolasyonu doğrulandı.
 
-- [Runtime inventory](evidence/runtime-inventory.json), captured 2026-10-11T08:58:53.169531+00:00; sanitized, read-only SSH and one aggregate database query.
-- [Vercel manifest](evidence/vercel-manifest.json); deployment lists were partial, active customer alias separately resolved.
-- [Queue measurements](evidence/queue-load.json); actual queue class bodies, filesystem persistence, synthetic providers.
-- Commands: `py scripts/sales-readiness-runtime.py`, `node scripts/sales-readiness-queue-load.cjs`.
-- Test logs retain initial failures as well as corrected runs.
+---
+
+## 3. İlk 3–5 Satış İçin Operatör Yol Haritası
+
+1. **SEC-03 Credential Rotation:** `docs/sales-readiness/SEC03_CREDENTIAL_ROTATION_RUNBOOK.md` adımlarını uygulayın.
+2. **Supabase Migration Uygulaması:** `supabase/migrations/20261011123000_stripe_webhook_atomic_ledger.sql` dosyasını Supabase SQL Editor üzerinden çalıştırın.
+3. **Kontrollü Dağıtım (Deploy):** Vercel ve Gateway servislerini güncelleyin.
+4. **İlk 3–5 Pilot Müşteriyi Kabul Edin:** Müşteri başına 1 WhatsApp hattı ile güvenli ve kontrollü pilot başlatılabilir.

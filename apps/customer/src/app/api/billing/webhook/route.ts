@@ -22,6 +22,7 @@ type StripeObject = {
 type StripeEvent = {
   id?: string
   type?: string
+  created?: number
   data?: { object?: StripeObject }
 }
 
@@ -128,75 +129,39 @@ export async function POST(request: Request) {
   const planKey: PlanId = downgrade ? 'free' : resolvePlan(obj)
   const quotas = PLAN_QUOTAS[planKey]
 
-  // 1. Idempotency Check: if event id is provided, ensure we avoid redundant application
-  if (event.id) {
-    try {
-      const { data: existingEvent } = await admin
-        .from('stripe_webhook_events')
-        .select('event_id')
-        .eq('event_id', event.id)
-        .maybeSingle()
-      if (existingEvent?.event_id) {
-        return NextResponse.json({ received: true, idempotent: true, skipped: 'already_processed' })
-      }
-    } catch {
-      // ledger query fallback if table is not yet migrated
-    }
+  const eventId = event.id
+  if (!eventId) {
+    return NextResponse.json({ error: 'event id missing' }, { status: 400 })
   }
 
-  const { error } = await admin.rpc('apply_stripe_subscription', {
+  const eventCreatedAt = event.created
+    ? new Date(event.created * 1000).toISOString()
+    : new Date().toISOString()
+
+  const status = obj?.status ?? ''
+
+  const { data: result, error } = await admin.rpc('apply_stripe_subscription_atomic', {
+    p_event_id: eventId,
+    p_event_created_at: eventCreatedAt,
+    p_event_type: type,
     p_org_id: orgId,
     p_plan: planKey,
     p_accounts_quota: quotas.accounts,
     p_monthly_message_quota: quotas.messages,
     p_stripe_customer_id: customerId(obj),
     p_stripe_subscription_id: downgrade ? null : subscriptionId(obj),
+    p_status: status,
+    p_is_upgrade: upgrade,
+    p_is_downgrade: downgrade,
   })
 
   if (error) {
-    console.error('[stripe-webhook] apply failed', error.message)
+    console.error('[stripe-webhook] atomic apply failed', error.message)
+    // Fail-closed with 500: Ensures Stripe re-delivers if migration is pending or DB is unavailable
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  if (event.id) {
-    try {
-      await admin
-        .from('stripe_webhook_events')
-        .insert({ event_id: event.id, org_id: orgId, event_type: type })
-    } catch {
-      // ignore recording failures
-    }
-  }
-
-  // Ödeme gecikmesi / unpaid → askı (gönderim + claim kesilir).
-  // İptal / silme → free kota, askıyı kaldır (bilinçli iptal).
-  // Active/trialing → askıyı temizle.
-  const status = obj?.status ?? ''
-  if (upgrade) {
-    await admin
-      .from('organizations')
-      .update({ suspended_at: null, suspend_reason: null })
-      .eq('id', orgId)
-  } else if (status === 'past_due' || status === 'unpaid') {
-    await admin
-      .from('organizations')
-      .update({
-        suspended_at: new Date().toISOString(),
-        suspend_reason: 'stripe_past_due',
-      })
-      .eq('id', orgId)
-  } else if (
-    type === 'customer.subscription.deleted' ||
-    status === 'canceled' ||
-    status === 'incomplete_expired'
-  ) {
-    await admin
-      .from('organizations')
-      .update({ suspended_at: null, suspend_reason: null })
-      .eq('id', orgId)
-  }
-
-  return NextResponse.json({ received: true, plan: planKey, orgId, status })
+  return NextResponse.json({ received: true, ...result })
 }
 
 function verifyStripeSignature(
