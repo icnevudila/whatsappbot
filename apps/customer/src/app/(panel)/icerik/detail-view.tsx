@@ -536,8 +536,16 @@ export function CreativeDetail({
   const spawn = (draft: Record<string, unknown>) => {
     const form = new FormData()
     form.set('draft', JSON.stringify(draft))
-    startTransition(() => {
-      void startCreativeGeneration(null, form)
+    startTransition(async () => {
+      const res = await startCreativeGeneration(null, form)
+      if (res?.error) {
+        toast(res.error, 'danger')
+        return
+      }
+      if (res?.id) {
+        setReviseOpen(false)
+        router.push(`/icerik/${res.id}`)
+      }
     })
   }
 
