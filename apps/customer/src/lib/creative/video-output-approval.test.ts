@@ -40,5 +40,8 @@ test('confirmed serious failures override even an existing approval',()=>{
   const editorial = {combined_review:{passed:false,decision:'NEEDS_REVIEW',isSevere:false,audio_report:{passed:false,failureCode:'VOICEOVER_TIMING_FAIL'}}}
   assert.equal(hasBlockingVideoProblem(editorial),false)
   assert.equal(isApprovedFinalVideoOutput({...final,visual_qa_report:editorial}),true)
+  const asrUnavailable = {combined_review:{passed:false,decision:'NEEDS_REVIEW',isSevere:false,audio_report:{passed:false,failureCode:'AUDIO_VERIFICATION_UNAVAILABLE'}}}
+  assert.equal(hasBlockingVideoProblem(asrUnavailable),false)
+  assert.equal(isApprovedFinalVideoOutput({...final,visual_qa_report:asrUnavailable}),true)
   assert.equal(isApprovedFinalVideoOutput({...final,visual_qa_report:{combined_review:{...editorial.combined_review,isSevere:true}}}),false)
 })
