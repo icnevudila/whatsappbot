@@ -1,0 +1,86 @@
+[
+  {
+    "viewport": "mobile_360",
+    "step": 1,
+    "totalScrollHeight": 640,
+    "wizardHeight": 640,
+    "screenshot": "mobile_360_step1.png"
+  },
+  {
+    "viewport": "mobile_360",
+    "step": 2,
+    "totalScrollHeight": 640,
+    "wizardHeight": 640,
+    "screenshot": "mobile_360_step2.png"
+  },
+  {
+    "viewport": "mobile_390",
+    "step": 1,
+    "totalScrollHeight": 844,
+    "wizardHeight": 844,
+    "screenshot": "mobile_390_step1.png"
+  },
+  {
+    "viewport": "mobile_390",
+    "step": 2,
+    "totalScrollHeight": 844,
+    "wizardHeight": 844,
+    "screenshot": "mobile_390_step2.png"
+  },
+  {
+    "viewport": "mobile_412",
+    "step": 1,
+    "totalScrollHeight": 915,
+    "wizardHeight": 915,
+    "screenshot": "mobile_412_step1.png"
+  },
+  {
+    "viewport": "mobile_412",
+    "step": 2,
+    "totalScrollHeight": 915,
+    "wizardHeight": 915,
+    "screenshot": "mobile_412_step2.png"
+  },
+  {
+    "viewport": "tablet_768",
+    "step": 1,
+    "totalScrollHeight": 1024,
+    "wizardHeight": 1024,
+    "screenshot": "tablet_768_step1.png"
+  },
+  {
+    "viewport": "tablet_768",
+    "step": 2,
+    "totalScrollHeight": 1024,
+    "wizardHeight": 1024,
+    "screenshot": "tablet_768_step2.png"
+  },
+  {
+    "viewport": "desktop_1024",
+    "step": 1,
+    "totalScrollHeight": 768,
+    "wizardHeight": 768,
+    "screenshot": "desktop_1024_step1.png"
+  },
+  {
+    "viewport": "desktop_1024",
+    "step": 2,
+    "totalScrollHeight": 768,
+    "wizardHeight": 768,
+    "screenshot": "desktop_1024_step2.png"
+  },
+  {
+    "viewport": "desktop_1440",
+    "step": 1,
+    "totalScrollHeight": 900,
+    "wizardHeight": 900,
+    "screenshot": "desktop_1440_step1.png"
+  },
+  {
+    "viewport": "desktop_1440",
+    "step": 2,
+    "totalScrollHeight": 900,
+    "wizardHeight": 900,
+    "screenshot": "desktop_1440_step2.png"
+  }
+]

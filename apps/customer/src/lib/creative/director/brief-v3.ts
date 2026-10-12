@@ -46,6 +46,7 @@ export function compileCreativeBriefV3(snapshot: CreativeSnapshot) {
         premium: 'Refined and premium: restrained hierarchy and elegant light without changing physical materials.',
         dynamic_offer: 'Bold and striking: high contrast with clear emphasis on the supplied commercial offer.' } as Record<string,string>)[snapshot.style] || snapshot.style,
       density: snapshot.textDensity,
+      sceneInstruction: snapshot.instruction || null,
       hierarchy: brandOnly ? 'Canonical logo and verified brand identity, supplied headline and CTA; no product or price claims.' : 'Canonical product and logo, headline, supplied price OR offer, supplied CTA; secondary details only if verified.',
       originality: 'Resolve placement from this product geometry; no mandatory left-title/right-product, price pill, CTA button, or three-badge scaffold.' },
     renderConstraints: { aspect: snapshot.aspect,
