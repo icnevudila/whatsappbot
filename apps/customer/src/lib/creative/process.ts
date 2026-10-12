@@ -17,6 +17,7 @@ import { buildImagePromptV2 } from './v2/image-prompt-v2'
 import { mapLegacyStyleToPreset } from './v2/adapter'
 import { imagePublicationStatus } from './image-review'
 import type { ImageFormatV2 } from './v2/types'
+import { resolveArtDirectionPlanAtSubmission } from './director/creative-director'
 
 const MAX_REFS = 4
 
@@ -700,13 +701,13 @@ export async function processCreativeGeneration(
       throw new Error('PRODUCT_REFERENCE_IS_LOGO: Ürün referansı ve işletme logosu aynı dosya. Gerçek ürün veya arayüz görseli ekleyin.')
     }
 
-    // 4. Ek referans görseller:
+    // 4. Ek referans görseller (Kullanıcının yüklediği örnek/ilham tasarımları):
     for (const refUrl of expectedRefUrls) {
       const refAsset = await resolveAssetSource(refUrl, { tenantId: creative.org_id, supabase })
       if (!refAsset) {
         throw new Error(`REFERENCE_RESOLUTION_FAILED: Ek referans görsel indirilemedi (${refUrl}); üretim başlatılmadı.`)
       }
-      refs.push({ data: refAsset.data, mimeType: refAsset.mimeType, role: 'base' })
+      refs.push({ data: refAsset.data, mimeType: refAsset.mimeType, role: 'inspiration' })
     }
 
     if (refs.length > MAX_REFS) {
@@ -726,6 +727,7 @@ export async function processCreativeGeneration(
       logo: refs.some((r) => r.role === 'logo'),
       product: refs.some((r) => r.role === 'product'),
       base: refs.some((r) => r.role === 'base'),
+      inspiration: refs.some((r) => r.role === 'inspiration'),
     }
 
     const targetFormatV2: ImageFormatV2 =
@@ -753,6 +755,24 @@ export async function processCreativeGeneration(
     // Use buildImagePromptV2 only if deterministic locked copy overlay is requested.
     const useLockedCopy = Boolean((payload as any).lockCopyOverlay)
 
+    const effectiveArtDirectionPlan = (payload as any).artDirectionPlan || resolveArtDirectionPlanAtSubmission({
+      input: {
+        orgId: creative.org_id,
+        brandName: customerName,
+        brandTone: snapshot.brandKit?.tone || null,
+        productName: snapshot.products?.[0]?.name || 'Ürün',
+        productDescription: snapshot.products?.[0]?.description || null,
+        objective: (snapshot as any).objective || 'PRODUCT_INTRO',
+        stylePreset: (payload as any).stylePreset || (snapshot as any).stylePreset || snapshot.style || 'AUTO',
+        format: snapshot.formatId,
+        headline: (snapshot as any).customHeadline || snapshot.brief,
+        offer: snapshot.products?.[0]?.promo || null,
+        cta: snapshot.cta || null,
+        campaignDetail: snapshot.instruction || null,
+      },
+      precomputedPlan: (payload as any).artDirectionPlan || null,
+    }).plan
+
     const prompt = creative.template === 'ai_send' && payload.quickSendPrompt
       ? payload.quickSendPrompt
       : useLockedCopy
@@ -768,7 +788,7 @@ export async function processCreativeGeneration(
           }).prompt
         : buildCreativePrompt(snapshot, {
             verifiedRefs,
-            artDirectionPlan: (payload as any).qualityMode === 'DESIGNER' ? (payload as any).artDirectionPlan : null,
+            artDirectionPlan: effectiveArtDirectionPlan,
             mode: payload.creativeDirectorVersion === 'V3' && (payload as any).qualityMode === 'DESIGNER' ? 'V3' : undefined,
           }).prompt
     const aspect = snapshot.aspect || formatToAspect(creative.format)

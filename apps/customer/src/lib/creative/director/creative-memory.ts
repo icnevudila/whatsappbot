@@ -90,3 +90,66 @@ export function selectFreshArchetype(
 
   return selected
 }
+
+/**
+ * Calculates repetition penalty for an environmental scene setting against recent memory.
+ */
+export function calculateEnvironmentPenalty(
+  orgId: string,
+  candidateEnvironmentName: string,
+): number {
+  const memories = getRecentMemories(orgId)
+  if (memories.length === 0) return 0
+
+  // 1. Exact match on most recent generation
+  if (memories[0]?.environment === candidateEnvironmentName) {
+    return 90
+  }
+
+  // 2. Used in last 3 generations
+  const recentIndex = memories.slice(0, 3).findIndex((m) => m.environment === candidateEnvironmentName)
+  if (recentIndex !== -1) {
+    return 55 - recentIndex * 20
+  }
+
+  return 0
+}
+
+/**
+ * Selects the freshest authentic environment profile that fits the archetype
+ * and avoids recent visual repetition.
+ */
+export function selectFreshEnvironment(
+  orgId: string,
+  profiles: import('./sector-dna').SectorEnvironmentProfile[],
+  preferredArchetype?: string,
+): import('./sector-dna').SectorEnvironmentProfile | null {
+  if (!profiles || profiles.length === 0) return null
+  if (profiles.length === 1) return profiles[0]
+
+  let bestScore = -9999
+  let selected = profiles[0]
+
+  for (const profile of profiles) {
+    let score = 100 // baseline
+    const penalty = calculateEnvironmentPenalty(orgId, profile.name)
+    score -= penalty
+
+    // Compatibility affinity with the chosen archetype
+    if (preferredArchetype && profile.suitableArchetypes?.length) {
+      if (profile.suitableArchetypes.includes(preferredArchetype)) {
+        score += 30
+      } else {
+        score -= 20
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score
+      selected = profile
+    }
+  }
+
+  return selected
+}
+

@@ -27,7 +27,7 @@ export type GeneratedImage = {
 export type ReferenceImage = {
   data: Buffer
   mimeType: string
-  role?: 'product' | 'logo' | 'base'
+  role?: 'product' | 'logo' | 'base' | 'inspiration'
 }
 
 export class DirectImageReconciliationError extends Error {
