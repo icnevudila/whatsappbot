@@ -17,6 +17,7 @@ export function generateDeterministicLocalCopy({
   supportingLine: string
   cta: string
   voiceover: string
+  scenePrompt: string
 } {
   const bName = brandName.trim() || 'İşletmemiz'
   const rawProduct = productName.trim() || 'Ürünümüz'
@@ -46,10 +47,20 @@ export function generateDeterministicLocalCopy({
   const voiceover = line.split(/\s+/).length <= 14
     ? line : 'Ürünümüzü yakından incelemek, bilgi ve sipariş almak için bize yazın.'
 
+  let scenePrompt = `Modern ve profesyonel reklam sahnesi, ${bName} ve ${pName} için doğal ve dengeli aydınlatma.`
+  if (/tarım|pompa|ilaçlama|gübre|tohum|fide|hasat/i.test(`${bName} ${pName}`)) {
+    scenePrompt = `Bereketli tarım arazisinde doğal gün ışığı altında ${pName} sergilemesi, canlı ve net detaylar.`
+  } else if (/inşaat|tuğla|yapı|harç|beton|şantiye/i.test(`${bName} ${pName}`)) {
+    scenePrompt = `Modern inşaat ve şantiye sahasında güçlü mimari ışık altında ${pName} dizilimi.`
+  } else if (/yemek|restoran|döner|kafe|gıda|tatlı/i.test(`${bName} ${pName}`)) {
+    scenePrompt = `Sıcak ve iştah açıcı servis masasında taze ışık altında ${pName} sunumu.`
+  }
+
   return {
     headline,
     supportingLine,
     cta,
     voiceover,
+    scenePrompt,
   }
 }

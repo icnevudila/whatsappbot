@@ -1,0 +1,182 @@
+[
+  {
+    "viewport": "mobile_360",
+    "step": 1,
+    "totalScrollHeight": 1575,
+    "mainClientHeight": 588,
+    "scrollableDistance": 987,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1478,
+    "screenshot": "mobile_360_step1.png"
+  },
+  {
+    "viewport": "mobile_360",
+    "step": 2,
+    "totalScrollHeight": 1516,
+    "mainClientHeight": 588,
+    "scrollableDistance": 928,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1419,
+    "screenshot": "mobile_360_step2.png"
+  },
+  {
+    "viewport": "mobile_360",
+    "step": 3,
+    "totalScrollHeight": 831,
+    "mainClientHeight": 588,
+    "scrollableDistance": 243,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 734,
+    "screenshot": "mobile_360_step3.png"
+  },
+  {
+    "viewport": "mobile_390",
+    "step": 1,
+    "totalScrollHeight": 1510,
+    "mainClientHeight": 792,
+    "scrollableDistance": 718,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1432,
+    "screenshot": "mobile_390_step1.png"
+  },
+  {
+    "viewport": "mobile_390",
+    "step": 2,
+    "totalScrollHeight": 1411,
+    "mainClientHeight": 792,
+    "scrollableDistance": 619,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1333,
+    "screenshot": "mobile_390_step2.png"
+  },
+  {
+    "viewport": "mobile_390",
+    "step": 3,
+    "totalScrollHeight": 795,
+    "mainClientHeight": 792,
+    "scrollableDistance": 3,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 717,
+    "screenshot": "mobile_390_step3.png"
+  },
+  {
+    "viewport": "mobile_412",
+    "step": 1,
+    "totalScrollHeight": 1510,
+    "mainClientHeight": 863,
+    "scrollableDistance": 647,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1432,
+    "screenshot": "mobile_412_step1.png"
+  },
+  {
+    "viewport": "mobile_412",
+    "step": 2,
+    "totalScrollHeight": 1380,
+    "mainClientHeight": 863,
+    "scrollableDistance": 517,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1302,
+    "screenshot": "mobile_412_step2.png"
+  },
+  {
+    "viewport": "mobile_412",
+    "step": 3,
+    "totalScrollHeight": 863,
+    "mainClientHeight": 863,
+    "scrollableDistance": 0,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 717,
+    "screenshot": "mobile_412_step3.png"
+  },
+  {
+    "viewport": "tablet_768",
+    "step": 1,
+    "totalScrollHeight": 1185,
+    "mainClientHeight": 972,
+    "scrollableDistance": 213,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1106,
+    "screenshot": "tablet_768_step1.png"
+  },
+  {
+    "viewport": "tablet_768",
+    "step": 2,
+    "totalScrollHeight": 1118,
+    "mainClientHeight": 972,
+    "scrollableDistance": 146,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1040,
+    "screenshot": "tablet_768_step2.png"
+  },
+  {
+    "viewport": "tablet_768",
+    "step": 3,
+    "totalScrollHeight": 972,
+    "mainClientHeight": 972,
+    "scrollableDistance": 0,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 607,
+    "screenshot": "tablet_768_step3.png"
+  },
+  {
+    "viewport": "desktop_1024",
+    "step": 1,
+    "totalScrollHeight": 1075,
+    "mainClientHeight": 716,
+    "scrollableDistance": 359,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1016,
+    "screenshot": "desktop_1024_step1.png"
+  },
+  {
+    "viewport": "desktop_1024",
+    "step": 2,
+    "totalScrollHeight": 954,
+    "mainClientHeight": 716,
+    "scrollableDistance": 238,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 894,
+    "screenshot": "desktop_1024_step2.png"
+  },
+  {
+    "viewport": "desktop_1024",
+    "step": 3,
+    "totalScrollHeight": 716,
+    "mainClientHeight": 716,
+    "scrollableDistance": 0,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 571,
+    "screenshot": "desktop_1024_step3.png"
+  },
+  {
+    "viewport": "desktop_1440",
+    "step": 1,
+    "totalScrollHeight": 1061,
+    "mainClientHeight": 848,
+    "scrollableDistance": 213,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 1002,
+    "screenshot": "desktop_1440_step1.png"
+  },
+  {
+    "viewport": "desktop_1440",
+    "step": 2,
+    "totalScrollHeight": 922,
+    "mainClientHeight": 848,
+    "scrollableDistance": 74,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 863,
+    "screenshot": "desktop_1440_step2.png"
+  },
+  {
+    "viewport": "desktop_1440",
+    "step": 3,
+    "totalScrollHeight": 848,
+    "mainClientHeight": 848,
+    "scrollableDistance": 0,
+    "hasHorizontalOverflow": false,
+    "wizardHeight": 551,
+    "screenshot": "desktop_1440_step3.png"
+  }
+]

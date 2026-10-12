@@ -45,6 +45,7 @@ import {
   generateArtDirectionPlan,
   resolveArtDirectionPlanAtSubmission,
 } from '@/lib/creative/director/creative-director'
+import { recordCreativeMemory } from '@/lib/creative/director/creative-memory'
 
 export type CreativeActionState = { error?: string; ok?: string; id?: string; publicUrl?: string } | null
 
@@ -208,6 +209,7 @@ export async function startCreativeGeneration(
     phonesRes,
     socialsRes,
     videoCountRes,
+    recentCreativesRes,
   ] = await Promise.all([
     requestKey
       ? supabase
@@ -293,8 +295,34 @@ export async function startCreativeGeneration(
           .in('status', ['ready', 'processing', 'pending'])
           .gte('created_at', startOfMonth.toISOString())
       : Promise.resolve({ count: 0, error: null }),
+    supabase
+      .from('creatives')
+      .select('id, payload, created_at')
+      .eq('org_id', org.id)
+      .not('payload', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ])
   const parallelReadsMs = Date.now() - tParallelStart
+
+  if (recentCreativesRes?.data && Array.isArray(recentCreativesRes.data)) {
+    for (const rec of [...recentCreativesRes.data].reverse()) {
+      const p = rec.payload as any
+      if (p?.artDirectionPlan?.creative_archetype) {
+        recordCreativeMemory({
+          orgId: org.id,
+          creativeId: rec.id,
+          archetype: p.artDirectionPlan.creative_archetype,
+          environment: p.artDirectionPlan.art_direction?.background_treatment || '',
+          compositionGrid: p.artDirectionPlan.composition?.grid || '',
+          visualHook: p.artDirectionPlan.visual_hook || '',
+          colorTreatment: p.artDirectionPlan.art_direction?.color_treatment || '',
+          backgroundTreatment: p.artDirectionPlan.art_direction?.background_treatment || '',
+          createdAt: rec.created_at,
+        })
+      }
+    }
+  }
 
   const existing = existingRes.data
   if (existing?.id) {
@@ -478,7 +506,7 @@ export async function startCreativeGeneration(
   let artDirectionSource: 'AI_PRECOMPUTED' | 'DETERMINISTIC_FALLBACK' | 'STANDARD_NOT_REQUIRED' = 'STANDARD_NOT_REQUIRED'
 
   // Non-blocking art direction resolution: precomputed AI plan or immediate deterministic Designer fallback
-  if (format.format !== 'video' && qualityMode === 'DESIGNER') {
+  if (format.format !== 'video') {
     const resolved = resolveArtDirectionPlanAtSubmission({
       input: {
         orgId: org.id,
@@ -487,7 +515,7 @@ export async function startCreativeGeneration(
         productName: products[0]?.name || 'Ürün',
         productDescription: products[0]?.description || null,
         objective: (draft.objective as string) || 'PRODUCT_INTRO',
-        stylePreset: (draft.stylePreset as string) || 'AUTO',
+        stylePreset: (draft.stylePreset as string) || (draft.style as string) || 'AUTO',
         format: format.id,
         headline: (draft.customHeadline as string) || brief,
         offer: products[0]?.promo || null,
