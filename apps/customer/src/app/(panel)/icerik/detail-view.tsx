@@ -65,6 +65,8 @@ export type DetailCreative = {
   cleanPublicUrl?: string | null
   recoverableImageJob?: boolean
   campaignMessage?: string | null
+  artDirectionSource?: string | null
+  heroProductId?: string | null
 }
 
 export type VersionRow = {
@@ -815,6 +817,7 @@ export function CreativeDetail({
         {new Date(creative.createdAt).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })} · {creative.format}
         {creative.provider ? ` · ${creative.provider}` : ''}
         {creative.generationType ? ` · ${creative.generationType}` : ''}
+        {creative.artDirectionSource === 'AI_PRECOMPUTED' ? ' · AI Planlama' : creative.artDirectionSource === 'DETERMINISTIC_FALLBACK' ? ' · Tasarım Kılavuzu' : ''}
       </p>
       {creative.brief && creative.brief !== creative.title ? (
         <p className="text-[13px]">{creative.brief}</p>
@@ -837,7 +840,7 @@ export function CreativeDetail({
                 formatId: formatToId(creative.format),
                 textDensity: 'balanced',
                 useLogo: true,
-                productIds: [],
+                productIds: creative.heroProductId ? [creative.heroProductId] : [],
                 phoneIds: [],
                 socialIds: [],
                 labels: [],
@@ -870,7 +873,7 @@ export function CreativeDetail({
                     formatId: formatToId(creative.format),
                     textDensity: 'balanced',
                     useLogo: true,
-                    productIds: [],
+                    productIds: creative.heroProductId ? [creative.heroProductId] : [],
                     phoneIds: [],
                     socialIds: [],
                     labels: [],
