@@ -7,6 +7,17 @@
  * Strictly NO hard-coded company names — pure context and linguistic analysis.
  */
 
+export interface SectorEnvironmentProfile {
+  id: string
+  name: string
+  primaryScene: string
+  depthElements: string[]
+  materialTextures: string[]
+  lightingPhysics: string
+  atmosphericEffects: string[]
+  suitableArchetypes?: string[]
+}
+
 export interface SectorDna {
   sectorId: string
   nameTr: string
@@ -20,6 +31,7 @@ export interface SectorDna {
     lightingPhysics: string
     atmosphericEffects: string[]
   }
+  environmentProfiles?: SectorEnvironmentProfile[]
   humanInteraction: {
     typicalRole: string
     attire: string
@@ -38,7 +50,7 @@ export const SECTOR_DNA_REGISTRY: Record<string, SectorDna> = {
     nameTr: 'Tarım, Bahçe & Çiftlik',
     isPhysicalProduct: true,
     productDominanceRequired: true,
-    preferredArchetypes: ['PRODUCT_COMMERCE_HERO', 'HYBRID_PRODUCT_USAGE', 'MATERIAL_TEXTURE_HERO', 'ORGANIC_LIFESTYLE', 'REAL_WORLD_USAGE'],
+    preferredArchetypes: ['PRODUCT_COMMERCE_HERO', 'HYBRID_PRODUCT_USAGE', 'MATERIAL_TEXTURE_HERO', 'STUDIO_PEDESTAL', 'ORGANIC_LIFESTYLE', 'REAL_WORLD_USAGE'],
     physicalEnvironment: {
       primaryScene: 'Lush Anatolian orchard, fertile terraced olive grove, modern greenhouse, or sunlit harvest field',
       depthElements: ['Foreground dew-covered foliage or micro water-droplets', 'Hero equipment/produce in sharp focus', 'Rich dark soil furrow lines', 'Distant rolling hills or modern greenhouse steel frames'],
@@ -46,6 +58,48 @@ export const SECTOR_DNA_REGISTRY: Record<string, SectorDna> = {
       lightingPhysics: 'Warm low-angle sun with authentic micro-droplet scattering (Tyndall effect) and golden rim highlights on leaves and machinery',
       atmosphericEffects: ['Fine atomized water spray / mist from nozzle', 'Morning sun vapor rising from warm moist earth', 'Airborne pollen or gentle dust motes in sunbeams'],
     },
+    environmentProfiles: [
+      {
+        id: 'OLIVE_GROVE_ORCHARD',
+        name: 'Doğal Zeytinlik ve Meyve Bahçesi',
+        primaryScene: 'Fertile Anatolian olive grove with sunlit silver-green foliage, rich agricultural loam, and natural morning light',
+        depthElements: ['Foreground dew-glistening olive leaves', 'Hero equipment in sharp focus grounded firmly on earth', 'Receding rows of ancient olive trees with soft atmospheric depth', 'Distant rolling Mediterranean hills under soft morning sky'],
+        materialTextures: ['Organic agricultural loam soil', 'Natural sunlit orchard foliage', 'Sun-cured weathered timber', 'Organic earth and field textures'],
+        lightingPhysics: 'Warm low-angle morning sun with authentic micro-droplet scattering (Tyndall effect) and golden rim highlights on leaves and machinery',
+        atmosphericEffects: ['Fine atomized water spray / mist from nozzle', 'Morning sun vapor rising from warm moist earth', 'Airborne pollen or gentle dust motes in sunbeams'],
+        suitableArchetypes: ['HYBRID_PRODUCT_USAGE', 'ORGANIC_LIFESTYLE', 'REAL_WORLD_USAGE', 'PRODUCT_COMMERCE_HERO'],
+      },
+      {
+        id: 'MODERN_GREENHOUSE',
+        name: 'Modern Tarım Serası',
+        primaryScene: 'High-tech commercial agricultural greenhouse with geometric glass and steel framework, vibrant green crop rows, and precision drip irrigation',
+        depthElements: ['Foreground clean irrigation tubes and lush leaves', 'Hero equipment in sharp focus commanding center stage', 'Receding symmetrical crop rows under architectural greenhouse glass', 'Modern diffused sky illumination filtering through clean roof glass'],
+        materialTextures: ['Clean structural greenhouse glass reflections', 'Moisture on polycarbonate panels', 'Vibrant emerald crop leaves', 'Durable powder-coated steel greenhouse supports'],
+        lightingPhysics: 'Bright diffused high-key greenhouse daylight, soft shadowless illumination highlighting crisp product mechanics and materials',
+        atmosphericEffects: ['Fine atomized micro-droplet irrigation mist', 'Soft atmospheric humidity haze illuminated by high skylight', 'Crisp reflections on greenhouse glazing'],
+        suitableArchetypes: ['PRODUCT_COMMERCE_HERO', 'HYBRID_PRODUCT_USAGE', 'MATERIAL_TEXTURE_HERO'],
+      },
+      {
+        id: 'PREMIUM_STUDIO_SHOWCASE',
+        name: 'Premium Tarım Vitrini ve Stüdyo Kaidesi',
+        primaryScene: 'Refined agricultural exhibition showcase resting on a honed limestone or weathered cedar pedestal with subtle botanical accents',
+        depthElements: ['Crisp natural stone pedestal foreground', 'Hero equipment commanding dominant central focus with pristine reflections', 'Subtle out-of-focus olive branch and warm wooden backdrop', 'Architectural studio shadow gradient'],
+        materialTextures: ['Honed natural stone slab', 'Brushed metal casing reflections', 'Tactile cedar grain', 'Pure matte exhibition plinth'],
+        lightingPhysics: 'High-CRI commercial studio key light with warm golden rim accent separating the product silhouette cleanly from the backdrop',
+        atmosphericEffects: ['Pristine exhibition showroom atmosphere', 'Subtle organic dust motes in key spotlight', 'Soft optical bloom on specular metallic highlights'],
+        suitableArchetypes: ['STUDIO_PEDESTAL', 'MATERIAL_TEXTURE_HERO', 'PRODUCT_COMMERCE_HERO', 'EDITORIAL_LUXURY'],
+      },
+      {
+        id: 'HARVEST_FARMLAND',
+        name: 'Geniş Hasat Arazisi ve Tarla',
+        primaryScene: 'Spacious fertile farmland at golden hour with rich dark furrowed earth and expansive rolling hills under open sky',
+        depthElements: ['Near foreground furrowed soil lines', 'Hero product in authoritative primary stance', 'Expansive open agricultural horizon receding into soft twilight', 'Warm ambient dusk sky'],
+        materialTextures: ['Rich dark agricultural loam', 'Fine soil particles', 'Natural field grasses', 'Weathered agricultural field boundary stones'],
+        lightingPhysics: 'Crisp low-angle golden-hour sunlight casting long dramatic shadows across the furrowed earth',
+        atmosphericEffects: ['Warm golden-hour ambient glow', 'Evening breeze through field foliage', 'Subtle ambient earth dust caught in sunset light'],
+        suitableArchetypes: ['REAL_WORLD_USAGE', 'HYBRID_PRODUCT_USAGE', 'PRODUCT_COMMERCE_HERO'],
+      },
+    ],
     humanInteraction: {
       typicalRole: 'Skilled agricultural specialist or third-generation grower',
       attire: 'Authentic canvas field jacket, durable work gloves, clean utility boots',

@@ -66,6 +66,7 @@ export type PromptFidelityOptions = {
     logo?: boolean
     product?: boolean
     base?: boolean
+    inspiration?: boolean
   }
   artDirectionPlan?: import('./director/creative-director').ArtDirectionPlan | null
   mode?: 'LEGACY_SIMPLE' | 'OVER_DIRECTED_DESIGNER' | 'V3'
@@ -558,6 +559,8 @@ export function buildLegacySimpleCreativePrompt(
         'EXECUTIVE ART DIRECTION & DESIGNER DIRECTIVES:',
         `- CONCEPT & ARCHETYPE: ${options.artDirectionPlan.concept_name} (Archetype: ${options.artDirectionPlan.creative_archetype}).`,
         `- VISUAL HOOK: ${options.artDirectionPlan.visual_hook}.`,
+        `- COMPOSITION & FRAMING: Grid=${options.artDirectionPlan.composition.grid}. Focal point=${options.artDirectionPlan.composition.focal_point}. Negative space=${options.artDirectionPlan.composition.negative_space}.`,
+        `- DEPTH LAYERS: Foreground (${options.artDirectionPlan.composition.depth_layers[0] || 'clear foreground'}) -> Subject (${options.artDirectionPlan.composition.depth_layers[1] || 'hero subject'}) -> Background (${options.artDirectionPlan.composition.depth_layers[2] || 'environmental backdrop'}).`,
         `- LIGHTING & SHADOW PHYSICS: ${options.artDirectionPlan.art_direction.lighting}.`,
         `- MATERIAL & TEXTURE REALISM: ${options.artDirectionPlan.art_direction.material_language}. Surface texture: ${options.artDirectionPlan.art_direction.texture}.`,
         `- ATMOSPHERE & BACKGROUND: ${options.artDirectionPlan.art_direction.background_treatment}. Atmosphere: ${options.artDirectionPlan.art_direction.atmosphere}.`,
@@ -585,7 +588,15 @@ export function buildLegacySimpleCreativePrompt(
     snapshot.baseCreativeId
       ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
       : null,
-    snapshot.instruction ? `Revision instruction (must follow): ${snapshot.instruction}` : null,
+    options?.verifiedRefs?.inspiration
+      ? 'DESIGN INSPIRATION DIRECTIVE: An example ad is attached for aesthetic/mood inspiration ONLY. Do NOT treat it as a base canvas or copy its exact layout, typography, or template. Autonomously create a completely original composition tailored to this brand and product.'
+      : null,
+    snapshot.style && snapshot.style !== 'auto'
+      ? `Visual style preset: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] || ''}`
+      : null,
+    snapshot.instruction
+      ? `Visual Scene & Atmosphere Instruction (Strictly follow): ${snapshot.instruction}`
+      : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${snapshot.brief}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
@@ -628,6 +639,7 @@ export function buildLegacySimpleCreativePrompt(
     'no tiny product in distant background',
     'no generic minimalist empty poster',
     'no cinematic lifestyle drift away from the product',
+    ...(options?.verifiedRefs?.inspiration ? ['no clone or literal replica of the inspiration ad layout'] : []),
     ...(options?.artDirectionPlan?.commercial_grammar?.negativeLayoutRules || []),
     ...(options?.artDirectionPlan?.anti_generic_rules || []),
   ].join(', ')
@@ -791,7 +803,9 @@ export function buildOverDirectedCreativePrompt(
     options?.verifiedRefs?.base
       ? 'A base/reference campaign image is attached. Keep the exact same product and brand identity; apply the requested change.'
       : null,
-    snapshot.instruction ? `Revision instruction (must follow): ${snapshot.instruction}` : null,
+    snapshot.instruction
+      ? `Visual Scene & Atmosphere Instruction (Strictly follow): ${snapshot.instruction}`
+      : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${briefText || 'Özel Kampanya'}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',

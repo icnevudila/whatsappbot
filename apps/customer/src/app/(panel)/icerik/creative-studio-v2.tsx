@@ -632,6 +632,8 @@ export function CreativeStudioV2({
           throw new Error(res.error)
         }
         if (res?.id) {
+          submissionIdentityRef.current = null
+          try { localStorage.removeItem(`${orgKey}.submission.image`) } catch { /* backend acceptance already confirmed */ }
           router.push(`/icerik/${res.id}`)
           return
         }

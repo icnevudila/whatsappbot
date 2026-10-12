@@ -7,7 +7,7 @@
 
 import { getArchetype, listArchetypeIds, type ArchetypeGrammar } from './archetypes'
 import { classifySector, type SectorDna } from './sector-dna'
-import { recordCreativeMemory, selectFreshArchetype } from './creative-memory'
+import { recordCreativeMemory, selectFreshArchetype, selectFreshEnvironment } from './creative-memory'
 import { completeText } from '../../ai/text'
 import { describeColor } from '../prompt'
 import { inferCommercialGrammar, type CommercialGrammarDefinition } from './commercial-poster-grammar'
@@ -164,6 +164,34 @@ const ANTI_GENERIC_STANDARD_RULES = [
   'No cluttered decorative visual noise',
 ]
 
+export function resolveArchetypeForInput(
+  input: ArtDirectorInput,
+  sector: SectorDna,
+): string {
+  if (input.forcedArchetype) return input.forcedArchetype
+
+  const preset = (input.stylePreset || '').toUpperCase()
+
+  if (preset === 'PREMIUM' || preset === 'LUXURY') {
+    return selectFreshArchetype(input.orgId, ['STUDIO_PEDESTAL', 'EDITORIAL_LUXURY', 'ARCHITECTURAL_PRESTIGE', 'MATERIAL_TEXTURE_HERO', 'PRODUCT_COMMERCE_HERO'])
+  }
+  if (preset === 'REAL_USAGE' || preset === 'ORGANIC_LIFESTYLE') {
+    return selectFreshArchetype(input.orgId, ['HYBRID_PRODUCT_USAGE', 'REAL_WORLD_USAGE', 'ORGANIC_LIFESTYLE', 'PRODUCT_COMMERCE_HERO'])
+  }
+  if (preset === 'PRODUCT_HERO' || preset === 'MODERN') {
+    return selectFreshArchetype(input.orgId, ['PRODUCT_COMMERCE_HERO', 'CINEMATIC_PRODUCT_HERO', 'MATERIAL_TEXTURE_HERO', 'STUDIO_PEDESTAL'])
+  }
+  if (preset === 'DYNAMIC_OFFER' || preset === 'ENERGETIC' || preset === 'BOLD') {
+    return selectFreshArchetype(input.orgId, ['BOLD_RETAIL', 'HIGH_ENERGY_PERFORMANCE', 'SOCIAL_FIRST_BOLD', 'PRODUCT_COMMERCE_HERO'])
+  }
+  if (preset === 'MINIMAL' || preset === 'SADE') {
+    return selectFreshArchetype(input.orgId, ['PREMIUM_MONOCHROME', 'STUDIO_PEDESTAL', 'PRODUCT_COMMERCE_HERO'])
+  }
+
+  // AUTO or unspecified: select among the sector's preferred archetypes based on creative memory
+  return selectFreshArchetype(input.orgId, sector.preferredArchetypes)
+}
+
 /**
  * Generates a full designer-grade Art Direction Plan.
  */
@@ -179,35 +207,7 @@ export async function generateArtDirectionPlan(
   })
 
   // Select Archetype respecting Creative Memory
-  let archetypeId = input.forcedArchetype
-  if (!archetypeId) {
-    if (sector.isPhysicalProduct) {
-      // Physical products MUST prioritize product/material dominance over lifestyle/cinematic sprawl
-      if (input.stylePreset === 'REAL_USAGE') {
-        archetypeId = selectFreshArchetype(input.orgId, ['HYBRID_PRODUCT_USAGE', 'PRODUCT_COMMERCE_HERO'])
-      } else if (input.stylePreset === 'PREMIUM' && sector.sectorId === 'CONSTRUCTION') {
-        archetypeId = selectFreshArchetype(input.orgId, ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'ARCHITECTURAL_PRESTIGE'])
-      } else if (sector.sectorId === 'CONSTRUCTION') {
-        archetypeId = selectFreshArchetype(input.orgId, ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'MATERIAL_TEXTURE_HERO'])
-      } else {
-        archetypeId = selectFreshArchetype(input.orgId, ['PRODUCT_COMMERCE_HERO', 'MATERIAL_TEXTURE_HERO', 'HYBRID_PRODUCT_USAGE'])
-      }
-    } else {
-      // If style preset maps closely:
-      if (input.stylePreset === 'PRODUCT_HERO') {
-        archetypeId = selectFreshArchetype(input.orgId, ['CINEMATIC_PRODUCT_HERO', 'STUDIO_PEDESTAL', 'MATERIAL_TEXTURE_HERO'])
-      } else if (input.stylePreset === 'REAL_USAGE') {
-        archetypeId = selectFreshArchetype(input.orgId, ['REAL_WORLD_USAGE', 'ORGANIC_LIFESTYLE', 'INDUSTRIAL_POWER'])
-      } else if (input.stylePreset === 'PREMIUM') {
-        archetypeId = selectFreshArchetype(input.orgId, ['EDITORIAL_LUXURY', 'PREMIUM_MONOCHROME', 'ARCHITECTURAL_PRESTIGE'])
-      } else if (input.stylePreset === 'DYNAMIC_OFFER') {
-        archetypeId = selectFreshArchetype(input.orgId, ['BOLD_RETAIL', 'MAXIMALIST_PROMO', 'HIGH_ENERGY_PERFORMANCE', 'SOCIAL_FIRST_BOLD'])
-      } else {
-        archetypeId = selectFreshArchetype(input.orgId, sector.preferredArchetypes)
-      }
-    }
-  }
-
+  const archetypeId = resolveArchetypeForInput(input, sector)
   const archetype = getArchetype(archetypeId)
 
   // In STANDARD mode with quick requirements, we can construct the deterministic plan immediately
@@ -353,10 +353,17 @@ function buildDeterministicPlan(
   const isHumanLikely = archetype.id === 'REAL_WORLD_USAGE' || archetype.id === 'ORGANIC_LIFESTYLE' || archetype.id === 'EDITORIAL_LUXURY' || archetype.id === 'SOCIAL_FIRST_BOLD'
   const isCorporateRestrained = /kurumsal|mimari|mühendis|ciddi|prestij|güvenilir|resmi|professional/i.test(brand_dna.tone)
 
-  return {
+  const envProfile = selectFreshEnvironment(input.orgId, sector.environmentProfiles || [], archetype.id)
+  const primaryScene = envProfile?.primaryScene || sector.physicalEnvironment.primaryScene
+  const depthElements = envProfile?.depthElements || sector.physicalEnvironment.depthElements
+  const materialTextures = envProfile?.materialTextures || sector.physicalEnvironment.materialTextures
+  const lightingPhysics = envProfile?.lightingPhysics || sector.physicalEnvironment.lightingPhysics
+  const atmosphericEffects = envProfile?.atmosphericEffects || sector.physicalEnvironment.atmosphericEffects
+
+  const plan: ArtDirectionPlan = {
     concept_name: `${brandName} ${archetype.name} Campaign`,
     creative_archetype: archetype.id,
-    visual_hook: `${input.productName}, ${sector.physicalEnvironment.primaryScene} içerisinde ${archetype.composition.focalPoint}`,
+    visual_hook: `${input.productName}, ${primaryScene} içerisinde ${archetype.composition.focalPoint}`,
 
     brand_dna,
     commercial_grammar,
@@ -370,22 +377,22 @@ function buildDeterministicPlan(
       negative_space: archetype.composition.negativeSpace,
       crop_strategy: archetype.composition.cropStrategy,
       depth_layers: [
-        sector.physicalEnvironment.depthElements[0] || archetype.composition.depthLayers[0],
+        depthElements[0] || archetype.composition.depthLayers[0],
         `${input.productName} in crisp focus`,
-        sector.physicalEnvironment.depthElements[2] || archetype.composition.depthLayers[2],
-        sector.physicalEnvironment.depthElements[3] || archetype.composition.depthLayers[3],
+        depthElements[2] || archetype.composition.depthLayers[2],
+        depthElements[3] || archetype.composition.depthLayers[3],
       ],
     },
 
     art_direction: {
-      visual_language: `${archetype.artDirection.visualLanguage}. Sector authenticity: ${sector.physicalEnvironment.primaryScene}.`,
+      visual_language: `${archetype.artDirection.visualLanguage}. Sector authenticity: ${primaryScene}.`,
       material_language: `${archetype.artDirection.materialLanguage}. Authentic product casing realism, preserving exact reference product manufacturing materials and casing details without alteration.`,
-      lighting: `${archetype.artDirection.lighting}. Physics: ${sector.physicalEnvironment.lightingPhysics}.`,
-      background_treatment: `${brand_dna.background_preference} with ${archetype.artDirection.backgroundTreatment}. Environmental surroundings and ground textures: ${sector.physicalEnvironment.materialTextures.join(', ')}.`,
+      lighting: `${archetype.artDirection.lighting}. Physics: ${lightingPhysics}.`,
+      background_treatment: `${brand_dna.background_preference} with ${archetype.artDirection.backgroundTreatment}. Environmental surroundings and ground textures: ${materialTextures.join(', ')}.`,
       color_treatment: `${brand_dna.palette.naturalLanguageDescription}. Archetype contrast strategy: ${archetype.artDirection.contrastStrategy}. ARCHETYPE MUST NOT OVERRIDE BRAND PALETTE.`,
       contrast_strategy: archetype.artDirection.contrastStrategy,
       texture: archetype.artDirection.texture,
-      atmosphere: `${archetype.artDirection.atmosphere}. Atmospheric accents: ${sector.physicalEnvironment.atmosphericEffects.join(', ')}.`,
+      atmosphere: `${archetype.artDirection.atmosphere}. Atmospheric accents: ${atmosphericEffects.join(', ')}.`,
     },
 
     graphic_language: {
@@ -448,6 +455,20 @@ function buildDeterministicPlan(
       nameTr: sector.nameTr,
     },
   }
+
+  recordCreativeMemory({
+    orgId: input.orgId,
+    archetype: plan.creative_archetype,
+    environment: envProfile?.name || primaryScene,
+    compositionGrid: plan.composition.grid,
+    visualHook: plan.visual_hook,
+    humanRole: plan.human_direction.enabled ? plan.human_direction.role : undefined,
+    colorTreatment: plan.art_direction.color_treatment,
+    backgroundTreatment: plan.art_direction.background_treatment,
+    createdAt: new Date().toISOString(),
+  })
+
+  return plan
 }
 
 async function requestAiArtDirection(params: {
@@ -546,33 +567,7 @@ export function resolveArtDirectionPlanAtSubmission({
     brief: input.campaignDetail || input.headline || undefined,
   })
 
-  let archetypeId = input.forcedArchetype
-  if (!archetypeId) {
-    if (sector.isPhysicalProduct) {
-      if (input.stylePreset === 'REAL_USAGE') {
-        archetypeId = selectFreshArchetype(input.orgId, ['HYBRID_PRODUCT_USAGE', 'PRODUCT_COMMERCE_HERO'])
-      } else if (input.stylePreset === 'PREMIUM' && sector.sectorId === 'CONSTRUCTION') {
-        archetypeId = selectFreshArchetype(input.orgId, ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'ARCHITECTURAL_PRESTIGE'])
-      } else if (sector.sectorId === 'CONSTRUCTION') {
-        archetypeId = selectFreshArchetype(input.orgId, ['MATERIAL_COMMERCE_HERO', 'PRODUCT_COMMERCE_HERO', 'MATERIAL_TEXTURE_HERO'])
-      } else {
-        archetypeId = selectFreshArchetype(input.orgId, ['PRODUCT_COMMERCE_HERO', 'MATERIAL_TEXTURE_HERO', 'HYBRID_PRODUCT_USAGE'])
-      }
-    } else {
-      if (input.stylePreset === 'PRODUCT_HERO') {
-        archetypeId = selectFreshArchetype(input.orgId, ['CINEMATIC_PRODUCT_HERO', 'STUDIO_PEDESTAL', 'MATERIAL_TEXTURE_HERO'])
-      } else if (input.stylePreset === 'REAL_USAGE') {
-        archetypeId = selectFreshArchetype(input.orgId, ['REAL_WORLD_USAGE', 'ORGANIC_LIFESTYLE', 'INDUSTRIAL_POWER'])
-      } else if (input.stylePreset === 'PREMIUM') {
-        archetypeId = selectFreshArchetype(input.orgId, ['EDITORIAL_LUXURY', 'PREMIUM_MONOCHROME', 'ARCHITECTURAL_PRESTIGE'])
-      } else if (input.stylePreset === 'DYNAMIC_OFFER') {
-        archetypeId = selectFreshArchetype(input.orgId, ['BOLD_RETAIL', 'MAXIMALIST_PROMO', 'HIGH_ENERGY_PERFORMANCE', 'SOCIAL_FIRST_BOLD'])
-      } else {
-        archetypeId = selectFreshArchetype(input.orgId, sector.preferredArchetypes)
-      }
-    }
-  }
-
+  const archetypeId = resolveArchetypeForInput(input, sector)
   const archetype = getArchetype(archetypeId)
   const plan = buildDeterministicPlan(input, sector, archetype)
 
