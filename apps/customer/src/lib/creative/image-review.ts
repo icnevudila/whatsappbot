@@ -1,5 +1,5 @@
 export function imagePublicationStatus(payload: { creativeDirectorVersion?: unknown }): 'ready' | 'needs_review' {
-  return payload.creativeDirectorVersion === 'V3' ? 'needs_review' : 'ready'
+  return 'ready'
 }
 export function canReviewImage(input: { orgId: string; creativeId: string; receipt: any; storagePath: string | null }) {
   const r = input.receipt

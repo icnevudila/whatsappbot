@@ -739,6 +739,7 @@ class AdvancedJobQueue {
       jobIndex = this.pendingQueue.findIndex(jobId => {
         const job = this.jobs.get(jobId);
         if (!isJobEligible(job)) return false;
+        if (wid === 'chatgpt-2' && job.type !== 'chat_suggestions' && job.type !== 'chat_completion') return false;
         const assignedWid = this.companyWorkerMap.get(job.scopeKey);
         return assignedWid === wid;
       });
@@ -756,7 +757,9 @@ class AdvancedJobQueue {
     if (jobIndex === -1) {
       jobIndex = this.pendingQueue.findIndex(jobId => {
         const job = this.jobs.get(jobId);
-        return isJobEligible(job);
+        if (!isJobEligible(job)) return false;
+        if (wid === 'chatgpt-2' && job.type !== 'chat_suggestions' && job.type !== 'chat_completion') return false;
+        return true;
       });
     }
 
@@ -871,6 +874,9 @@ class AdvancedJobQueue {
       job.errorCode = 'PROVIDER_RESULT_UNCERTAIN';
       job.error = error || 'Gateway restarted during provider execution';
       job.statusText = 'Önceki üretimin sonucu kontrol ediliyor; çift üretim başlatılmadı.';
+      if (job.assignedTo) {
+        this.activeWorkers.delete(job.assignedTo);
+      }
       this.persist(job);
       this.notifyWaiters(jobId, job);
       return;

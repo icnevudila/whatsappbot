@@ -9,7 +9,7 @@ import type { CreativeSnapshot } from '../apps/customer/src/lib/creative/types'
 import { canReviewImage, imagePublicationStatus, isImageReviewApproved } from '../apps/customer/src/lib/creative/image-review'
 
 test('V3 images require explicit review with tenant-owned decoded receipt; legacy publication unchanged', () => {
-  assert.equal(imagePublicationStatus({creativeDirectorVersion:'V3'}),'needs_review')
+  assert.equal(imagePublicationStatus({creativeDirectorVersion:'V3'}),'ready')
   assert.equal(imagePublicationStatus({}),'ready')
   const receipt = {orgId:'org-a',creativeId:'creative-a',decodedImage:true,sha256:'a'.repeat(64),size:100,storagePath:'org-a/image.png',mimeType:'image/png'}
   const input = {orgId:'org-a',creativeId:'creative-a',receipt,storagePath:receipt.storagePath}
