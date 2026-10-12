@@ -158,6 +158,7 @@ export function CreativeStudioV2({
   const [textDensity, setTextDensity] = useState<'low' | 'balanced' | 'detailed'>('balanced')
   const [sector, setSector] = useState('')
   const [deliveryInfo, setDeliveryInfo] = useState('')
+  const [visualScenePrompt, setVisualScenePrompt] = useState('')
 
   // Quality Mode: Internal AUTO_PROFESSIONAL policy (backward-compatible with STANDARD / DESIGNER drafts)
   const [qualityMode, setQualityMode] = useState<'AUTO_PROFESSIONAL' | 'STANDARD' | 'DESIGNER'>('AUTO_PROFESSIONAL')
@@ -593,6 +594,8 @@ export function CreativeStudioV2({
           objective,
           creativePlan,
           qualityMode,
+          instruction: visualScenePrompt.trim() || undefined,
+          customText: visualScenePrompt.trim() || undefined,
           templateFamily,
           textDensity,
           sector: sector.trim() || undefined,
@@ -1288,6 +1291,21 @@ export function CreativeStudioV2({
                           placeholder="Hemen İnceleyin"
                         />
                       </Field>
+
+                      <div className="pt-1.5 border-t border-hairline/60">
+                        <Field
+                          label="Görsel Sahne / Ortam Tarifi"
+                          hint="İsteğe bağlı: Yapay zekaya özel bir sahne, atmosfer veya arka plan tarif edin."
+                        >
+                          <Textarea
+                            rows={2}
+                            value={visualScenePrompt}
+                            onChange={(e) => setVisualScenePrompt(e.target.value)}
+                            placeholder="Örn: Modern açık ofiste kahvesini yudumlayan çalışanlar, arkada yeşil WhatsApp bildirimleri veya kafe tezgahında telefonla sipariş alan işletmeci."
+                            className="text-[13px]"
+                          />
+                        </Field>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -823,7 +823,7 @@ export function CreativeDetail({
             previewUrl={displayPublicUrl}
             onClose={() => setReviseOpen(false)}
             onInstruction={setInstruction}
-            onSubmit={() =>
+            onSubmit={({ keepBaseScene }) =>
               spawn({
                 requestKey: crypto.randomUUID(),
                 brief: creative.brief || instruction.trim(),
@@ -836,7 +836,7 @@ export function CreativeDetail({
                 socialIds: [],
                 labels: [],
                 parentId: creative.id,
-                baseCreativeId: creative.id,
+                baseCreativeId: keepBaseScene ? creative.id : null,
                 generationType: 'revision',
                 instruction: instruction.trim(),
               })
@@ -1114,9 +1114,10 @@ function ReviseModal({
   previewUrl: string | null
   onClose: () => void
   onInstruction: (value: string) => void
-  onSubmit: () => void
+  onSubmit: (options: { keepBaseScene: boolean }) => void
 }) {
   const titleId = useId()
+  const [keepBaseScene, setKeepBaseScene] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -1188,7 +1189,7 @@ function ReviseModal({
           onSubmit={(event) => {
             event.preventDefault()
             if (instruction.trim().length < 4 || pending) return
-            onSubmit()
+            onSubmit({ keepBaseScene })
           }}
         >
           <Field label="Neyi değiştirmek istiyorsunuz?" hint="Kısa ve net yazın: ne kalsın, ne değişsin.">
@@ -1196,10 +1197,40 @@ function ReviseModal({
               rows={4}
               value={instruction}
               onChange={(event) => onInstruction(event.target.value)}
-              placeholder="Marka adını Ayvazoğlu İnşaat yap. Fiyatı 10 TL yaz, yanına sınırlı sayıda ekle. Hemen iletişime geçin yazısını koy."
+              placeholder="Örn: Masada laptop değil, elinde telefon olan kafe sahibi olsun. Canlı renkler ve WhatsApp arayüzü öne çıksın."
               autoFocus
             />
           </Field>
+
+          <div className="rounded-lg border border-hairline bg-canvas/60 p-2.5 space-y-1.5">
+            <p className="text-[12px] font-semibold text-ink">Sahne Kurgusu</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setKeepBaseScene(false)}
+                className={`rounded border p-2 text-left transition-all ${
+                  !keepBaseScene
+                    ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-semibold ring-1 ring-[#008069]'
+                    : 'border-hairline bg-surface text-ink-muted hover:border-[#008069]/30'
+                }`}
+              >
+                <span className="block text-[12px] font-bold">✨ Yeni Sahne / Açı</span>
+                <span className="block text-[10.5px] opacity-80 mt-0.5">Eski sahneye takılmaz, taze kompozisyon kurar.</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setKeepBaseScene(true)}
+                className={`rounded border p-2 text-left transition-all ${
+                  keepBaseScene
+                    ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-semibold ring-1 ring-[#008069]'
+                    : 'border-hairline bg-surface text-ink-muted hover:border-[#008069]/30'
+                }`}
+              >
+                <span className="block text-[12px] font-bold">🔒 Sahneyi Koru</span>
+                <span className="block text-[10.5px] opacity-80 mt-0.5">Aynı kompozisyonda sadece metin veya küçük detay değiştirir.</span>
+              </button>
+            </div>
+          </div>
 
           <div className="wb-modal-actions">
             <Button type="button" variant="quiet" disabled={pending} onClick={onClose}>
