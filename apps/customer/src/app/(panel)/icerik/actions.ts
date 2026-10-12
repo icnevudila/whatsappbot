@@ -175,15 +175,36 @@ export async function startCreativeGeneration(
   const kitId = String(draft.brandKitId ?? '').trim() || null
   const rawProductIds = parseIds(draft.productIds)
   const heroProductId = String(draft.heroProductId || '').trim()
-  const productIds = heroProductId
-    ? [heroProductId]
+  const baseCreativeId = String(draft.baseCreativeId ?? '').trim() || null
+  const parentId = String(draft.parentId ?? '').trim() || null
+  const effectiveParentId = parentId || baseCreativeId
+
+  // If variation/revision without explicit productIds, pre-check parent payload products
+  let inheritedParentProductId: string | null = null
+  if (!heroProductId && rawProductIds.length === 0 && effectiveParentId) {
+    try {
+      const { data: earlyParent } = await supabase
+        .from('creatives')
+        .select('payload')
+        .eq('id', effectiveParentId)
+        .eq('org_id', org.id)
+        .maybeSingle()
+      const p = earlyParent?.payload as any
+      if (p?.heroProductId) inheritedParentProductId = String(p.heroProductId).trim()
+      else if (Array.isArray(p?.products) && p.products[0]?.id) inheritedParentProductId = String(p.products[0].id).trim()
+    } catch {
+      // Non-blocking parent preview
+    }
+  }
+
+  const effectiveHeroProduct = heroProductId || inheritedParentProductId || ''
+  const productIds = effectiveHeroProduct
+    ? [effectiveHeroProduct]
     : rawProductIds.length > 0
       ? [rawProductIds[0]]
       : []
   const phoneIds = parseIds(draft.phoneIds)
   const socialIds = parseIds(draft.socialIds)
-  const baseCreativeId = String(draft.baseCreativeId ?? '').trim() || null
-  const parentId = String(draft.parentId ?? '').trim() || null
   const rawType = String(draft.generationType ?? '')
   const generationType =
     rawType === 'revision' || rawType === 'variation' || rawType === 'derived' || rawType === 'new'
@@ -505,6 +526,11 @@ export async function startCreativeGeneration(
   let artDirectionPlan = (draft.artDirectionPlan as any) || null
   let artDirectionSource: 'AI_PRECOMPUTED' | 'DETERMINISTIC_FALLBACK' | 'STANDARD_NOT_REQUIRED' = 'STANDARD_NOT_REQUIRED'
 
+  const rawStylePreset = String(draft.stylePreset ?? draft.style ?? 'AUTO').trim().toUpperCase()
+  const normalizedStylePreset = ['PRODUCT_HERO', 'REAL_USAGE', 'PREMIUM', 'DYNAMIC_OFFER', 'AUTO'].includes(rawStylePreset)
+    ? rawStylePreset
+    : 'AUTO'
+
   // Non-blocking art direction resolution: precomputed AI plan or immediate deterministic Designer fallback
   if (format.format !== 'video') {
     const resolved = resolveArtDirectionPlanAtSubmission({
@@ -515,7 +541,7 @@ export async function startCreativeGeneration(
         productName: products[0]?.name || 'Ürün',
         productDescription: products[0]?.description || null,
         objective: (draft.objective as string) || 'PRODUCT_INTRO',
-        stylePreset: (draft.stylePreset as string) || (draft.style as string) || 'AUTO',
+        stylePreset: normalizedStylePreset,
         format: format.id,
         headline: (draft.customHeadline as string) || brief,
         offer: products[0]?.promo || null,
@@ -582,7 +608,8 @@ export async function startCreativeGeneration(
     customHeadline: (draft.customHeadline as string) || null,
     customSupporting: (draft.customSupporting as string) || null,
     heroProductId: heroProductId || (products[0]?.id as string) || null,
-    stylePreset: (draft.stylePreset as string) || null,
+    generationType,
+    stylePreset: normalizedStylePreset,
     objective: subjectMode === 'brand' ? 'BRAND_AWARENESS' : (draft.objective as string) || null,
     artDirectionPlan: artDirectionPlan || null,
     art_direction_source: artDirectionSource,
@@ -671,7 +698,15 @@ export async function startCreativeGeneration(
   if (!inserted) return { error: 'Kayıt açılamadı.' }
   const creativeInsertMs = Date.now() - tInsertStart
 
-  if (products.length > 0) {
+  const isTestRequest = Boolean(
+    (draft as any).isTest ||
+    (draft as any).testMode ||
+    requestKey?.startsWith('test_') ||
+    requestKey?.startsWith('p0_') ||
+    org.name?.toLowerCase().includes('test')
+  )
+
+  if (products.length > 0 && !isTestRequest) {
     const knowledgeRows = products
       .filter((p) => Boolean(p.name?.trim()))
       .map((p) => {
@@ -787,6 +822,20 @@ export async function reconcileCreative(id: string): Promise<CreativeActionState
         if (gwRes.ok) {
           const gwJson = await gwRes.json()
           if (gwJson.status === 'completed' && gwJson.result_url) {
+            // Restore active imageJob in payload so processCreativeGeneration can complete authentic reconciliation
+            await supabase
+              .from('creatives')
+              .update({
+                status: 'rendering',
+                payload: {
+                  ...payload,
+                  imageJob: lastJob,
+                  imageReconciliationRequired: false,
+                },
+              })
+              .eq('id', trimmed)
+              .eq('org_id', org.id)
+
             const processRes = await processCreativeGeneration(trimmed, supabase)
             if (processRes.ready || processRes.needsReview) {
               revalidateLibrary(trimmed)

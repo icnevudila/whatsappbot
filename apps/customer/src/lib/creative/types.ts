@@ -188,6 +188,7 @@ export type CreativeSnapshot = {
   customSupporting?: string | null
   objective?: string | null
   stylePreset?: string | null
+  generationType?: string | null
 }
 
 export type CreativePayload = CreativeSnapshot & {

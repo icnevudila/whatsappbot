@@ -80,6 +80,8 @@ export default async function CreativeDetailPage({
     recoverableImageJob: Boolean(payload?.imageJob && payload?.imageReconciliationRequired),
     imageReconciliationRequired: Boolean(payload?.imageReconciliationRequired),
     campaignMessage: payload?.campaignMessage ?? null,
+    artDirectionSource: payload?.art_direction_source || payload?.submissionMetrics?.art_direction_source || null,
+    heroProductId: payload?.heroProductId || (Array.isArray(payload?.products) && payload.products[0]?.id) || null,
   }
 
   let rootId = row.id
