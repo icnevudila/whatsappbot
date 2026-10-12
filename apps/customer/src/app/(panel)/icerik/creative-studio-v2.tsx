@@ -979,11 +979,11 @@ export function CreativeStudioV2({
                     <legend className="text-[13px] font-bold text-[#111b21]">Tanıtım Biçimi</legend>
                     <span className="text-[11px] text-[#667781]">{brandOnly ? 'Yalnızca Logo & Marka' : 'Katalog Ürün/Hizmeti'}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {([{id:'offering',label:'Ürün / Hizmet Tanıtımı',detail:'Katalogdaki ürününüzü veya hizmetinizi öne çıkarın.'},
                       {id:'brand',label:'Marka Tanıtımı',detail:'Yalnızca logonuz ve işletme bilgilerinizle tanıtım yapın.'}] as const).map(mode => (
                       <button type="button" key={mode.id} aria-pressed={promotionMode === mode.id}
-                        className={`rounded-lg border py-2 px-3 text-left transition-all min-h-[44px] flex flex-col justify-center ${promotionMode === mode.id ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]' : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/40'}`}
+                        className={`rounded-lg border py-2.5 px-3 text-left transition-all min-h-[48px] flex flex-col justify-center ${promotionMode === mode.id ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]' : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/40'}`}
                         onClick={() => {
                           if (mode.id === promotionMode) return
                           resetProductCopy()
@@ -992,8 +992,8 @@ export function CreativeStudioV2({
                           setObjective(mode.id === 'brand' ? 'BRAND_AWARENESS' : 'PRODUCT_INTRO')
                           setPrice(''); setOldPrice(''); setOffer('')
                         }}>
-                        <span className="block text-[12.5px] font-bold">{mode.label}</span>
-                        <span className="text-[10px] text-[#667781] truncate mt-0.5">{mode.detail}</span>
+                        <span className="block text-[12.5px] font-bold leading-snug">{mode.label}</span>
+                        <span className="text-[11px] text-[#667781] leading-tight mt-0.5 line-clamp-2">{mode.detail}</span>
                       </button>
                     ))}
                   </div>
@@ -1013,27 +1013,27 @@ export function CreativeStudioV2({
                       <button
                         type="button"
                         onClick={() => setMediaType('IMAGE')}
-                        className={`flex items-center justify-center gap-2 rounded-lg border py-2 px-3 transition-all min-h-[44px] ${
+                        className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border py-2 px-2 sm:px-3 transition-all min-h-[44px] ${
                           mediaType === 'IMAGE'
                             ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
                             : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/40'
                         }`}
                       >
                         <Icon name="image" className="size-4 shrink-0 text-[#008069]" />
-                        <span className="text-[13px]">Görsel Reklam</span>
+                        <span className="text-[12.5px] font-medium leading-none">Görsel Reklam</span>
                       </button>
 
                       <button
                         type="button"
                         onClick={() => setMediaType('VIDEO')}
-                        className={`flex items-center justify-center gap-2 rounded-lg border py-2 px-3 transition-all min-h-[44px] ${
+                        className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border py-2 px-2 sm:px-3 transition-all min-h-[44px] ${
                           mediaType === 'VIDEO'
                             ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
                             : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/40'
                         }`}
                       >
                         <Icon name="video" className="size-4 shrink-0 text-[#008069]" />
-                        <span className="text-[13px]">Video Reklam</span>
+                        <span className="text-[12.5px] font-medium leading-none">Video Reklam</span>
                       </button>
                     </div>
                   </div>
@@ -1051,14 +1051,14 @@ export function CreativeStudioV2({
                             key={fmt.id}
                             type="button"
                             onClick={() => setImageFormat(fmt.id)}
-                            className={`rounded-lg border px-2 py-2 text-center transition-all min-h-[44px] flex flex-col items-center justify-center ${
+                            className={`rounded-lg border px-1.5 py-1.5 text-center transition-all min-h-[44px] flex flex-col items-center justify-center ${
                               imageFormat === fmt.id
                                 ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
                                 : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/30'
                             }`}
                           >
-                            <span className="text-[12px] font-bold leading-tight">{fmt.label}</span>
-                            <span className="text-[10px] text-[#667781] leading-tight mt-0.5">{fmt.hint.split(' ')[0]}</span>
+                            <span className="text-[11.5px] sm:text-[12px] font-bold leading-tight truncate w-full">{fmt.label}</span>
+                            <span className="text-[9.5px] sm:text-[10px] text-[#667781] leading-tight mt-0.5">{fmt.hint.split(' ')[0]}</span>
                           </button>
                         ))}
                       </div>
@@ -1165,20 +1165,20 @@ export function CreativeStudioV2({
                     <h2 className="text-[13px] font-bold text-[#111b21]">4. Kampanya Amacı</h2>
                     <span className="text-[11px] text-[#667781]">Metin ve teklif odağı</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     {CAMPAIGN_OBJECTIVES.filter(obj => !brandOnly || obj.id === 'BRAND_AWARENESS').map((obj) => (
                       <button
                         key={obj.id}
                         type="button"
                         onClick={() => setObjective(obj.id)}
-                        className={`rounded-lg border p-2.5 text-left transition-all min-h-[44px] flex flex-col justify-center ${
+                        className={`rounded-lg border p-2.5 text-left transition-all min-h-[48px] flex flex-col justify-center ${
                           objective === obj.id
                             ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
                             : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
                         }`}
                       >
-                        <span className="text-[12px] font-bold text-[#111b21]">{obj.label}</span>
-                        <span className="text-[10px] text-[#667781] truncate mt-0.5">{obj.description}</span>
+                        <span className="text-[12.5px] font-bold text-[#111b21] leading-tight">{obj.label}</span>
+                        <span className="text-[10.5px] text-[#667781] leading-snug mt-0.5 line-clamp-2">{obj.description}</span>
                       </button>
                     ))}
                   </div>
@@ -1230,7 +1230,7 @@ export function CreativeStudioV2({
                     <h2 className="text-[13px] font-bold text-[#111b21]">1. Görsel Tarzı</h2>
                     <span className="text-[11px] text-[#667781]">Kompozisyon ve tasarım yaklaşımı</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
                     {CREATIVE_STYLE_PRESETS.map((preset) => (
                       <button
                         key={preset.id}
@@ -1239,21 +1239,21 @@ export function CreativeStudioV2({
                           setStylePreset(preset.id)
                           void requestCreativePlan(false, preset.id)
                         }}
-                        className={`rounded-lg border p-2.5 text-left transition-all min-h-[44px] flex flex-col justify-center ${
+                        className={`rounded-lg border p-2.5 text-left transition-all min-h-[48px] flex flex-col justify-center ${
                           stylePreset === preset.id
                             ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]'
                             : 'border-[#e9edef] hover:border-[#008069]/30 bg-white'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[12px] font-bold text-[#111b21]">{preset.label}</span>
+                          <span className="text-[12.5px] font-bold text-[#111b21] leading-tight">{preset.label}</span>
                           {preset.tag && (
                             <span className="rounded bg-[#008069] px-1.5 py-0.2 text-[9px] font-bold text-white">
                               {preset.tag}
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-[#667781] mt-0.5 line-clamp-1">{brandOnly ? 'Logonuz ve kayıtlı marka bilgilerinizle bu görsel dili kullanın.' : preset.description}</p>
+                        <p className="text-[10.5px] text-[#667781] mt-0.5 line-clamp-2 leading-snug">{brandOnly ? 'Logonuz ve kayıtlı marka bilgilerinizle bu görsel dili kullanın.' : preset.description}</p>
                       </button>
                     ))}
                   </div>
