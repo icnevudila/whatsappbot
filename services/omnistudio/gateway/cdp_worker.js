@@ -1113,7 +1113,8 @@ async function executeChatGPTJob(tab, job) {
 
     // 4. Görselin üretilmesini bekle (Stale korumalı adaptif bounded polling)
     let foundImgSrc = null;
-    const maxAttempts = 120; // 120 * 1.5s = 180s
+    let consecutiveCandidateHits = 0;
+    const maxAttempts = 180; // 180 * 1.5s = 270s
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       await sleep(1500);
 
@@ -1174,11 +1175,28 @@ async function executeChatGPTJob(tab, job) {
       }
 
       if (checkResult?.isGenerating && !workerTiming.timings.generation_start_detect_ms) workerTiming.mark('generation_start_detect_ms', submittedAt);
-      if (checkResult?.foundImgSrc && ((checkResult?.hasNewMsg && !checkResult.isGenerating) || checkResult?.ready)) {
-        foundImgSrc = checkResult.foundImgSrc;
-        workerTiming.mark('generation_complete_detect_ms', submittedAt);
-        console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi: ${foundImgSrc}`);
-        break;
+
+      if (checkResult?.foundImgSrc) {
+        if ((checkResult?.hasNewMsg && !checkResult.isGenerating) || checkResult?.ready) {
+          foundImgSrc = checkResult.foundImgSrc;
+          workerTiming.mark('generation_complete_detect_ms', submittedAt);
+          console.log(`[CDP Worker] Görsel ${elapsed}. saniyede başarıyla tamamlandı ve tespit edildi: ${foundImgSrc}`);
+          break;
+        }
+
+        // Kararlı görsel adayı tespiti: Görsel DOM'da belirdiyse ve 4 kontrol (6 saniye) boyunca kararlı kaldıysa,
+        // ChatGPT arka planda tamamlayıcı metin üretiyor olsa dahi görseli güvenle teslim al.
+        if (checkResult.candidateCount > 0 && elapsed > 45) {
+          consecutiveCandidateHits++;
+          if (consecutiveCandidateHits >= 4) {
+            foundImgSrc = checkResult.foundImgSrc;
+            workerTiming.mark('generation_complete_detect_ms', submittedAt);
+            console.log(`[CDP Worker] Görsel ${elapsed}. saniyede kararlı aday olarak kabul edildi: ${foundImgSrc}`);
+            break;
+          }
+        }
+      } else {
+        consecutiveCandidateHits = 0;
       }
 
       // ChatGPT Ret / Metin Cevabı Algılayıcı (Hızlı Başarısızlık)
@@ -1199,7 +1217,12 @@ async function executeChatGPTJob(tab, job) {
     }
 
     if (!foundImgSrc) {
-      throw new Error('Görsel üretim zaman aşımı (180 saniye)');
+      if (checkResult?.foundImgSrc) {
+        foundImgSrc = checkResult.foundImgSrc;
+        console.log(`[CDP Worker] Görsel süre sonunda mevcut aday üzerinden kabul edildi: ${foundImgSrc}`);
+      } else {
+        throw new Error('Görsel üretim zaman aşımı (270 saniye)');
+      }
     }
 
     // 4. Görsel Blob'unu Sayfa Context'inden Çek

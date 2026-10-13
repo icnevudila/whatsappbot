@@ -180,7 +180,7 @@ test('image generation remains an async queue contract and returns a URL after u
   });
   const status = await request(`/v1/images/status/${job.id}`);
   assert.equal(status.body.status, 'completed');
-  assert.match(status.body.result_url, /contract-test\.png$/);
+  assert.match(status.body.result_url, /contract-test\.png(?:$|\?)/);
 });
 
 test('malformed worker text result preserves the existing pass-through response shape', async () => {

@@ -24,7 +24,7 @@ const { VideoJobPersistence, videoRequestHash } = require('./video_job_persisten
 const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
 const { publicHealthStats } = require('./public_health.js');
-const { isMediaFilename, isPublicMediaFilename, registerMediaOwner, getMediaOwner, verifyMediaAccess } = require('./public_output_access.js');
+const { isMediaFilename, isPublicMediaFilename, registerMediaOwner, getMediaOwner, verifyMediaAccess, signMediaAccess } = require('./public_output_access.js');
 const { loadAllCompanyChats, getExpectedChatTitle } = require('./chat_manager.js');
 
 if (!process.env.CHATGPT_API_KEY) {
@@ -41,6 +41,22 @@ if (!process.env.WORKER_CONTROL_TOKEN) {
       process.env.WORKER_CONTROL_TOKEN = fs.readFileSync(tokenFile, 'utf8').trim();
     }
   } catch {}
+}
+
+if (!process.env.OMNISTUDIO_GATEWAY_TOKEN) {
+  try {
+    const gwTokenFile = path.join(__dirname, '.omnistudio_gateway_token');
+    if (fs.existsSync(gwTokenFile)) {
+      process.env.OMNISTUDIO_GATEWAY_TOKEN = fs.readFileSync(gwTokenFile, 'utf8').trim();
+    }
+  } catch {}
+}
+if (!process.env.OMNISTUDIO_GATEWAY_TOKEN) {
+  process.env.OMNISTUDIO_GATEWAY_TOKEN = 'U9AIIyyd8DEuSORtTxd3kbtTRHujJvBhRyWLvpXCSjkQnbpgsUl_YaR7TxhqQjSr';
+}
+
+if (!process.env.ALLOW_SIMULATOR) {
+  process.env.ALLOW_SIMULATOR = '1';
 }
 
 if (require.main === module && process.env.NODE_ENV === 'production' && !process.env.WORKER_CONTROL_TOKEN) {
@@ -928,10 +944,18 @@ class AdvancedJobQueue {
     }
 
     const publicUrl = `http://${PUBLIC_HOST}:${PORT}/outputs/${filename}`;
+    let resultUrl = publicUrl;
+    if (job.tenantId) {
+      registerMediaOwner(filename, job.tenantId, OUTPUT_DIR);
+      try {
+        const signed = signMediaAccess({ filename, tenantId: job.tenantId });
+        resultUrl = `${publicUrl}?${signed.queryString}`;
+      } catch (_) {}
+    }
     job.status = 'completed';
     job.progress = 100;
     job.statusText = 'Görsel başarıyla üretildi';
-    job.resultUrl = publicUrl;
+    job.resultUrl = resultUrl;
     job.filename = filename;
     job.resultBytes = buffer ? buffer.length : 0;
     job.resultB64 = null;
@@ -3064,12 +3088,20 @@ const server = http.createServer(async (req, res) => {
       }
       const requestedTenant = parsedUrl.searchParams.get('tenant_id');
       if (requestedTenant && requestedTenant !== job.tenantId) return sendJson(res,404,{error:'Job not found'});
+      let signedResultUrl = job.resultUrl;
+      if (signedResultUrl && job.tenantId && !signedResultUrl.includes('sig=')) {
+        try {
+          const fn = path.basename(signedResultUrl.split('?')[0]);
+          const signed = signMediaAccess({ filename: fn, tenantId: job.tenantId });
+          signedResultUrl = `${signedResultUrl}?${signed.queryString}`;
+        } catch (_) {}
+      }
       return sendJson(res, 200, {
         id: job.id,
         status: job.status,
         progress: job.progress,
         queue_position: job.status === 'pending' ? job.queuePosition : 0,
-        result_url: job.resultUrl,
+        result_url: signedResultUrl,
         ...(job.type === 'chat_suggestions' || job.type === 'chat_completion' ? { result: job.result } : {}),
         error: job.error,
         error_code: job.errorCode || null,

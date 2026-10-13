@@ -2,17 +2,18 @@
 
 // These functions also run verbatim in the provider page. Keep them self-contained.
 function captureTurnBaseline() {
-  const users = Array.from(document.querySelectorAll('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"]'));
+  const users = Array.from(document.querySelectorAll('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], [class*="user-message"]'));
   return { userKeys: users.map(u => u.getAttribute('data-message-id') || u.getAttribute('data-chatgpt-search-message-ids') || u.getAttribute('data-chatgpt-search-unit-key') || u.id || u.innerText) };
 }
 
 function readCurrentTurn(prompt, baseline) {
   const normalize = value => String(value || '').replace(/\s+/g, ' ').trim();
   const expected = normalize(prompt);
+  const expectedClean = expected.replace(/\.{3,}$/, '').trim();
   const before = new Set(baseline?.userKeys || []);
-  const users = Array.from(document.querySelectorAll('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"]'));
+  const users = Array.from(document.querySelectorAll('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], [class*="user-message"]'));
   const userKey = u => u.getAttribute('data-message-id') || u.getAttribute('data-chatgpt-search-message-ids') || u.getAttribute('data-chatgpt-search-unit-key') || u.id || u.innerText;
-  const user = users.filter(u => !before.has(userKey(u)) && expected && normalize(u.innerText).includes(expected)).pop();
+  const user = users.filter(u => !before.has(userKey(u)) && ((expected && normalize(u.innerText).includes(expected)) || (expectedClean && normalize(u.innerText).includes(expectedClean)))).pop();
   if (!user) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
   let assistants = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
   if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-chatgpt-search-unit-key$=":assistant"]'));

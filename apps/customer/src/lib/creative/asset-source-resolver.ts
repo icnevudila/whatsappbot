@@ -114,6 +114,10 @@ async function resolveRawAssetSource(
   }
 
   const gw = defaultGatewayUrl()
+  const gwToken = (process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim()
+  const gwHeaders: Record<string, string> = {}
+  if (gwToken) gwHeaders['Authorization'] = `Bearer ${gwToken}`
+  if (options?.tenantId) gwHeaders['X-Tenant-Id'] = options.tenantId
 
   // 1. media-proxy query parametresi içeren URL'ler
   if (source.includes('media-proxy?file=')) {
@@ -127,7 +131,9 @@ async function resolveRawAssetSource(
   // 2. Tam (Absolute) HTTP / HTTPS URL'leri
   if (source.startsWith('http://') || source.startsWith('https://')) {
     try {
-      const response = await fetch(source, { signal: AbortSignal.timeout(15000) })
+      const isGatewayRequest = source.startsWith(gw)
+      const fetchHeaders = isGatewayRequest ? gwHeaders : {}
+      const response = await fetch(source, { headers: fetchHeaders, signal: AbortSignal.timeout(15000) })
       if (!response.ok) return null
       const mime = (response.headers.get('content-type') || '').split(';')[0].trim() || detectMime(source)
       if (!mime.startsWith('image/')) return null
@@ -155,6 +161,7 @@ async function resolveRawAssetSource(
     const diskRoots = [
       path.resolve('/app/gateway/outputs'),
       path.resolve(process.cwd(), 'outputs'),
+      path.resolve(process.cwd(), 'services/omnistudio/gateway/outputs'),
       path.resolve(process.cwd(), '../services/omnistudio/gateway/outputs'),
       path.resolve('/var/lib/docker/volumes/infra_flow-outputs/_data'),
     ]
@@ -181,7 +188,7 @@ async function resolveRawAssetSource(
     // Gateway HTTP üzerinden indir
     try {
       const gwUrl = `${gw}/${cleanOutput}`
-      const response = await fetch(gwUrl, { signal: AbortSignal.timeout(15000) })
+      const response = await fetch(gwUrl, { headers: gwHeaders, signal: AbortSignal.timeout(15000) })
       if (response.ok) {
         const mime = (response.headers.get('content-type') || '').split(';')[0].trim() || detectMime(cleanOutput)
         if (mime.startsWith('image/')) {

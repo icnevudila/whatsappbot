@@ -91,11 +91,11 @@ class DistributedLeaseStore {
           const { createClient } = require('@supabase/supabase-js');
           this.supabase = createClient(url, key);
         } catch {
-          if (process.env.NODE_ENV === 'production') throw new Error('DISTRIBUTED_LEASE_STORE_UNAVAILABLE');
+          if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_SIMULATOR) throw new Error('DISTRIBUTED_LEASE_STORE_UNAVAILABLE');
           this.simulator = new SharedDatabaseSimulator();
         }
       } else {
-        if (process.env.NODE_ENV === 'production') throw new Error('DISTRIBUTED_LEASE_STORE_REQUIRED');
+        if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_SIMULATOR) throw new Error('DISTRIBUTED_LEASE_STORE_REQUIRED');
         this.simulator = new SharedDatabaseSimulator();
       }
     }

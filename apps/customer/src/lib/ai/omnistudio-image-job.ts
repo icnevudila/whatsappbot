@@ -82,7 +82,11 @@ export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expe
   }
   if (!/^[a-f0-9]{64}$/i.test(result.result_sha256 || '')) throw new ImageJobReconciliationError(job)
   if (!result.result_url) throw new ImageJobReconciliationError(job)
-  const output = await fetch(result.result_url, { signal: AbortSignal.timeout(30000) }).catch(() => { throw new ImageJobReconciliationError(job) })
+  const gwToken = (process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim()
+  const fetchHeaders: Record<string, string> = {}
+  if (gwToken) fetchHeaders['Authorization'] = `Bearer ${gwToken}`
+  if (tenantId) fetchHeaders['X-Tenant-Id'] = tenantId
+  const output = await fetch(result.result_url, { headers: fetchHeaders, signal: AbortSignal.timeout(30000) }).catch(() => { throw new ImageJobReconciliationError(job) })
   const mimeType = output.headers.get('content-type')?.split(';')[0] || ''
   if (!output.ok || !mimeType.startsWith('image/')) throw new ImageJobReconciliationError(job)
   if (Number(output.headers.get('content-length') || 0) > 32 * 1024 * 1024 || !output.body) throw new ImageJobPendingError(job)

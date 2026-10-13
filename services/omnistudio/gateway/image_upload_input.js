@@ -8,10 +8,28 @@ function findImageUploadInput(requiredCount) {
     .filter(({ input }) => !input.disabled && (requiredCount <= 1 || input.multiple)
       && /image\/|\.(png|jpe?g|webp|gif)(?:,|$)/i.test(input.accept || ''));
   const owned = eligible.filter(({ input }) => composer.contains(input));
-  // Some providers mount the chooser outside the form; accept only an unambiguous image chooser.
   const candidates = owned.length ? owned : eligible;
-  if (candidates.length !== 1) return null;
-  return { index: candidates[0].index, multiple: !!candidates[0].input.multiple };
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return { index: candidates[0].index, multiple: !!candidates[0].input.multiple };
+
+  // Multiple unowned portals outside composer are ambiguous: fail closed
+  if (!owned.length) return null;
+
+  // Inside composer: filter out camera/capture inputs
+  const nonCapture = candidates.filter(({ input }) => typeof input.getAttribute !== 'function' || !input.getAttribute('capture'));
+  if (nonCapture.length === 1) {
+    return { index: nonCapture[0].index, multiple: !!nonCapture[0].input.multiple };
+  }
+
+  // Prioritize dedicated photo-only input over mixed video/all-file inputs
+  const photoOnly = (nonCapture.length ? nonCapture : candidates).filter(({ input }) =>
+    /^(?:image\/\*|image\/(?:png|jpe?g|webp)(?:,\s*image\/(?:png|jpe?g|webp))*)$/i.test((input.accept || '').trim())
+  );
+  if (photoOnly.length === 1) {
+    return { index: photoOnly[0].index, multiple: !!photoOnly[0].input.multiple };
+  }
+
+  return null;
 }
 
 module.exports = { findImageUploadInput };
