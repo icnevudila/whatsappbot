@@ -1,3 +1,4 @@
+import { styleModeDirective } from './style-mode'
 import type { CreativeSnapshot, TemplateFamily } from './types'
 import { buildCreativePromptV3 } from './director/brief-v3'
 import { CREATIVE_FORMATS, CREATIVE_STYLES, TEMPLATE_FAMILIES, VARIATION_PRESETS } from './types'
@@ -711,6 +712,8 @@ export function buildOverDirectedCreativePrompt(
   if (snapshot.address) contacts.push(`Address: ${snapshot.address}`)
 
   const extras: string[] = []
+  if (snapshot.customHeadline?.trim()) extras.push(`Required headline, preserve literally: ${JSON.stringify(snapshot.customHeadline.trim())}`)
+  if (snapshot.customSupporting?.trim()) extras.push(`Required supporting copy, preserve literally: ${JSON.stringify(snapshot.customSupporting.trim())}`)
   if (snapshot.labels.length) extras.push(`Badges/labels to feature: ${snapshot.labels.join(', ')}`)
   if (snapshot.cta) extras.push(`CTA: ${snapshot.cta}`)
   if (snapshot.dateRange) extras.push(`Campaign dates: ${snapshot.dateRange}`)
@@ -903,10 +906,10 @@ export function buildCreativePrompt(
   negative: string
 } {
   if (snapshot.promotionMode === 'brand' || options?.mode === 'V3') return buildCreativePromptV3(snapshot)
-  if (options?.mode === 'OVER_DIRECTED_DESIGNER') {
-    return buildOverDirectedCreativePrompt(snapshot, options)
-  }
-  return buildLegacySimpleCreativePrompt(snapshot, options)
+  const compiled = options?.mode === 'OVER_DIRECTED_DESIGNER'
+    ? buildOverDirectedCreativePrompt(snapshot, options)
+    : buildLegacySimpleCreativePrompt(snapshot, options)
+  return snapshot.styleMode ? { ...compiled, prompt: `${compiled.prompt}\n${styleModeDirective(snapshot.styleMode)}` } : compiled
 }
 
 const VIDEO_STYLE_MOODS: Record<string, string> = {

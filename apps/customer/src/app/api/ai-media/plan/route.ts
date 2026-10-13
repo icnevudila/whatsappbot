@@ -1,3 +1,4 @@
+import { normalizeStyleMode } from '@/lib/creative/style-mode'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg } from '@/lib/org'
 import { generateCreativePlan } from '@/lib/creative/v2/ai-planner'
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
       productDescription,
       objective,
       stylePreset,
+      styleMode: normalizeStyleMode(body.styleMode),
       mediaType,
       campaignDetail,
       campaignCopy,

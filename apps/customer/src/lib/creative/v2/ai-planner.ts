@@ -1,3 +1,4 @@
+import { styleModeDirective, type CreativeStyleMode } from '../style-mode'
 import { completeText } from '@/lib/ai/text'
 import {
   type CampaignObjective,
@@ -14,6 +15,7 @@ export type PlannerInput = {
   productName: string
   productDescription?: string | null
   objective: CampaignObjective
+  styleMode?: CreativeStyleMode
   stylePreset: CreativeStylePreset
   mediaType: MediaType
   campaignDetail?: string | null
@@ -53,6 +55,7 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
     cta = 'Detaylı Bilgi Alın'
   }
 
+  const campaignBold = !isVideo && input.styleMode === 'campaign_bold'
   const voiceover = isVideo
     ? `${brand} ${product}. Ayrıntılı bilgi almak için bize ulaşın.`
     : undefined
@@ -62,14 +65,14 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
     objective: input.objective,
     creative_style: input.stylePreset,
     scene: {
-      environment: 'Sade, aydınlık ve modern ticari ortam',
+      environment: campaignBold ? 'Ürüne ve marka sektörüne uygun, güçlü kontrastlı ticari ortam' : 'Sade, aydınlık ve modern ticari ortam',
       human_presence: input.stylePreset === 'REAL_USAGE' ? 'actor' : 'none',
       subject: product,
       product_interaction: input.stylePreset === 'REAL_USAGE' ? 'doğal profesyonel kullanım' : 'statik ürün sunumu',
-      composition: 'merkezde net odak, dengeli reklam yerleşimi',
+      composition: campaignBold ? 'Büyük başlık, güçlü CTA, belirgin ana ürün ve kontrollü vurgu alanları' : 'merkezde net odak, dengeli reklam yerleşimi',
       lighting: 'doğal ticari aydınlatma, yumuşak gölgeler',
       camera_feel: '35mm sinematik netlik, derinlikli kadraj',
-      background: 'ürünü öne çıkaran sade, şık ve uyumlu arka plan',
+      background: campaignBold ? 'Marka renklerine uygun katmanlı ve düzenli kampanya sahnesi' : 'ürünü öne çıkaran sade, şık ve uyumlu arka plan',
     },
     copy: {
       headline,
@@ -151,6 +154,7 @@ Marka Tonu: ${input.brandTone || 'Güvenilir ve profesyonel'}
 Ürün Açıklaması: ${input.productDescription || 'Belirtilmedi'}
 Kampanya Amacı: ${DEFAULT_OBJECTIVE_TITLES[input.objective]} (${input.objective})
 Kreatif Stil: ${input.stylePreset}
+${input.mediaType === 'IMAGE' ? styleModeDirective(input.styleMode) : ''}
 Medya Türü: ${input.mediaType}
 Varsa Kampanya Detayı / Not: ${input.campaignDetail || 'Yok'}
 Varsa Ticari Bilgiler: ${copyDetails || 'Belirtilmedi'}

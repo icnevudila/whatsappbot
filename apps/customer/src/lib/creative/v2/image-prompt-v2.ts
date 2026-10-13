@@ -1,9 +1,11 @@
+import { styleModeDirective, type CreativeStyleMode } from '../style-mode'
 import { type CreativePlanV2, type CreativeStylePreset, type ImageFormatV2 } from './types'
 
 export type ImagePromptV2Options = {
   brandName: string
   productName: string
   productDescription?: string | null
+  styleMode?: CreativeStyleMode
   stylePreset: CreativeStylePreset
   format: ImageFormatV2
   plan?: CreativePlanV2 | null
@@ -40,6 +42,7 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     styleLine = 'Vibrant commercial advertising staging, dynamic directional lighting, high contrast, clean focal hierarchy.'
   }
 
+  if (options.styleMode) styleLine += '\n' + styleModeDirective(options.styleMode)
   const sceneEnvironment = plan?.scene?.environment || 'Clean, modern, commercial environment appropriate for the product.'
   const composition = plan?.scene?.composition || 'Balanced commercial composition, product is prominent and in sharp focus.'
   const lighting = plan?.scene?.lighting || 'Professional advertising lighting with soft natural shadows.'

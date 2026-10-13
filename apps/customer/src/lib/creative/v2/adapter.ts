@@ -1,3 +1,4 @@
+import { normalizeStyleMode, type CreativeStyleMode } from '../style-mode'
 import {
   type CampaignObjective,
   type CreativeStylePreset,
@@ -12,6 +13,7 @@ export type UnifiedCreativeDraftV2 = {
   mediaType: MediaType
   heroProductId: string
   objective: CampaignObjective
+  styleMode?: CreativeStyleMode
   stylePreset: CreativeStylePreset
   campaignDetail: string
   campaignCopy: StructuredCampaignCopy
@@ -205,6 +207,7 @@ export function adaptLegacyDraftToV2(
     heroProductId,
     objective,
     stylePreset,
+    styleMode: normalizeStyleMode(raw.styleMode),
     campaignDetail: (raw.campaignDetail as string) || (raw.creativeNote as string) || (raw.brief as string) || (raw.notes as string) || '',
     campaignCopy,
     formatId: isVideo ? 'STORY_9_16' : mapLegacyFormatToV2(rawFormat),

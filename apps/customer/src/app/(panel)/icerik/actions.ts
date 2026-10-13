@@ -19,6 +19,7 @@ import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
 import { isReadyImageSource } from '@/lib/creative/image-source'
+import { normalizeStyleMode } from '@/lib/creative/style-mode'
 import { inheritVariationContext, variationIdentityError } from '@/lib/creative/variation-context'
 import { requiredImageAssets } from '@/lib/creative/required-image-assets'
 import {
@@ -614,6 +615,7 @@ export async function startCreativeGeneration(
     customSupporting: (draft.customSupporting as string) || null,
     heroProductId: heroProductId || (products[0]?.id as string) || null,
     generationType,
+    styleMode: normalizeStyleMode(draft.styleMode),
     stylePreset: normalizedStylePreset,
     objective: subjectMode === 'brand' ? 'BRAND_AWARENESS' : (draft.objective as string) || null,
     artDirectionPlan: artDirectionPlan || null,

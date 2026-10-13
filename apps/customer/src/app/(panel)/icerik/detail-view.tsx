@@ -12,6 +12,7 @@ import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
+import { STYLE_MODES, normalizeStyleMode, type CreativeStyleMode } from '@/lib/creative/style-mode'
 import { VARIATION_PRESETS } from '@/lib/creative/types'
 import { detailRenderState, hasConfirmedRenderResult, renderRemainingText } from '@/lib/creative/detail-render-state'
 import {
@@ -66,6 +67,7 @@ export type DetailCreative = {
   recoverableImageJob?: boolean
   campaignMessage?: string | null
   artDirectionSource?: string | null
+  styleMode?: CreativeStyleMode
   heroProductId?: string | null
 }
 
@@ -304,12 +306,17 @@ export function CreativeDetail({
 }) {
   const router = useRouter()
   const [instruction, setInstruction] = useState('')
+  const [variationStyleMode, setVariationStyleMode] = useState<'inherit' | CreativeStyleMode>('inherit')
   const [variationInstruction, setVariationInstruction] = useState('')
   const variationDraftKey = `wa.customer.creative-variation.v1.${orgId}.${creative.id}`
   const [variationDraftReady, setVariationDraftReady] = useState<string | null>(null)
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      try { setVariationInstruction(localStorage.getItem(variationDraftKey) || '') }
+      try {
+        setVariationInstruction(localStorage.getItem(variationDraftKey) || '')
+        const savedStyle = localStorage.getItem(`${variationDraftKey}.style`)
+        setVariationStyleMode(savedStyle === 'balanced_modern' || savedStyle === 'campaign_bold' ? savedStyle : 'inherit')
+      }
       catch { setVariationInstruction('') }
       setVariationDraftReady(variationDraftKey)
     })
@@ -317,9 +324,12 @@ export function CreativeDetail({
   }, [variationDraftKey])
   useEffect(() => {
     if (variationDraftReady !== variationDraftKey) return
-    try { localStorage.setItem(variationDraftKey, variationInstruction) }
+    try {
+      localStorage.setItem(variationDraftKey, variationInstruction)
+      localStorage.setItem(`${variationDraftKey}.style`, variationStyleMode)
+    }
     catch { /* Keep the editable draft usable when storage is unavailable. */ }
-  }, [variationDraftReady, variationDraftKey, variationInstruction])
+  }, [variationDraftReady, variationDraftKey, variationInstruction, variationStyleMode])
   useEffect(() => {
     if (!creative.submissionRequestKey) return
     try {
@@ -553,7 +563,7 @@ export function CreativeDetail({
 
   const spawn = (draft: Record<string, unknown>) => {
     const form = new FormData()
-    form.set('draft', JSON.stringify(draft))
+    form.set('draft', JSON.stringify(draft.generationType === 'variation' && variationStyleMode !== 'inherit' ? { ...draft, styleMode: variationStyleMode } : draft))
     startTransition(async () => {
       const res = await startCreativeGeneration(null, form)
       if (res?.error) {
@@ -833,6 +843,7 @@ export function CreativeDetail({
         {new Date(creative.createdAt).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' })} · {creative.format}
         {creative.provider ? ` · ${creative.provider}` : ''}
         {creative.generationType ? ` · ${creative.generationType}` : ''}
+        {creative.format !== 'video' && creative.styleMode ? ` · ${STYLE_MODES.find(mode => mode.id === creative.styleMode)?.label}` : ''}
         {creative.artDirectionSource === 'AI_PRECOMPUTED' ? ' · AI Planlama' : creative.artDirectionSource === 'DETERMINISTIC_FALLBACK' ? ' · Tasarım Kılavuzu' : ''}
       </p>
       {creative.brief && creative.brief !== creative.title ? (
@@ -882,6 +893,13 @@ export function CreativeDetail({
             </p>
           </div>
 
+          <label className="flex flex-wrap items-center gap-2 text-[12px] font-medium">
+            Tasarım Stili
+            <select value={variationStyleMode} disabled={pending} onChange={event => setVariationStyleMode(event.target.value === 'inherit' ? 'inherit' : normalizeStyleMode(event.target.value))} className="min-h-9 rounded-lg border border-hairline bg-white px-2 text-[12px]">
+              <option value="inherit">Aynı kalsın</option>
+              {STYLE_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label} yap</option>)}
+            </select>
+          </label>
           <Textarea
             rows={2}
             value={variationInstruction}

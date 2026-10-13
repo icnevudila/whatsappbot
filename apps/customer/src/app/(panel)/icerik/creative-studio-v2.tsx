@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
+import { STYLE_MODES, normalizeStyleMode, type CreativeStyleMode } from '@/lib/creative/style-mode'
 import { Stepper } from '@/components/stepper'
 import { Icon } from '@/components/icon'
 import { ProductionProgress } from '@/components/production-progress/production-progress'
@@ -106,6 +107,7 @@ export function CreativeStudioV2({
   const [productsList, setProductsList] = useState<ProductCard[]>(data.products)
 
   // Step 2: Creative Direction & Copy
+  const [styleMode, setStyleMode] = useState<CreativeStyleMode>('balanced_modern')
   const [stylePreset, setStylePreset] = useState<CreativeStylePreset>('AUTO')
   const [isPlanning, setIsPlanning] = useState(false)
   const [planError, setPlanError] = useState<string | null>(null)
@@ -299,6 +301,7 @@ export function CreativeStudioV2({
         setOfferingKind(parseOfferingKind(parsed.offeringKind))
         if (parsed.promotionMode === 'brand') setHeroProductId('')
         setObjective(adapted.objective)
+        setStyleMode(normalizeStyleMode(adapted.styleMode))
         setStylePreset(adapted.stylePreset)
         setCampaignDetail(adapted.campaignDetail)
         if (adapted.formatId !== 'STORY_9_16') setImageFormat(adapted.formatId)
@@ -354,6 +357,7 @@ export function CreativeStudioV2({
         heroProductId: brandOnly ? '' : heroProductId,
         objective,
         stylePreset,
+        styleMode,
         campaignDetail,
         formatId: mediaType === 'VIDEO' ? 'STORY_9_16' : imageFormat,
         campaignCopy: { price, oldPrice, offer, dateRange, cta: ctaText },
@@ -381,6 +385,7 @@ export function CreativeStudioV2({
     heroProductId,
     objective,
     stylePreset,
+    styleMode,
     campaignDetail,
     imageFormat,
     price,
@@ -401,7 +406,7 @@ export function CreativeStudioV2({
   ])
 
   // Keep the editor usable while the planner completes its bounded request.
-  const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset, sceneOnly = false) => {
+  const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset, sceneOnly = false, requestedStyleMode: CreativeStyleMode = styleMode) => {
     if (previewOnly) return
     if (!brandOnly && !selectedProduct) return
 
@@ -435,6 +440,7 @@ export function CreativeStudioV2({
           productDescription: brandOnly ? (data.org.about || null) : (selectedProduct?.description || null),
           objective: brandOnly ? 'BRAND_AWARENESS' : objective,
           stylePreset: requestedStyle,
+          styleMode: requestedStyleMode,
           mediaType,
           campaignDetail: campaignDetail || null,
           campaignCopy: { price, oldPrice, offer, dateRange, cta: ctaText },
@@ -656,6 +662,7 @@ export function CreativeStudioV2({
           customHeadline: headline,
           customSupporting: supportingLine,
           stylePreset,
+          styleMode,
           objective: brandOnly ? 'BRAND_AWARENESS' : objective,
           creativePlan,
           qualityMode,
@@ -973,6 +980,42 @@ export function CreativeStudioV2({
             {/* STEP 1: PRODUCT & GOAL */}
             {step === 'product_goal' && (
               <div className="space-y-4">
+                  {/* Medya Türü */}
+                  <div className="rounded-xl border border-emerald-200 bg-[#f2fbf7] p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[13px] font-bold text-[#111b21]">1. Medya Türü</span>
+                      <span className="text-[11px] text-[#667781]">{mediaType === 'IMAGE' ? 'Görsel Tasarım' : '9:16 Video'}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        aria-pressed={mediaType === 'IMAGE'} onClick={() => setMediaType('IMAGE')}
+                        className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border py-2 px-2 sm:px-3 transition-all min-h-[52px] ${
+                          mediaType === 'IMAGE'
+                            ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
+                            : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/40'
+                        }`}
+                      >
+                        <Icon name="image" className="size-4 shrink-0 text-[#008069]" />
+                        <span className="text-[12.5px] font-medium leading-none">Görsel Reklam</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        aria-pressed={mediaType === 'VIDEO'} onClick={() => setMediaType('VIDEO')}
+                        className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border py-2 px-2 sm:px-3 transition-all min-h-[52px] ${
+                          mediaType === 'VIDEO'
+                            ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
+                            : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/40'
+                        }`}
+                      >
+                        <Icon name="video" className="size-4 shrink-0 text-[#008069]" />
+                        <span className="text-[12.5px] font-medium leading-none">Video Reklam</span>
+                      </button>
+                    </div>
+                  </div>
+
+
                 {/* Tanıtım Biçimi Segmented Control */}
                 <fieldset className="rounded-xl border border-hairline bg-surface p-3 space-y-2">
                   <div className="flex items-center justify-between">
@@ -1002,42 +1045,7 @@ export function CreativeStudioV2({
                 {brandOnly && mediaType === 'VIDEO' ? <Notice tone="warn">{BRAND_VIDEO_UNAVAILABLE}</Notice> : null}
 
                 {/* 1. Medya Türü & Boyut / Format (Kompakt 2 sütunlu grid) */}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {/* Medya Türü */}
-                  <div className="rounded-xl border border-hairline bg-surface p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[13px] font-bold text-[#111b21]">1. Medya Türü</span>
-                      <span className="text-[11px] text-[#667781]">{mediaType === 'IMAGE' ? 'Görsel Tasarım' : '9:16 Video'}</span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setMediaType('IMAGE')}
-                        className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border py-2 px-2 sm:px-3 transition-all min-h-[44px] ${
-                          mediaType === 'IMAGE'
-                            ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
-                            : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/40'
-                        }`}
-                      >
-                        <Icon name="image" className="size-4 shrink-0 text-[#008069]" />
-                        <span className="text-[12.5px] font-medium leading-none">Görsel Reklam</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setMediaType('VIDEO')}
-                        className={`flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg border py-2 px-2 sm:px-3 transition-all min-h-[44px] ${
-                          mediaType === 'VIDEO'
-                            ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
-                            : 'border-[#e9edef] bg-white text-[#111b21] hover:border-[#008069]/40'
-                        }`}
-                      >
-                        <Icon name="video" className="size-4 shrink-0 text-[#008069]" />
-                        <span className="text-[12.5px] font-medium leading-none">Video Reklam</span>
-                      </button>
-                    </div>
-                  </div>
-
+                <div className="grid gap-3">
                   {/* Format Seçimi (Görsel için) veya Video Bilgisi */}
                   <div className="rounded-xl border border-hairline bg-surface p-3 space-y-2">
                     <div className="flex items-center justify-between">
@@ -1227,9 +1235,25 @@ export function CreativeStudioV2({
                 {/* 1. Görsel Tarzı */}
                 <div className="rounded-xl border border-hairline bg-surface p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-[13px] font-bold text-[#111b21]">1. Görsel Tarzı</h2>
+                    <h2 className="text-[13px] font-bold text-[#111b21]">{mediaType === 'IMAGE' ? '1. Tasarım Stili' : '1. Görsel Tarzı'}</h2>
                     <span className="text-[11px] text-[#667781]">Kompozisyon ve tasarım yaklaşımı</span>
                   </div>
+                  {mediaType === 'IMAGE' ? (
+                    <fieldset className="space-y-2">
+                      <legend className="sr-only">Tasarım Stili</legend>
+                      <div className="grid grid-cols-2 gap-2">
+                        {STYLE_MODES.map(mode => (
+                          <button key={mode.id} type="button" aria-pressed={styleMode === mode.id}
+                            onClick={() => { setStyleMode(mode.id); void requestCreativePlan(false, stylePreset, true, mode.id) }}
+                            className={`min-h-[56px] rounded-lg border px-3 py-2 text-left transition-colors ${styleMode === mode.id ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]' : 'border-[#e9edef] bg-white hover:border-[#008069]/40'}`}>
+                            <span className="block text-[12px] font-bold text-[#111b21]">{mode.label}</span>
+                            <span className="mt-0.5 block text-[11px] leading-snug text-[#667781]">{mode.description}</span>
+                          </button>
+                        ))}
+                      </div>
+                      {(objective === 'CAMPAIGN' || objective === 'SALES_OFFER') && styleMode !== 'campaign_bold' && <p className="text-[11px] text-[#008069]">Bu kampanya için Kampanya / Dikkat Çekici stilini deneyebilirsiniz.</p>}
+                    </fieldset>
+                  ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
                     {CREATIVE_STYLE_PRESETS.map((preset) => (
                       <button
@@ -1257,6 +1281,8 @@ export function CreativeStudioV2({
                       </button>
                     ))}
                   </div>
+
+                  )}
 
                   {mediaType === 'IMAGE' && (
                     <div className="flex items-center justify-between pt-2 border-t border-hairline/60">
@@ -1655,7 +1681,7 @@ export function CreativeStudioV2({
                         </button>
                       </div>
                       <p className="font-bold text-[#008069] truncate">
-                        {CREATIVE_STYLE_PRESETS.find((p) => p.id === stylePreset)?.label}
+                        {mediaType === 'IMAGE' ? STYLE_MODES.find(mode => mode.id === styleMode)?.label : CREATIVE_STYLE_PRESETS.find((p) => p.id === stylePreset)?.label}
                       </p>
                     </div>
                     <div className="rounded-lg border border-[#e9edef] bg-white p-2.5">

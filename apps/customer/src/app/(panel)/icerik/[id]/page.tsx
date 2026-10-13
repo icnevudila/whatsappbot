@@ -1,3 +1,4 @@
+import { normalizeStyleMode } from '@/lib/creative/style-mode'
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { PageHeader } from '@/components/ui'
@@ -81,6 +82,7 @@ export default async function CreativeDetailPage({
     imageReconciliationRequired: Boolean(payload?.imageReconciliationRequired),
     campaignMessage: payload?.campaignMessage ?? null,
     artDirectionSource: payload?.art_direction_source || payload?.submissionMetrics?.art_direction_source || null,
+    styleMode: normalizeStyleMode(payload?.styleMode),
     heroProductId: payload?.heroProductId || (Array.isArray(payload?.products) && payload.products[0]?.id) || null,
   }
 

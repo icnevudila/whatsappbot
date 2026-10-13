@@ -12,7 +12,7 @@ export function variationIdentityError(productIds: string[], kitId: string | nul
 export function inheritVariationContext(draft: Record<string, unknown>, parent: CreativePayload): Record<string, unknown> {
   const inherited = { ...draft }
   const keys = ['cta', 'address', 'website', 'dateRange', 'customText', 'customHeadline',
-    'customSupporting', 'objective', 'stylePreset', 'qualityMode', 'templateFamily',
+    'customSupporting', 'objective', 'styleMode', 'stylePreset', 'qualityMode', 'templateFamily',
     'sector', 'deliveryInfo', 'stockInfo', 'urgencyInfo', 'primaryBenefits', 'promotionMode', 'offeringKind'] as const
   for (const key of keys) {
     if (!Object.prototype.hasOwnProperty.call(draft, key) && parent[key] !== undefined) {

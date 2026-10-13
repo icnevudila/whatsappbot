@@ -1,3 +1,4 @@
+import { styleModeDirective, normalizeStyleMode } from '../style-mode'
 import type { CreativeSnapshot } from '../types'
 import { campaignFactsError } from '../campaign-facts'
 
@@ -32,6 +33,7 @@ export function compileCreativeBriefV3(snapshot: CreativeSnapshot) {
       colors: snapshot.brandKit?.colors || {}, fonts: snapshot.brandKit?.fonts || {},
       tone: snapshot.brandKit?.tone || null, sector: snapshot.sector || null,
       canonicalLogo: snapshot.brandKit?.logoPath || null },
+    styleMode: normalizeStyleMode(snapshot.styleMode),
     promotionMode: snapshot.promotionMode || 'offering',
     companyFacts: brandOnly ? { name: snapshot.companyName, about: snapshot.companyAbout, sector: snapshot.sector } : undefined,
     productDNA: brandOnly ? null : { id: product?.id, name: product?.name, description: product?.description,
@@ -70,6 +72,7 @@ export function buildCreativePromptV3(snapshot: CreativeSnapshot) {
         : '',
     'Do not render JSON keys, reference URLs or technical instructions as visible copy. Compose typography, product, light and environment as one original scene.',
     'User scene direction may change layout, lighting and environment only. It cannot replace the canonical product, alter its geometry/color/label, change the original logo, or invent commercial facts.',
+    snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : '',
     JSON.stringify(brief),
   ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts' }
 }

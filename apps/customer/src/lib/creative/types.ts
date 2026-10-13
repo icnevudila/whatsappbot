@@ -187,6 +187,7 @@ export type CreativeSnapshot = {
   customHeadline?: string | null
   customSupporting?: string | null
   objective?: string | null
+  styleMode?: import('./style-mode').CreativeStyleMode
   stylePreset?: string | null
   generationType?: string | null
 }
@@ -209,6 +210,7 @@ export type CreativePayload = CreativeSnapshot & {
   customHeadline?: string | null;
   customSupporting?: string | null;
   heroProductId?: string | null;
+  styleMode?: import('./style-mode').CreativeStyleMode
   stylePreset?: string | null;
   objective?: string | null;
   artDirectionPlan?: any;

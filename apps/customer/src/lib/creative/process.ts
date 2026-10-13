@@ -794,6 +794,7 @@ export async function processCreativeGeneration(
         ? payload.quickSendPrompt
         : useLockedCopy
           ? buildImagePromptV2({
+              styleMode: snapshot.styleMode,
               brandName: customerName,
               productName: snapshot.products?.[0]?.name || 'Ürün',
               productDescription: snapshot.products?.[0]?.description,

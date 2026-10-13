@@ -2247,7 +2247,7 @@ button.wb-wa-set-row {
 }
 .wb-library-cta {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 8px;
   padding: 10px 12px 8px;
 }

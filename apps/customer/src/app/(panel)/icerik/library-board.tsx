@@ -194,13 +194,9 @@ export function LibraryBoard({
       />
 
       <div className="wb-library-cta">
-        <Link href="/icerik/yeni?format=video" className="wb-library-cta-btn is-primary">
-          <Icon name="video" className="size-5" />
-          + Video
-        </Link>
-        <Link href="/icerik/yeni" className="wb-library-cta-btn">
-          <Icon name="image" className="size-5" />
-          + Görsel
+        <Link href="/icerik/yeni" className="wb-library-cta-btn is-primary">
+          <Icon name="sparkles" className="size-5" />
+          İçerik Oluştur
         </Link>
       </div>
 
