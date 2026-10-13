@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto'
 import type { AiKeyBag } from '@/lib/ai/config'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { buildCreativePrompt, buildVideoPrompt, deriveVerifiedCampaignData } from './prompt'
+import { requiredImageAssets } from './required-image-assets'
 import { buildCreativePromptV3 } from './director/brief-v3'
 import { promotionPolicyError } from './promotion-policy'
 import { generateCampaignWhatsAppMessage } from '@/lib/ai/campaign-message'
@@ -657,6 +658,10 @@ export async function processCreativeGeneration(
       }
     }
     const expectedLogo = Boolean(shouldIncludeLogo && expectedLogoPath)
+    const identityGate = requiredImageAssets({ useLogo: shouldIncludeLogo, hasLogo: expectedLogo,
+      hasProductReference: expectedProducts.length > 0, hasValidBase: expectedBase,
+      promotionMode: snapshot.promotionMode === 'brand' ? 'brand' : 'offering' })
+    if (!identityGate.ready) throw new Error(`${identityGate.code}: ${identityGate.message}`)
     if (snapshot.promotionMode === 'brand') {
       const subjectError = promotionPolicyError({mode:'brand',video:creative.format === 'video' || snapshot.formatId === 'reels_video',
         hasLogo:expectedLogo,hasOfferingReference:false,hasOfferingSelection:snapshot.products.length > 0,

@@ -63,7 +63,13 @@ export function buildCreativePromptV3(snapshot: CreativeSnapshot) {
     snapshot.promotionMode === 'brand' ? 'Create ONE Turkish brand advertisement. The only attached identity reference is the canonical brand logo; it is NOT a product photograph. Do not invent an offering.' : 'Create ONE complete AI-designed Turkish advertisement from the structured brief below. The attached canonical logo/product are identity references, not a layout template.',
     'Use the exact supplied brand color roles and heading font when available. Missing roles remain unspecified; never borrow another brand palette.',
     'Keep supplied sales headline, price OR offer and CTA visible at every text density. Low density removes optional supporting copy only. Preserve user-written copy literally.',
+    snapshot.baseCreativeId && snapshot.generationType === 'revision'
+      ? 'CONTROLLED REVISION: STRICTLY PRESERVE the exact existing scene, product angle, lighting and layout of the attached parent creative. Only change the requested text or price; canonical product and logo identity are immutable.'
+      : snapshot.baseCreativeId && snapshot.generationType === 'variation'
+        ? 'VARIATION: Do NOT freeze or copy the old canvas layout. Follow the new user scene direction while retaining the exact canonical product and brand identity.'
+        : '',
     'Do not render JSON keys, reference URLs or technical instructions as visible copy. Compose typography, product, light and environment as one original scene.',
+    'User scene direction may change layout, lighting and environment only. It cannot replace the canonical product, alter its geometry/color/label, change the original logo, or invent commercial facts.',
     JSON.stringify(brief),
   ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts' }
 }

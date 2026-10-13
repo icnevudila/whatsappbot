@@ -14,7 +14,7 @@ const { navigateToChat } = require('./chat_navigation.js');
 const { isChatGPTPage } = require('./chatgpt_tab_scope.js');
 const { assertImageScope, readImageScope } = require('./image_conversation_scope.js');
 const { assertReferenceCount } = require('./image_reference_contract.js');
-const { reconnectImageObservation } = require('./image_observation_reconnect.js');
+const { reconnectImageObservation, isImageObservationContextLost } = require('./image_observation_reconnect.js');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const { createWorkerGatewayFetch } = require('./worker_gateway_fetch.js');
@@ -1149,7 +1149,7 @@ async function executeChatGPTJob(tab, job) {
           throw new Error(checkResult.error);
         }
       } catch (evalErr) {
-        if (evalErr.message.includes('WebSocket not open') || evalErr.message.includes('Target closed') || evalErr.message.includes('Connection closed')) {
+        if (isImageObservationContextLost(evalErr)) {
           console.error(`[CDP Worker: ${WORKER_ID}] WebSocket koptu:`, evalErr.message);
           if (submissionActivated && observationReconnects < 2) {
             observationReconnects++;

@@ -6,7 +6,8 @@ export function requiredImageAssets(input: {
     ready: false, code: 'IMAGE_LOGO_REQUIRED', message: 'Üretmek için işletme logosunu ekleyin ve logo kullanımını açın.',
   }
   if (input.promotionMode === 'brand') return {ready:true,code:null,message:null}
-  if (!input.hasProductReference && !input.hasValidBase) return {
+  // A parent canvas can preserve composition, but cannot replace catalog identity.
+  if (!input.hasProductReference) return {
     ready: false, code: 'IMAGE_PRODUCT_REFERENCE_REQUIRED', message: 'Üretmek için gerçek bir ürün veya referans görseli seçin.',
   }
   return {ready:true,code:null,message:null}

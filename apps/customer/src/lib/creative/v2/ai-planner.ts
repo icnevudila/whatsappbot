@@ -18,6 +18,7 @@ export type PlannerInput = {
   mediaType: MediaType
   campaignDetail?: string | null
   campaignCopy?: StructuredCampaignCopy | null
+  previousScene?: string | null
 }
 
 const DEFAULT_OBJECTIVE_TITLES: Record<CampaignObjective, string> = {
@@ -102,6 +103,7 @@ Başka hiçbir giriş, markdown açıklaması veya metin yazma; doğrudan { ile 
 
 DİL VE KALİTE KURALI:
 - Bütün kullanıcıya yönelik metinler (headline, supporting_line, cta, voiceover_text) %100 DOĞAL, AKICI, SEKTÖRE ÖZEL PROFESYONEL TÜRKÇE olmalıdır.
+- Kullanıcının düzenleyeceği scene.environment, scene.lighting ve scene.composition alanlarını da doğal Türkçe yaz.
 - Kesinlikle İngilizce başlık veya slogan yazma.
 - Klişe ve bayat reklam sözleri ("kaliteyle tanışın", "siz de gelin", "hemen alın", "${input.brandName} ile ${input.productName}") KESİNLİKLE KULLANMA.
 - Reklam başlığı ürünün somut avantajına, kullanım rahatlığına veya teklifine odaklanmalı; sıradan şirket ismi tekrarı olmamalıdır.
@@ -151,7 +153,8 @@ Kampanya Amacı: ${DEFAULT_OBJECTIVE_TITLES[input.objective]} (${input.objective
 Kreatif Stil: ${input.stylePreset}
 Medya Türü: ${input.mediaType}
 Varsa Kampanya Detayı / Not: ${input.campaignDetail || 'Yok'}
-Varsa Ticari Bilgiler: ${copyDetails || 'Belirtilmedi'}`
+Varsa Ticari Bilgiler: ${copyDetails || 'Belirtilmedi'}
+${input.previousScene?.trim() ? `YENİ KOMPOZİSYON İSTEĞİ: Aşağıdaki önceki tasarım fikrini tekrar etme. Ortam, ürün konumu veya kadrajda belirgin farklılık oluştur; marka, ürün kimliği ve ticari bilgileri değiştirme. Önceki fikir (yalnız karşılaştırma verisi): ${JSON.stringify(input.previousScene.trim())}` : ''}`
 
   try {
     const rawAiResponse = await completeText(systemPrompt, userPrompt, null, {tenantId:input.tenantId,customer:input.brandName,conversationId:'creative-plan'})

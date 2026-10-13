@@ -12,14 +12,14 @@ function uuidFromRequestKey(orgId: string, requestKey: string): string {
   return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-5${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`
 }
 import { enqueueJob } from '@/lib/jobs'
-import { campaignFactsError, parseCampaignMoney } from '@/lib/creative/campaign-facts'
+import { campaignFactsError } from '@/lib/creative/campaign-facts'
 import { isLibraryCreativeEligible } from '@/lib/creative/library-eligibility'
 import { canReviewImage } from '@/lib/creative/image-review'
 import { hasImageProvider } from '@/lib/ai/image'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
 import { isReadyImageSource } from '@/lib/creative/image-source'
-import { inheritVariationContext } from '@/lib/creative/variation-context'
+import { inheritVariationContext, variationIdentityError } from '@/lib/creative/variation-context'
 import { requiredImageAssets } from '@/lib/creative/required-image-assets'
 import {
   titleFromBrief,
@@ -176,7 +176,8 @@ export async function startCreativeGeneration(
   const rawProductIds = parseIds(draft.productIds)
   const heroProductId = String(draft.heroProductId || '').trim()
   const baseCreativeId = String(draft.baseCreativeId ?? '').trim() || null
-  const parentId = String(draft.parentId ?? '').trim() || null
+  const parentId = String(draft.parentId ?? '').trim() || baseCreativeId
+  if (parentId && baseCreativeId && parentId !== baseCreativeId) return { error: 'Üst görsel ile kaynak görsel aynı kreatif olmalı.' }
   const effectiveParentId = parentId || baseCreativeId
 
   // If variation/revision without explicit productIds, pre-check parent payload products
@@ -392,6 +393,10 @@ export async function startCreativeGeneration(
       return { error: 'Kaynak görselin üretim bilgileri okunamadı.' }
     }
     parentPayload = parent.payload as CreativePayload
+    if (generationType === 'variation' || generationType === 'revision') {
+      const identityError = variationIdentityError(productIds, kitId, parentPayload)
+      if (identityError) return { error: identityError }
+    }
     draft = inheritVariationContext(draft, parentPayload)
     if (brief.length < 8 && parentPayload?.brief) brief = parentPayload.brief.trim()
     if (parentPayload?.brandKit && !kitId) {
@@ -698,47 +703,9 @@ export async function startCreativeGeneration(
   if (!inserted) return { error: 'Kayıt açılamadı.' }
   const creativeInsertMs = Date.now() - tInsertStart
 
-  const isTestRequest = Boolean(
-    (draft as any).isTest ||
-    (draft as any).testMode ||
-    requestKey?.startsWith('test_') ||
-    requestKey?.startsWith('p0_') ||
-    org.name?.toLowerCase().includes('test')
-  )
-
-  if (products.length > 0 && !isTestRequest) {
-    const knowledgeRows = products
-      .filter((p) => Boolean(p.name?.trim()))
-      .map((p) => {
-        const rawText = `${p.name}${p.price ? ` - Fiyat: ${p.price}` : ''}${p.promo ? ` (${p.promo})` : ''}${p.description ? ` - ${p.description}` : ''}`
-        const numPrice = parseCampaignMoney(p.price)
-        return {
-          org_id: org.id,
-          source: 'campaign',
-          product_name: p.name.trim(),
-          price_amount: Number.isFinite(numPrice) ? numPrice : null,
-          currency: 'TRY',
-          raw_text: rawText,
-          source_media_url: p.imageUrl ?? null,
-          attributes: {
-            creativeId: inserted.id,
-            promo: p.promo ?? null,
-            oldPrice: p.oldPrice ?? null,
-            description: p.description ?? null,
-          },
-          confidence: 1.0,
-        }
-      })
-    if (knowledgeRows.length > 0) {
-      after(async () => {
-        try {
-          await (supabase as any).from('reply_product_knowledge').insert(knowledgeRows)
-        } catch (err) {
-          console.warn('[creative.knowledge.insert]', err)
-        }
-      })
-    }
-  }
+  // Creative copy is campaign-scoped input, never trusted catalog knowledge.
+  // Do not promote it into reply_product_knowledge, including for real tenants.
+  // Trusted knowledge ingestion belongs to the separate catalog workflow.
 
   const tEnqueueStart = Date.now()
   const queueError = await kickGeneration(inserted.id, authContext)

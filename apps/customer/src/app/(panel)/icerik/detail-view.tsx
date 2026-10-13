@@ -304,6 +304,22 @@ export function CreativeDetail({
 }) {
   const router = useRouter()
   const [instruction, setInstruction] = useState('')
+  const [variationInstruction, setVariationInstruction] = useState('')
+  const variationDraftKey = `wa.customer.creative-variation.v1.${orgId}.${creative.id}`
+  const [variationDraftReady, setVariationDraftReady] = useState<string | null>(null)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      try { setVariationInstruction(localStorage.getItem(variationDraftKey) || '') }
+      catch { setVariationInstruction('') }
+      setVariationDraftReady(variationDraftKey)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [variationDraftKey])
+  useEffect(() => {
+    if (variationDraftReady !== variationDraftKey) return
+    try { localStorage.setItem(variationDraftKey, variationInstruction) }
+    catch { /* Keep the editable draft usable when storage is unavailable. */ }
+  }, [variationDraftReady, variationDraftKey, variationInstruction])
   useEffect(() => {
     if (!creative.submissionRequestKey) return
     try {
@@ -855,39 +871,112 @@ export function CreativeDetail({
       ) : null}
 
       {isReady && canManage ? (
-        <section className="space-y-2 rounded-[var(--radius-card)] border border-hairline bg-surface p-3.5">
-          <h2 className="text-[14px] font-bold">Varyasyon oluştur</h2>
-          <div className="flex flex-wrap gap-1.5">
-            {VARIATION_PRESETS.map((preset) => (
-              <Button
-                key={preset.id}
-                type="button"
-                variant="quiet"
-                className="h-8 text-[12.5px]"
-                disabled={pending}
-                onClick={() =>
-                  spawn({
-                    requestKey: crypto.randomUUID(),
-                    brief: creative.brief || creative.title || 'Kampanya görseli varyasyonu',
-                    style: preset.id === 'minimal' ? 'minimal' : preset.id === 'premium' ? 'premium' : 'auto',
-                    formatId: formatToId(creative.format),
-                    textDensity: 'balanced',
-                    useLogo: true,
-                    productIds: creative.heroProductId ? [creative.heroProductId] : [],
-                    phoneIds: [],
-                    socialIds: [],
-                    labels: [],
-                    parentId: creative.id,
-                    baseCreativeId: creative.id,
-                    generationType: 'variation',
-                    variationPreset: preset.id,
-                  })
-                }
-              >
-                <Icon name={VARIATION_ICONS[preset.id]} className="size-3.5" />
-                {preset.label}
-              </Button>
-            ))}
+        <section className="space-y-3 rounded-[var(--radius-card)] border border-hairline bg-surface p-4">
+          <div className="space-y-1">
+            <h2 className="text-[14px] font-bold text-[#111b21] flex items-center gap-1.5">
+              <Icon name="sparkles" className="size-4 text-[#008069]" />
+              <span>Bu Varyasyonda Neyi Değiştirelim?</span>
+            </h2>
+            <p className="text-[11.5px] text-[#667781]">
+              Boş bırakırsanız AI yeni bir fikir üretir. İsterseniz sahneyi, kompozisyonu veya ürünün konumunu belirtebilirsiniz.
+            </p>
+          </div>
+
+          <Textarea
+            rows={2}
+            value={variationInstruction}
+            onChange={(e) => setVariationInstruction(e.target.value)}
+            placeholder="Örn: Ürünü bu kez modern bir serada göster, ürün sağda olsun, daha premium..."
+            className="text-[12.5px] leading-relaxed"
+          />
+
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-semibold text-[#667781] block">Hızlı Yönlendirmeler:</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: 'Farklı Kompozisyon', hint: 'Bu reklamdan tamamen farklı bir kompozisyon ve kadraj tasarla.' },
+                { label: 'Premium', hint: 'Daha premium, şık ve lüks bir atmosferde sun.' },
+                { label: 'Gerçek Kullanım', hint: 'Ürünü gerçek kullanım anında ve doğal ortamında göster.' },
+                { label: 'Minimal', hint: 'Göz yormayan, sade ve ferah bir minimal tasarım yap.' },
+                { label: 'Dinamik', hint: 'Hareket hissi taşıyan dinamik bir kadraj ve yüksek kontrastlı kompozisyon oluştur.' },
+              ].map((chip) => (
+                <button
+                  key={chip.label}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => {
+                    const current = variationInstruction.trim()
+                    setVariationInstruction(current ? `${current}. ${chip.hint}` : chip.hint)
+                  }}
+                  className="rounded-full border border-hairline bg-canvas px-2.5 py-1 text-[11px] font-medium text-ink hover:border-[#008069] hover:bg-[#e7f8f2] hover:text-[#008069] transition-colors"
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-1 flex items-center justify-between gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              {VARIATION_PRESETS.map((preset) => (
+                <Button
+                  key={preset.id}
+                  type="button"
+                  variant="quiet"
+                  className="h-8 text-[11.5px] px-2.5"
+                  disabled={pending}
+                  onClick={() =>
+                    spawn({
+                      requestKey: crypto.randomUUID(),
+                      brief: creative.brief || creative.title || 'Kampanya görseli varyasyonu',
+                      style: preset.id === 'minimal' ? 'minimal' : preset.id === 'premium' ? 'premium' : 'auto',
+                      formatId: formatToId(creative.format),
+                      textDensity: 'balanced',
+                      useLogo: true,
+                      productIds: creative.heroProductId ? [creative.heroProductId] : [],
+                      phoneIds: [],
+                      socialIds: [],
+                      labels: [],
+                      parentId: creative.id,
+                      baseCreativeId: creative.id,
+                      generationType: 'variation',
+                      variationPreset: preset.id,
+                      instruction: variationInstruction.trim(),
+                    })
+                  }
+                >
+                  <Icon name={VARIATION_ICONS[preset.id]} className="size-3.5" />
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              disabled={pending}
+              className="!bg-[#008069] !text-white hover:!bg-[#006b58] h-8 text-[12px] px-3.5 shrink-0 rounded-full font-semibold"
+              onClick={() =>
+                spawn({
+                  requestKey: crypto.randomUUID(),
+                  brief: creative.brief || creative.title || 'Kampanya görseli varyasyonu',
+                  style: 'auto',
+                  formatId: formatToId(creative.format),
+                  textDensity: 'balanced',
+                  useLogo: true,
+                  productIds: creative.heroProductId ? [creative.heroProductId] : [],
+                  phoneIds: [],
+                  socialIds: [],
+                  labels: [],
+                  parentId: creative.id,
+                  baseCreativeId: creative.id,
+                  generationType: 'variation',
+                  instruction: variationInstruction.trim(),
+                })
+              }
+            >
+              <Icon name="sparkles" className="size-3.5 mr-1" />
+              Varyasyon Oluştur
+            </Button>
           </div>
         </section>
       ) : null}

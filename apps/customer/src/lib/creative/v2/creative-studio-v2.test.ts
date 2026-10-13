@@ -136,6 +136,23 @@ test('4. Standard generative image prompt preserves CTA, price, promo, brand ide
   assert.match(prompt, /www\.bofe\.com/i)
   assert.match(prompt, /STRICT LOGO FIDELITY/)
   assert.match(prompt, /STRICT PRODUCT FIDELITY/)
+
+  const customerScene = 'Ürün sağda, metin solda, premium stüdyo ortamı'
+  for (const generationType of ['new', 'variation', 'revision'] as const) {
+    const directed = buildCreativePrompt({ ...snapshot, instruction: customerScene, generationType,
+      baseCreativeId: generationType === 'new' ? null : 'parent-creative' },
+      { verifiedRefs: { product: true, logo: true } }).prompt
+    assert.ok(directed.includes(customerScene), `${generationType} must retain the last customer instruction`)
+    assert.match(directed, /STRICT PRODUCT FIDELITY/)
+    assert.match(directed, /STRICT LOGO FIDELITY/)
+    if (generationType === 'revision') assert.match(directed, /STRICTLY PRESERVE the exact existing scene/)
+    if (generationType === 'variation') assert.match(directed, /Do NOT freeze or copy the old canvas layout/)
+    const v3 = buildCreativePrompt({ ...snapshot, products: snapshot.products.map(product => ({ ...product, oldPrice: null, promo: null })), instruction: customerScene, generationType,
+      baseCreativeId: generationType === 'new' ? null : 'parent-creative' }, { mode: 'V3' }).prompt
+    assert.ok(v3.includes(customerScene), 'V3 must retain the same last user instruction')
+    if (generationType === 'revision') assert.match(v3, /STRICTLY PRESERVE the exact existing scene/)
+    if (generationType === 'variation') assert.match(v3, /Do NOT freeze or copy the old canvas layout/)
+  }
 })
 
 test('4b. Optional locked copy mode excludes promotional typography for deterministic overlay fallback (buildImagePromptV2)', () => {

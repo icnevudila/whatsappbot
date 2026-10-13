@@ -592,9 +592,11 @@ export function buildLegacySimpleCreativePrompt(
     refInstruction,
     snapshot.baseCreativeId && snapshot.generationType === 'revision'
       ? 'CONTROLLED REVISION DIRECTIVE: A base campaign ad is attached as the reference canvas. STRICTLY PRESERVE the exact existing scene environment, background, product angle, lighting, colors, and layout framing. ONLY revise the specific headline/text/price elements requested in the instruction. Do NOT generate a completely new composition or environment.'
-      : snapshot.baseCreativeId
-        ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
-        : null,
+      : snapshot.baseCreativeId && snapshot.generationType === 'variation'
+        ? 'VARIATION DIRECTIVE: Create a dynamic new variation inheriting the authentic product and brand identity. Do NOT freeze or copy the old canvas layout; adapt the scene, camera angle, and composition to the user directive.'
+        : snapshot.baseCreativeId
+          ? 'A base/reference campaign image is attached. Keep the same product and brand identity; apply the requested change.'
+          : null,
     options?.verifiedRefs?.inspiration
       ? 'DESIGN INSPIRATION DIRECTIVE: An example ad is attached for aesthetic/mood inspiration ONLY. Do NOT treat it as a base canvas or copy its exact layout, typography, or template. Autonomously create a completely original composition tailored to this brand and product.'
       : null,
@@ -602,7 +604,7 @@ export function buildLegacySimpleCreativePrompt(
       ? `Visual style preset: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] || ''}`
       : null,
     snapshot.instruction
-      ? `Visual Scene & Atmosphere Instruction (Strictly follow): ${snapshot.instruction}`
+      ? `USER SCENE DIRECTION (composition, environment and lighting only; canonical product/logo identity and verified commercial facts are immutable): ${snapshot.instruction}`
       : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${snapshot.brief}`,
@@ -809,11 +811,13 @@ export function buildOverDirectedCreativePrompt(
         : 'Do not invent fake logos. Do not type a brand name as a fake logo unless the advertiser brief explicitly asks for the business name as headline text.',
     snapshot.baseCreativeId && snapshot.generationType === 'revision'
       ? 'CONTROLLED REVISION DIRECTIVE: A base campaign ad is attached as the reference canvas. STRICTLY PRESERVE the exact existing scene environment, background, product angle, lighting, colors, and layout framing. ONLY revise the specific headline/text/price elements requested in the instruction. Do NOT generate a completely new composition or environment.'
-      : options?.verifiedRefs?.base || snapshot.baseCreativeId
-        ? 'A base/reference campaign image is attached. Keep the exact same product and brand identity; apply the requested change.'
-        : null,
+      : snapshot.baseCreativeId && snapshot.generationType === 'variation'
+        ? 'VARIATION DIRECTIVE: Create a dynamic new variation inheriting the authentic product and brand identity. Do NOT freeze or copy the old canvas layout; adapt the scene, camera angle, and composition to the user directive.'
+        : options?.verifiedRefs?.base || snapshot.baseCreativeId
+          ? 'A base/reference campaign image is attached. Keep the exact same product and brand identity; apply the requested change.'
+          : null,
     snapshot.instruction
-      ? `Visual Scene & Atmosphere Instruction (Strictly follow): ${snapshot.instruction}`
+      ? `USER SCENE DIRECTION (composition, environment and lighting only; canonical product/logo identity and verified commercial facts are immutable): ${snapshot.instruction}`
       : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${briefText || 'Özel Kampanya'}`,

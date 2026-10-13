@@ -1,6 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { reconnectImageObservation } = require('../image_observation_reconnect.js');
+const { reconnectImageObservation, isImageObservationContextLost } = require('../image_observation_reconnect.js');
+
+test('navigation-invalidated execution context resumes observation, never treats provider rejection as reconnectable', () => {
+  for (const message of ['Cannot find default execution context', 'Cannot find context with specified id',
+    'Execution context was destroyed.', '[CDP Error] WebSocket not open']) {
+    assert.equal(isImageObservationContextLost(new Error(message)), true);
+  }
+  for (const message of ['Content policy rejection', 'Insufficient credits', 'Generation failed', 'Timeout waiting for image']) {
+    assert.equal(isImageObservationContextLost(new Error(message)), false);
+  }
+});
 
 test('reconnect uses only original target despite another active customer tab', async () => {
   const calls = [];

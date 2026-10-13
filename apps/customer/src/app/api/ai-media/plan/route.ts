@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
       mediaType,
       campaignDetail,
       campaignCopy,
+      previousScene: typeof body.previousScene === 'string' ? body.previousScene.trim().slice(0, 3000) : null,
     })
 
     return NextResponse.json({ ok: true, plan })

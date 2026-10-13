@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { inheritVariationContext } from './variation-context'
+import { inheritVariationContext, variationIdentityError } from './variation-context'
 import type { CreativePayload } from './types'
 
 test('variation preserves commercial context without copying output or submission state', () => {
@@ -25,4 +25,12 @@ test('explicit empty and null edits override parent facts', () => {
   assert.equal(actual.cta, '')
   assert.equal(actual.dateRange, null)
   assert.equal(actual.customHeadline, 'Yeni başlık')
+})
+
+test('parent product and brand identity cannot be replaced by same-tenant client choices', () => {
+  const parent = { products: [{ id: 'canonical-product' }], brandKit: { id: 'canonical-kit' } } as CreativePayload
+  assert.equal(variationIdentityError(['canonical-product'], null, parent), null)
+  assert.equal(variationIdentityError([], 'canonical-kit', parent), null)
+  assert.match(variationIdentityError(['other-product'], null, parent)!, /ürün kimliği/)
+  assert.match(variationIdentityError(['canonical-product'], 'other-kit', parent)!, /marka kiti/)
 })

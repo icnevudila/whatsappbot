@@ -401,7 +401,7 @@ export function CreativeStudioV2({
   ])
 
   // Keep the editor usable while the planner completes its bounded request.
-  const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset) => {
+  const requestCreativePlan = async (forceRefresh = false, requestedStyle = stylePreset, sceneOnly = false) => {
     if (previewOnly) return
     if (!brandOnly && !selectedProduct) return
 
@@ -438,6 +438,7 @@ export function CreativeStudioV2({
           mediaType,
           campaignDetail: campaignDetail || null,
           campaignCopy: { price, oldPrice, offer, dateRange, cta: ctaText },
+          previousScene: forceRefresh ? visualScenePrompt.trim() : null,
         }),
       })
 
@@ -452,22 +453,22 @@ export function CreativeStudioV2({
       setCopySource(plan.source === 'AI' ? 'AI' : 'DETERMINISTIC_FALLBACK')
 
       // NEVER OVERWRITE USER EDITS: Only update untouched fields unless user explicitly clicked "Farklı Öner"
-      if (copyEditsRef.current.headline === editsAtRequest.headline && (forceRefresh || !copyDirtyRef.current.headline)) {
+      if (!sceneOnly && copyEditsRef.current.headline === editsAtRequest.headline && (forceRefresh || !copyDirtyRef.current.headline)) {
         setHeadline(plan.copy.headline)
         if (forceRefresh) copyDirtyRef.current.headline = false
         if (forceRefresh) setHeadlineDirty(false)
       }
-      if (copyEditsRef.current.supporting === editsAtRequest.supporting && (forceRefresh || !copyDirtyRef.current.supporting)) {
+      if (!sceneOnly && copyEditsRef.current.supporting === editsAtRequest.supporting && (forceRefresh || !copyDirtyRef.current.supporting)) {
         setSupportingLine(plan.copy.supporting_line)
         if (forceRefresh) copyDirtyRef.current.supporting = false
         if (forceRefresh) setSupportingLineDirty(false)
       }
-      if (copyEditsRef.current.cta === editsAtRequest.cta && (forceRefresh || !copyDirtyRef.current.cta)) {
+      if (!sceneOnly && copyEditsRef.current.cta === editsAtRequest.cta && (forceRefresh || !copyDirtyRef.current.cta)) {
         setCtaText(plan.copy.cta)
         if (forceRefresh) copyDirtyRef.current.cta = false
         if (forceRefresh) setCtaDirty(false)
       }
-      if (mediaType === 'VIDEO' && copyEditsRef.current.voiceover === editsAtRequest.voiceover && (forceRefresh || !copyDirtyRef.current.voiceover) && plan.voiceover_text) {
+      if (!sceneOnly && mediaType === 'VIDEO' && copyEditsRef.current.voiceover === editsAtRequest.voiceover && (forceRefresh || !copyDirtyRef.current.voiceover) && plan.voiceover_text) {
         setSpokenVoiceover(plan.voiceover_text)
         if (forceRefresh) copyDirtyRef.current.voiceover = false
         if (forceRefresh) setVoiceoverDirty(false)
@@ -659,7 +660,6 @@ export function CreativeStudioV2({
           creativePlan,
           qualityMode,
           instruction: visualScenePrompt.trim() || undefined,
-          customText: visualScenePrompt.trim() || undefined,
           templateFamily,
           textDensity,
           sector: sector.trim() || undefined,
@@ -1285,23 +1285,37 @@ export function CreativeStudioV2({
                   )}
                 </div>
 
-                {/* 2. Düzenlenebilir AI Tasarım Fikri / Sahne Tarifi (ASLA GİZLENMEYEN) */}
+                {/* 2. Düzenlenebilir Kullanıcı Yönlendirme Alanı: "Nasıl Bir Tasarım İstiyorsunuz?" */}
                 <div className="rounded-xl border border-hairline bg-surface p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
                     <div>
                       <span className="text-[13px] font-bold text-[#111b21] flex items-center gap-1.5">
                         <Icon name="sparkles" className="size-3.5 text-[#008069]" />
-                        <span>AI Tasarım Fikri & Sahne Tarifi</span>
+                        <span>Nasıl Bir Tasarım İstiyorsunuz?</span>
                       </span>
                       <p className="text-[11px] text-[#667781]">
-                        AI&apos;ın reklam kompozisyonunu yönlendirir. İsterseniz sahneyi, atmosferi veya arka planı düzenleyin.
+                        AI sizin için bir fikir hazırladı. İsterseniz değiştirebilirsiniz.
                       </p>
                     </div>
-                    {visualScenePrompt.trim() && (
-                      <span className="rounded bg-[#e7f8f2] text-[#008069] px-2 py-0.5 text-[10px] font-bold shrink-0">
-                        Özel Fikir Aktif
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 self-start sm:self-auto">
+                      <Button
+                        type="button"
+                        variant="quiet"
+                        className="h-7 text-[11px] font-semibold text-[#008069] hover:bg-[#e7f8f2] px-2 flex items-center gap-1"
+                        disabled={isPlanning}
+                        onClick={() => {
+                          void requestCreativePlan(true, stylePreset, true)
+                        }}
+                      >
+                        <Icon name="refresh" className={`size-3 ${isPlanning ? 'animate-spin' : ''}`} />
+                        <span>Başka Fikir Öner</span>
+                      </Button>
+                      {visualScenePrompt.trim() && (
+                        <span className="rounded bg-[#e7f8f2] text-[#008069] px-2 py-0.5 text-[10px] font-bold shrink-0">
+                          Özel Fikir Aktif
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <Textarea
                     rows={2}
@@ -1312,7 +1326,7 @@ export function CreativeStudioV2({
                       setVisualScenePrompt(e.target.value)
                       setScenePromptDirty(true)
                     }}
-                    placeholder="Örn: Zeytinlikte gün batımı ışığında ahşap zemin üzerinde ürün vitrini veya modern şantiyede paletli tuğla dizilimi."
+                    placeholder="İsteğe bağlı: Kendi tasarım fikrinizi, arka planı, ışığı veya sahneyi yazın (boş bırakabilirsiniz)."
                     className="text-[12.5px] leading-relaxed"
                   />
                 </div>
