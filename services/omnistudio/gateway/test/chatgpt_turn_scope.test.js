@@ -15,6 +15,9 @@ function createMockElement(tag, attrs = {}, children = [], text = '') {
     getAttribute(name) { return this.attributes[name] || null; },
     setAttribute(name, val) { this.attributes[name] = val; },
     hasAttribute(name) { return name in this.attributes; },
+    contains(other) {
+      return other === this || this.children.some(child => child.contains(other));
+    },
     closest(selector) {
       let cur = this.parentElement;
       while (cur) {
@@ -50,6 +53,7 @@ function createMockElement(tag, attrs = {}, children = [], text = '') {
 
 function matches(el, selector) {
   if (!el) return false;
+  if (selector === '[data-markdown-copy-content="true"]') return el.attributes['data-markdown-copy-content'] === 'true';
   const classes = (el.attributes.class || '').split(/\s+/);
   if (selector.startsWith('.')) {
     return classes.includes(selector.slice(1));
@@ -152,4 +156,50 @@ test('chatgpt_turn_scope: detects stop button as generating', () => {
   const result = readCurrentTurn('Prompt', { userKeys: [] });
   assert.equal(result.ready, false);
   assert.equal(result.isGenerating, true);
+});
+
+function mountMessages(children) {
+  let order = 0;
+  function assign(node) { node._order = order++; node.children.forEach(assign); }
+  const root = createMockElement('div', {}, children);
+  assign(root);
+  global.document = {
+    querySelectorAll(selector) {
+      const found = new Set();
+      for (const part of selector.split(',').map(s => s.trim())) {
+        root.querySelectorAll(part).forEach(node => found.add(node));
+      }
+      return [...found].sort((a,b) => a._order - b._order);
+    },
+    querySelector(selector) { return this.querySelectorAll(selector)[0] || null; },
+  };
+}
+
+test('nested user wrappers are one turn and do not hide its fresh assistant', () => {
+  const inner = createMockElement('div', { class: 'user-message' }, [], 'Yeni istek');
+  const user = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'new-user' }, [inner], 'Yeni istek');
+  const assistant = createMockElement('div', { 'data-message-author-role': 'assistant' }, [], 'Yeni yanıt');
+  mountMessages([user, assistant]);
+  assert.deepEqual(captureTurnBaseline().userKeys, ['new-user']);
+  const result = readCurrentTurn('Yeni istek', { userKeys: [] });
+  assert.equal(result.hasNewMsg, true);
+  assert.equal(result.text, 'Yeni yanıt');
+});
+
+test('an old matching prompt and its answer cannot satisfy a new request', () => {
+  const user = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'old-user' }, [], 'Aynı istek');
+  const assistant = createMockElement('div', { 'data-message-author-role': 'assistant' }, [], 'Eski yanıt');
+  mountMessages([user,assistant]);
+  const result = readCurrentTurn('Aynı istek', captureTurnBaseline());
+  assert.equal(result.hasNewMsg,false);
+  assert.equal(result.text,'');
+});
+
+test('writing-block copy excludes email controls, title and suggested followups', () => {
+  const user = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'user' }, [], 'Kurumsal yanıt');
+  const body = 'Merhaba,\n\nTalebiniz incelemeye alınmıştır.\n\nSaygılarımızla';
+  const content = createMockElement('div', {'data-markdown-copy-content':'true'}, [], body);
+  const assistant = createMockElement('div', {'data-message-author-role':'assistant'}, [content], 'ChatGPT said:\nEmail\nSend\nRecipients\n'+body+'\nE-postayı daha kısa yap');
+  mountMessages([user,assistant]);
+  assert.equal(readCurrentTurn('Kurumsal yanıt',{userKeys:[]}).text,body);
 });
