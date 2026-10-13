@@ -795,6 +795,12 @@ class BrowserWorkerSupervisor extends EventEmitter {
     if (!worker) return { ok: false, error: 'WORKER_NOT_FOUND' };
     const now = this.clock();
     worker.lastHeartbeatAt = now;
+    // Legacy CDP workers lease through the gateway queue rather than acquire().
+    // A busy heartbeat is real activity, unlike an idle liveness heartbeat.
+    if (payload.status === 'busy') {
+      worker.lastActivityAt = now;
+      worker.externalBusyUntil = now + 30_000;
+    }
     let cdpResponsive = false;
     if (worker.state !== WORKER_STATES.OFFLINE && worker.readiness !== READINESS_STATES.NOT_READY) {
       cdpResponsive = await this._isCdpReady(worker);
@@ -878,7 +884,8 @@ class BrowserWorkerSupervisor extends EventEmitter {
     const activePhase = ACTIVE_PHASES.has(worker.phase) && !(allowStarting && worker.phase === 'STARTING');
     const activeState = [WORKER_STATES.STARTING, WORKER_STATES.BUSY].includes(worker.state) &&
       !(allowStarting && worker.state === WORKER_STATES.STARTING);
-    if ((worker.currentJobId && !reservedStartup) || activePhase || activeState) {
+    if ((worker.currentJobId && !reservedStartup) || activePhase || activeState ||
+        (worker.externalBusyUntil || 0) > this.clock()) {
       return false;
     }
     worker.stopping = true;

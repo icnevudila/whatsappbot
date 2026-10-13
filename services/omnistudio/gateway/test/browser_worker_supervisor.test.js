@@ -518,6 +518,21 @@ test('14. heartbeat does not create tab leak', async () => {
 });
 
 // 15. maintenance scan does not refresh real lastActivity
+test('legacy busy heartbeat protects browser beyond idle TTL, idle liveness does not', async () => {
+  const h = harness({ idleBrowserTTL: 1000 });
+  const worker = h.add('chatgpt-1', 9222, {}, 'chatgpt');
+  await h.supervisor.ensureReady(worker);
+  h.advance(2000);
+  await h.supervisor.heartbeat(worker.id, {status:'busy'});
+  await h.supervisor.maintenanceTick();
+  assert.notEqual(worker.state, WORKER_STATES.OFFLINE);
+  assert.equal(await h.supervisor.gracefulShutdown(worker), false);
+  h.advance(31_000);
+  await h.supervisor.heartbeat(worker.id, {status:'idle'});
+  await h.supervisor.maintenanceTick();
+  assert.equal(worker.state, WORKER_STATES.OFFLINE);
+});
+
 test('15. maintenance scan does not refresh real lastActivity', async () => {
   const h = harness({ idleBrowserTTL: 20 * 60_000 });
   const worker = h.add('gemini-1', 9223);

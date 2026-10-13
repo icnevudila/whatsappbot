@@ -15,4 +15,17 @@ async function reconnectImageObservation({ targetId, listTargets, connect }) {
   return connect(target.webSocketDebuggerUrl);
 }
 
-module.exports = { reconnectImageObservation, isImageObservationContextLost };
+// Only idempotent observation/read operations belong here; never submit or upload.
+async function readWithImageReconnect({ session, read, reconnect, maxReconnects = 2 }) {
+  let current = session;
+  for (let attempt = 0; ; attempt++) {
+    try { return { value: await read(current), session: current }; }
+    catch (error) {
+      if (!isImageObservationContextLost(error) || attempt >= maxReconnects) throw error;
+      try { current.close(); } catch {}
+      current = await reconnect();
+    }
+  }
+}
+
+module.exports = { reconnectImageObservation, isImageObservationContextLost, readWithImageReconnect };

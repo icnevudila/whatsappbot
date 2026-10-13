@@ -3099,6 +3099,10 @@ const server = http.createServer(async (req, res) => {
         if (browserSupervisor.workers.has(workerId)) {
           await browserSupervisor.heartbeat(workerId, body);
         }
+        // chatgpt-2 shares the primary browser, but has no supervisor record.
+        if (workerId === 'chatgpt-2' && sessionKey === 'chatgpt_9222' && status === 'busy') {
+          await browserSupervisor.heartbeat('chatgpt-1', { status: 'busy' });
+        }
       }
       return sendJson(res, 200, { ok: true });
     }

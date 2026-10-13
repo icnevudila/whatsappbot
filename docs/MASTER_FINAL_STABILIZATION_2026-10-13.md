@@ -89,3 +89,20 @@ Read-only runtime evidence:
 6. Only all-critical-pass permits synchronized PR/merge/main push and customer deploy; verify production SHA and live smoke, rollback any critical release regression. Currently delivery gate CLOSED due incomplete tests.
 
 Credentials supplied for sign-in were used only in login UI; do not put them into files, scripts, logs, reports or Git.
+
+## 13 October live failure investigation — not resolved
+
+- User permits Mesajify representative paid acceptance; other brand catalog/reference checks may be read-only. Account-access question is no longer a blocker.
+- User-created creative 85896ab0-f7fd-5e06-a813-56bdbc2e7187 / gateway job job_8f6eddc6d5278e24 failed into reconciliation_required after about five minutes. Not PASS, not an agent-created paid acceptance output.
+- Tenant-scoped gateway GET returned HTTP200, reconciliation_required, SUBMISSION_UNCERTAIN: WebSocket not open (readyState:3), no output URL/hash/reference receipt in status response.
+- Worker1 log proves both requested references were attached (2/2), original target 6CDA5E3CB946F9C57C5D5CED332B3369; provider generation was observed active. Reconnection failed with ECONNREFUSED port9222, succeeded on attempts3 and5, then socket closed again after120s. Actual incident occurred in observation, not output extraction.
+- Container logs show repeated Chrome watchdog restarts. OOMKilled=false, kernel searches did not prove OOM/segfault. Memory pressure observed, causality NOT PROVEN. Exact browser exit cause still missing.
+- Local output-acquisition read reconnect is an additional gap fix, not sufficient evidence this incident is solved. Five reconnect tests plus fifteen gateway-contract tests PASS20/20; worker syntax check PASS. No runtime patch/restart/deploy or paid retry performed.
+- Remaining critical: determine browser exit cause; compare deployed modifications before scoped runtime repair; reconcile exact original job without repeated paid submission; fresh real image/video output and repeated acceptance after repair. Do not claim completion.
+
+### Busy-heartbeat lifecycle repair
+
+- Found supervisor/legacy-queue mismatch: busy worker heartbeat did not refresh actual browser activity or protect shutdown; chatgpt-2 shares9222 but is not independently supervisor registered. Idle-TTL maintenance could close a busy legacy browser. Added30s busy protection and real-activity update only on busy heartbeat; secondary shared-browser busy heartbeat forwards to primary. Idle liveness remains eligible for normal idle shutdown.
+- Supervisor/gateway/reconnect regression PASS55/55, including busy-vs-idle TTL reproduction. Syntax and diff checks passed.
+- Applied ONLY matching hunks to deployed browser_worker_supervisor.js and server.js, preserving deployed other changes. Verified no active/pending queue jobs or browser leases before patch/restart. Backups suffix1791881677 in /app/gateway. GatewayPID14 restarted, browser was not restarted. Gateway health returned200 afterward. Acquisition reconnect candidate remains local; not deployed.
+- Began first agent-created real image acceptance from Browser Use: creative b1801719-ff8a-567c-a0b3-c30f499d32a9, original Mesajify app screenshot and logo, square format, explicit unchanged screen text/numbers. Current paid count1image/0video. Do not label PASS until output receipt, pixels, download and library verified.

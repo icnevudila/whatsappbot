@@ -1,6 +1,25 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { reconnectImageObservation, isImageObservationContextLost } = require('../image_observation_reconnect.js');
+const { reconnectImageObservation, isImageObservationContextLost, readWithImageReconnect } = require('../image_observation_reconnect.js');
+
+test('output read resumes after closed socket without submitting another generation', async () => {
+  const old = { close() {} }; const next = {}; let reads = 0; let reconnects = 0;
+  const result = await readWithImageReconnect({ session: old,
+    read: async session => { reads++; if (session === old) throw new Error('WebSocket not open (readyState: 3)'); return 'existing-output'; },
+    reconnect: async () => { reconnects++; return next; } });
+  assert.equal(result.value, 'existing-output'); assert.equal(result.session, next);
+  assert.equal(reads, 2); assert.equal(reconnects, 1);
+});
+
+test('output reconnect is bounded and does not retry provider rejection', async () => {
+  let reconnects = 0;
+  await assert.rejects(readWithImageReconnect({session: {close() {}},
+    read: async () => { throw new Error('WebSocket not open'); },
+    reconnect: async () => { reconnects++; return {close() {}}; } }), /WebSocket not open/);
+  assert.equal(reconnects, 2);
+  await assert.rejects(readWithImageReconnect({session: {}, read: async () => {throw new Error('Content policy rejection');},
+    reconnect: async () => {throw new Error('must not reconnect');} }), /Content policy rejection/);
+});
 
 test('navigation-invalidated execution context resumes observation, never treats provider rejection as reconnectable', () => {
   for (const message of ['Cannot find default execution context', 'Cannot find context with specified id',

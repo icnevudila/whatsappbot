@@ -14,7 +14,7 @@ const { navigateToChat } = require('./chat_navigation.js');
 const { isChatGPTPage } = require('./chatgpt_tab_scope.js');
 const { assertImageScope, readImageScope } = require('./image_conversation_scope.js');
 const { assertReferenceCount } = require('./image_reference_contract.js');
-const { reconnectImageObservation, isImageObservationContextLost } = require('./image_observation_reconnect.js');
+const { reconnectImageObservation, isImageObservationContextLost, readWithImageReconnect } = require('./image_observation_reconnect.js');
 
 const GATEWAY_URL = process.env.GATEWAY_URL || 'http://127.0.0.1:3456';
 const { createWorkerGatewayFetch } = require('./worker_gateway_fetch.js');
@@ -1205,7 +1205,14 @@ async function executeChatGPTJob(tab, job) {
     // 4. Görsel Blob'unu Sayfa Context'inden Çek
     console.log('[CDP Worker] Görsel çekiliyor ve indiriliyor...');
     const acquireStartedAt = Date.now();
-    const extractEval = await cdp.send('Runtime.evaluate', {
+    const extraction = await readWithImageReconnect({ session: cdp,
+      reconnect: () => reconnectImageObservation({ targetId: tab.id,
+        listTargets: async () => {
+          const response = await globalThis.fetch(`${CDP_HTTP}/json/list`, { signal: AbortSignal.timeout(8000) });
+          if (!response.ok) throw new Error('IMAGE_OBSERVATION_TARGET_LIST_FAILED');
+          return response.json();
+        }, connect: createCdpSession }),
+      read: session => session.send('Runtime.evaluate', {
       expression: `
         (async () => {
           const resp = await fetch(${JSON.stringify(foundImgSrc)});
@@ -1220,7 +1227,9 @@ async function executeChatGPTJob(tab, job) {
       `,
       awaitPromise: true,
       returnByValue: true
-    });
+    }) });
+    cdp = extraction.session;
+    const extractEval = extraction.value;
 
     const b64Data = extractEval.result?.value?.base64;
     workerTiming.mark('image_acquire_ms', acquireStartedAt);
