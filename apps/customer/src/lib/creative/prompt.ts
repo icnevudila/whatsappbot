@@ -604,7 +604,7 @@ export function buildLegacySimpleCreativePrompt(
       ? `Visual style preset: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] || ''}`
       : null,
     snapshot.instruction
-      ? `USER SCENE DIRECTION (composition, environment and lighting only; canonical product/logo identity and verified commercial facts are immutable): ${snapshot.instruction}`
+      ? `USER SCENE ART DIRECTION (Environmental staging, camera framing, lighting and models ONLY): "${snapshot.instruction}". STRICT COPY SEPARATION RULE: This scene direction must ONLY be used to stage the physical environment, models, and camera. NEVER print, render, or transcribe this scene description text anywhere on the visual image. Advertising copy is governed strictly by the Verified Commercial Core below.`
       : null,
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${snapshot.brief}`,
@@ -614,6 +614,7 @@ export function buildLegacySimpleCreativePrompt(
       : null,
     supportingLines.length ? `Supporting Details:\n${supportingLines.join('\n')}` : null,
     commercialContract,
+    'CRITICAL TEXT RENDERING DISCIPLINE: Only the Verified Commercial Core (Headline, Offer/Price, CTA) should appear as typography on the ad. Never print user instructions, scene descriptions, or camera prompts as copy.',
     'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
     'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
   ]

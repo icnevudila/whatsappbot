@@ -895,10 +895,10 @@ export function CreativeDetail({
             <div className="flex flex-wrap gap-1.5">
               {[
                 { label: 'Farklı Kompozisyon', hint: 'Bu reklamdan tamamen farklı bir kompozisyon ve kadraj tasarla.' },
-                { label: 'Premium', hint: 'Daha premium, şık ve lüks bir atmosferde sun.' },
+                { label: 'Daha Premium', hint: 'Daha premium, şık ve lüks bir atmosferde sun.' },
                 { label: 'Gerçek Kullanım', hint: 'Ürünü gerçek kullanım anında ve doğal ortamında göster.' },
-                { label: 'Minimal', hint: 'Göz yormayan, sade ve ferah bir minimal tasarım yap.' },
-                { label: 'Dinamik', hint: 'Hareket hissi taşıyan dinamik bir kadraj ve yüksek kontrastlı kompozisyon oluştur.' },
+                { label: 'Daha Minimal', hint: 'Göz yormayan, sade ve ferah bir minimal tasarım yap.' },
+                { label: 'Daha Dikkat Çekici', hint: 'Yüksek kontrastlı, cesur ve anında dikkat çeken bir tasarım oluştur.' },
               ].map((chip) => (
                 <button
                   key={chip.label}

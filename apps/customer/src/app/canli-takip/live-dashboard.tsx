@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { LogoMark, BRAND_NAME } from '@/components/brand'
+import { LogoMark, Wordmark, BRAND_NAME } from '@/components/brand'
 
 type Account = {
   id: string
@@ -1672,21 +1672,16 @@ export function LiveDashboard() {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           {/* Header Row 1 (Logo + Super Admin Badge + Mobile Status) */}
           <div className="flex items-center justify-between w-full sm:w-auto">
-            <div className="flex items-center gap-2">
-              <div className="p-1 rounded-[var(--radius-sm)] bg-[var(--color-surface-raised)] border border-[var(--color-hairline)] flex items-center justify-center">
-                <LogoMark className="w-4 h-4 sm:w-5 sm:h-5 text-accent" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="font-bold text-xs sm:text-sm tracking-tight text-ink">{BRAND_NAME}</span>
-                  <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-surface-raised text-ink border border-[var(--color-hairline)] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
-                    SUPER ADMIN
-                  </span>
-                  <span className="text-[9px] font-mono text-ink-muted hidden md:inline">
-                    {lastFetchedAt ? lastFetchedAt.toLocaleTimeString('tr-TR') : ''}
-                  </span>
-                </div>
+            <div className="flex items-center gap-2.5">
+              <Wordmark className="h-6 sm:h-7 w-auto" />
+              <div className="flex items-center gap-1.5 flex-wrap pl-1.5 border-l border-[var(--color-hairline)]">
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-surface-raised text-ink border border-[var(--color-hairline)] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
+                  SUPER ADMIN
+                </span>
+                <span className="text-[9px] font-mono text-ink-muted hidden md:inline">
+                  {lastFetchedAt ? lastFetchedAt.toLocaleTimeString('tr-TR') : ''}
+                </span>
               </div>
             </div>
 

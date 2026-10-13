@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BRAND_NAME, LogoMark } from '@/components/brand'
+import { BRAND_NAME, LogoMark, Wordmark } from '@/components/brand'
 
 const routes = [
   ['Genel', '/canli-takip'],
@@ -24,10 +24,10 @@ export function ControlPlaneShell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-40 border-b border-[var(--color-hairline)] bg-surface/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-3 px-3 py-2.5 sm:px-5">
           <Link href="/canli-takip" className="flex min-w-0 items-center gap-2.5" aria-label="Operasyon merkezine git">
-            <LogoMark className="h-8 w-8 shrink-0" />
-            <div className="min-w-0">
-              <div className="truncate text-sm font-black tracking-[-0.02em]">{BRAND_NAME} Operasyon</div>
-              <div className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-muted">Unified control plane</div>
+            <Wordmark className="h-7 w-auto shrink-0" />
+            <div className="min-w-0 pl-1 border-l border-[var(--color-hairline)]">
+              <div className="truncate text-xs font-bold tracking-tight text-ink">Operasyon</div>
+              <div className="truncate text-[9px] font-semibold uppercase tracking-[0.14em] text-ink-muted">Control plane</div>
             </div>
           </Link>
           <div className="flex items-center gap-2 text-[11px]">

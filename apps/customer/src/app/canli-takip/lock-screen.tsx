@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { LogoMark, BRAND_NAME } from '@/components/brand'
+import { LogoMark, Wordmark, BRAND_NAME } from '@/components/brand'
 
 export function LockScreen() {
   const [password, setPassword] = useState('')
@@ -38,11 +38,11 @@ export function LockScreen() {
     <div className="flex min-h-dvh w-full items-center justify-center bg-canvas px-4 py-12 font-sans text-ink">
       <div className="w-full max-w-sm rounded-[var(--radius-card)] border border-hairline bg-surface p-7 shadow-[var(--shadow-md)] sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-3.5 flex size-12 items-center justify-center rounded-full border border-accent/20 bg-accent-soft text-accent">
-            <LogoMark className="size-6" />
+          <div className="mb-4 flex items-center justify-center">
+            <Wordmark className="h-9 w-auto" />
           </div>
-          <h1 className="text-[18px] font-bold tracking-tight text-ink">
-            {BRAND_NAME} Operasyon Paneli
+          <h1 className="text-[17px] font-bold tracking-tight text-ink">
+            Operasyon ve Canlı Takip Paneli
           </h1>
           <p className="mt-1 text-[13px] text-ink-muted">
             Yetkili sistem yöneticisi erişimi için güvenlik şifrenizi girin.
