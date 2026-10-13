@@ -32,3 +32,5 @@ Working branch: `codex/campaign-style-mode`, based on `3e7d5bb`.
 2. Verify style switching preserves user copy/scene; variation inherit and explicit change survive refresh.
 3. Generate representative balanced/bold media from the actual wizard, verify canonical assets and literal text, archive/download and campaign handoff. Do not label commercial quality PASS from prompt tests alone.
 4. Push/release only after the remaining acceptance and the applicable release authorization are resolved.
+
+User revision: static style example images and enlargement dialog removed. Compact text-only style choices retained. Typecheck passed after removal; browser verification pending rebuilt preview.

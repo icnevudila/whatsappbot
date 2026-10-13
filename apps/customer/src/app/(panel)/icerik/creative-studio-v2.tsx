@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
 import { STYLE_MODES, normalizeStyleMode, type CreativeStyleMode } from '@/lib/creative/style-mode'
+import { CreativeStylePicker } from '@/components/creative-style-picker'
 import { Stepper } from '@/components/stepper'
 import { Icon } from '@/components/icon'
 import { ProductionProgress } from '@/components/production-progress/production-progress'
@@ -1241,16 +1242,10 @@ export function CreativeStudioV2({
                   {mediaType === 'IMAGE' ? (
                     <fieldset className="space-y-2">
                       <legend className="sr-only">Tasarım Stili</legend>
-                      <div className="grid grid-cols-2 gap-2">
-                        {STYLE_MODES.map(mode => (
-                          <button key={mode.id} type="button" aria-pressed={styleMode === mode.id}
-                            onClick={() => { setStyleMode(mode.id); void requestCreativePlan(false, stylePreset, true, mode.id) }}
-                            className={`min-h-[56px] rounded-lg border px-3 py-2 text-left transition-colors ${styleMode === mode.id ? 'border-[#008069] bg-[#e7f8f2] ring-1 ring-[#008069]' : 'border-[#e9edef] bg-white hover:border-[#008069]/40'}`}>
-                            <span className="block text-[12px] font-bold text-[#111b21]">{mode.label}</span>
-                            <span className="mt-0.5 block text-[11px] leading-snug text-[#667781]">{mode.description}</span>
-                          </button>
-                        ))}
-                      </div>
+                      <CreativeStylePicker value={styleMode} onChange={mode => {
+                        setStyleMode(mode)
+                        void requestCreativePlan(false, stylePreset, true, mode)
+                      }} />
                       {(objective === 'CAMPAIGN' || objective === 'SALES_OFFER') && styleMode !== 'campaign_bold' && <p className="text-[11px] text-[#008069]">Bu kampanya için Kampanya / Dikkat Çekici stilini deneyebilirsiniz.</p>}
                     </fieldset>
                   ) : (

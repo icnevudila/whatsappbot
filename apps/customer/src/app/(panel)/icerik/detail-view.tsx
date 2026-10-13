@@ -563,7 +563,7 @@ export function CreativeDetail({
 
   const spawn = (draft: Record<string, unknown>) => {
     const form = new FormData()
-    form.set('draft', JSON.stringify(draft.generationType === 'variation' && variationStyleMode !== 'inherit' ? { ...draft, styleMode: variationStyleMode } : draft))
+    form.set('draft', JSON.stringify(creative.format !== 'video' && draft.generationType === 'variation' && variationStyleMode !== 'inherit' ? { ...draft, styleMode: variationStyleMode } : draft))
     startTransition(async () => {
       const res = await startCreativeGeneration(null, form)
       if (res?.error) {
@@ -893,13 +893,13 @@ export function CreativeDetail({
             </p>
           </div>
 
-          <label className="flex flex-wrap items-center gap-2 text-[12px] font-medium">
+          {creative.format !== 'video' && <label className="flex flex-wrap items-center gap-2 text-[12px] font-medium">
             Tasarım Stili
             <select value={variationStyleMode} disabled={pending} onChange={event => setVariationStyleMode(event.target.value === 'inherit' ? 'inherit' : normalizeStyleMode(event.target.value))} className="min-h-9 rounded-lg border border-hairline bg-white px-2 text-[12px]">
               <option value="inherit">Aynı kalsın</option>
               {STYLE_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label} yap</option>)}
             </select>
-          </label>
+          </label>}
           <Textarea
             rows={2}
             value={variationInstruction}
