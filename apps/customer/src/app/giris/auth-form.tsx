@@ -35,13 +35,14 @@ export function AuthForm() {
 
       {hataNotice ? <Notice tone="danger">{hataNotice}</Notice> : null}
 
-      <Field label="E-posta">
+      <Field label="E-posta Adresi">
         <Input
           name="email"
           type="email"
           autoComplete="email"
           required
-          placeholder="siz@sirketiniz.com"
+          placeholder="ornek@sirketiniz.com"
+          className="h-10 text-[14px] bg-canvas focus:bg-surface transition-colors"
         />
       </Field>
 
@@ -52,31 +53,38 @@ export function AuthForm() {
           autoComplete="current-password"
           required
           minLength={8}
+          placeholder="••••••••"
+          className="h-10 text-[14px] bg-canvas focus:bg-surface transition-colors"
         />
       </Field>
 
-      <p className="-mt-2 text-right text-[12px]">
+      <div className="-mt-1 flex items-center justify-end text-[12px]">
         <a
           href="/sifremi-unuttum"
-          className="text-ink-muted underline-offset-2 hover:text-ink hover:underline"
+          className="font-medium text-ink-muted transition-colors hover:text-accent"
         >
           Şifremi unuttum
         </a>
-      </p>
+      </div>
 
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
-      <Button type="submit" variant="accent" disabled={pending} className="w-full">
-        {pending ? 'Bekleyin…' : 'Giriş yap'}
+      <Button
+        type="submit"
+        variant="accent"
+        disabled={pending}
+        className="h-10 w-full rounded-[10px] text-[14px] font-semibold shadow-sm transition-transform active:scale-[0.99]"
+      >
+        {pending ? 'Giriş yapılıyor…' : 'Giriş Yap'}
       </Button>
 
-      <p className="text-center text-[12px] leading-relaxed text-ink-muted">
+      <p className="pt-1 text-center text-[12px] leading-relaxed text-ink-muted">
         Hesabınız yok mu?{' '}
-        <a href={contactMailto()} className="font-medium text-ink underline-offset-2 hover:underline">
+        <a href={contactMailto()} className="font-semibold text-accent transition-colors hover:underline">
           İletişime geçin
         </a>
-        — kayıtlar yalnızca Filo tarafından açılır.
+        .
       </p>
     </form>
   )

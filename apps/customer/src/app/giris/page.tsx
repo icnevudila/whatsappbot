@@ -5,8 +5,8 @@ import { AuthForm } from './auth-form'
 import { AuthModeCopy } from './auth-mode-copy'
 
 export const metadata: Metadata = {
-  title: 'Giriş',
-  description: 'Filo müşteri paneline giriş yapın.',
+  title: 'Giriş Yap · Mesajify',
+  description: 'Mesajify WhatsApp Kampanya Platformu müşteri paneline giriş yapın.',
 }
 
 export default function LoginPage() {
@@ -14,12 +14,12 @@ export default function LoginPage() {
     <AuthShell
       asideTitle={
         <>
-          Panele gir,
+          WhatsApp ile
           <br />
-          <span className="text-[#9db8f5]">gönderimi yönet.</span>
+          <span className="text-[#25D366]">satışlarınızı büyütün.</span>
         </>
       }
-      asideLead="Hattını, kişilerini ve kampanyalarını tek yerden yönet. Yeni hesap için iletişime geçin."
+      asideLead="WhatsApp hatlarınızı bağlayın, hedef kitlenizi hazırlayın, kişiselleştirilmiş kampanyalarınızı güvenle gönderin."
     >
       <Suspense
         fallback={

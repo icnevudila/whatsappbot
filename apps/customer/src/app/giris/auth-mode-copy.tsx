@@ -1,12 +1,12 @@
 'use client'
 
-/** Giriş sayfası başlığı — self-signup yok. */
+/** Giriş sayfası başlığı */
 export function AuthModeCopy() {
   return (
     <>
-      <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">Panele giriş</h1>
-      <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
-        Size verilen e-posta ve şifre ile giriş yapın. Yeni hesap için iletişime geçin.
+      <h1 className="text-[20px] font-bold tracking-tight text-ink">Giriş Yap</h1>
+      <p className="mt-1 text-[13px] leading-relaxed text-ink-muted">
+        Hesabınıza kayıtlı e-posta ve şifrenizle panelinize erişin.
       </p>
     </>
   )
