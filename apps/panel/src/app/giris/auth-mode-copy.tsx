@@ -1,13 +1,13 @@
 'use client'
 
-/** Giriş sayfası başlığı — self-signup yok. */
+/** Giriş sayfası başlığı */
 export function AuthModeCopy() {
   return (
-    <>
-      <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-ink">Panele giriş</h1>
-      <p className="mt-2 text-[13px] leading-relaxed text-ink-muted">
-        Size verilen e-posta ve şifre ile giriş yapın. Yeni hesap için iletişime geçin.
+    <div>
+      <h1 className="text-[24px] font-bold tracking-[-0.03em] text-[#0A0A0A]">Panele Giriş Yap</h1>
+      <p className="mt-1.5 text-[14px] leading-relaxed text-[#6B7280]">
+        WhatsApp Kampanya Platformu yönetim paneline erişin.
       </p>
-    </>
+    </div>
   )
 }

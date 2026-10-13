@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { BRAND_NAME, LogoMark, Wordmark } from './brand'
+import { BRAND_NAME, Wordmark } from './brand'
 
 export function AuthShell({
   children,
@@ -8,7 +8,9 @@ export function AuthShell({
     <>
       WhatsApp ile
       <br />
-      <span className="text-[#25D366]">satışlarınızı büyütün.</span>
+      <span className="bg-gradient-to-r from-[#25D366] via-[#00A884] to-[#25D366] bg-clip-text text-transparent">
+        satışlarınızı büyütün.
+      </span>
     </>
   ),
   asideLead = 'WhatsApp hatlarınızı bağlayın, hedef kitlenizi hazırlayın, kişiselleştirilmiş kampanyalarınızı güvenle gönderin.',
@@ -24,22 +26,26 @@ export function AuthShell({
   termsLabel?: string
 }) {
   return (
-    <div className="grid min-h-dvh bg-canvas md:grid-cols-2">
-      {/* Sol Hero / Marka Alanı */}
+    <div className="grid min-h-dvh bg-[#F8FAFC] md:grid-cols-2">
+      {/* Sol Hero / Marka Alanı (Sadece Desktop) */}
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#07100C] px-10 py-12 text-white md:flex lg:px-14 lg:py-14">
-        {/* Zarif arka plan radial ışığı */}
+        {/* Zarif radyal arka plan ışıkları */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -left-20 -top-20 size-[420px] rounded-full bg-[rgba(34,197,94,0.09)] blur-[100px]"
+          className="pointer-events-none absolute -left-20 -top-20 size-[420px] rounded-full bg-[rgba(34,197,94,0.12)] blur-[110px]"
         />
         <div
           aria-hidden
-          className="pointer-events-none absolute bottom-0 right-0 size-[360px] rounded-full bg-[rgba(47,91,255,0.06)] blur-[90px]"
+          className="pointer-events-none absolute bottom-0 right-0 size-[380px] rounded-full bg-[rgba(47,91,255,0.07)] blur-[100px]"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03),transparent_70%)]"
         />
 
-        {/* Üst Logo */}
+        {/* Üst: Tek Yetkili Logo (Beyaz) */}
         <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-3 transition-opacity hover:opacity-90">
+          <Link href="/" className="inline-flex items-center transition-opacity hover:opacity-90">
             <img
               src="/brand/mesajify-logo-full.png"
               alt={BRAND_NAME}
@@ -47,24 +53,30 @@ export function AuthShell({
             />
           </Link>
 
-          <h2 className="mt-14 max-w-[14ch] text-[clamp(28px,3.5vw,42px)] font-black leading-[1.15] tracking-[-0.035em]">
+          {/* Canlı Sistem Rozeti */}
+          <div className="mt-12 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[12px] font-medium text-white/80 backdrop-blur-sm">
+            <span className="size-2 rounded-full bg-[#25D366] shadow-[0_0_8px_#25D366]" />
+            <span>Kurumsal WhatsApp Kampanya Altyapısı</span>
+          </div>
+
+          <h2 className="mt-5 max-w-[15ch] text-[clamp(28px,3.5vw,42px)] font-black leading-[1.15] tracking-[-0.035em]">
             {asideTitle}
           </h2>
-          <p className="mt-5 max-w-[38ch] text-[15px] leading-relaxed text-white/75">{asideLead}</p>
+          <p className="mt-5 max-w-[40ch] text-[15px] leading-relaxed text-white/75">{asideLead}</p>
 
-          {/* Güven ve Özellik İpuçları */}
-          <div className="mt-10 space-y-3.5 border-t border-white/10 pt-8 text-[13px] text-white/80">
-            <div className="flex items-center gap-2.5">
-              <span className="flex size-5 items-center justify-center rounded-full bg-[#25D366]/20 text-[#25D366]">✓</span>
-              <span>Akıllı Hat Yönetimi & Isındırma</span>
+          {/* Özellik ve Güven Kartları */}
+          <div className="mt-10 space-y-3 border-t border-white/10 pt-8 text-[13px] text-white/85">
+            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-3.5 py-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#25D366]/20 font-bold text-xs text-[#25D366]">✓</span>
+              <span><strong>Akıllı Hat Yönetimi & Isındırma</strong> — Hat sağlığını koruyan akıllı dağıtım</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <span className="flex size-5 items-center justify-center rounded-full bg-[#25D366]/20 text-[#25D366]">✓</span>
-              <span>Yapay Zeka Destekli Kreatif Stüdyo</span>
+            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-3.5 py-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#25D366]/20 font-bold text-xs text-[#25D366]">✓</span>
+              <span><strong>Yapay Zeka Destekli Kreatif Stüdyo</strong> — Marka kitine özel görsel & video</span>
             </div>
-            <div className="flex items-center gap-2.5">
-              <span className="flex size-5 items-center justify-center rounded-full bg-[#25D366]/20 text-[#25D366]">✓</span>
-              <span>Ortak Gelen Kutusu & Canlı İletim</span>
+            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-3.5 py-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#25D366]/20 font-bold text-xs text-[#25D366]">✓</span>
+              <span><strong>Ortak Gelen Kutusu & Canlı İletim</strong> — Anlık yanıt ve müşteri etkileşimi</span>
             </div>
           </div>
         </div>
@@ -77,38 +89,31 @@ export function AuthShell({
       </aside>
 
       {/* Sağ Form Alanı */}
-      <main className="relative flex min-h-dvh flex-col justify-between bg-canvas px-5 py-8 md:px-10 lg:px-14">
-        {/* Mobil Header Logo */}
+      <main className="relative flex min-h-dvh flex-col justify-between px-5 py-6 sm:px-8 md:px-10 lg:px-14">
+        {/* Mobil Header: Tek yetkili logo (Masaüstünde sol aside'da olduğu için burada gizlenir) */}
         <header className="flex items-center justify-between md:hidden">
           <Link href="/" className="inline-flex items-center">
             <Wordmark className="h-7 w-auto" />
           </Link>
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-muted">
+          <span className="rounded-full border border-black/[0.08] bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
             Panel Girişi
           </span>
         </header>
 
-        {/* Form Kartı */}
-        <div className="flex flex-1 items-center justify-center py-8">
-          <div className="w-full max-w-[400px]">
-            {/* Desktop Üst Logo Vurgusu */}
-            <div className="mb-6 hidden md:block">
-              <Link href="/" className="inline-flex items-center">
-                <Wordmark className="h-8 w-auto" />
-              </Link>
-            </div>
-
-            <div className="rounded-[20px] border border-hairline bg-surface p-7 shadow-[var(--shadow-card)] sm:p-8">
+        {/* Form Alanı (Masaüstünde ikinci logo YOKTUR; doğrudan form gelir) */}
+        <div className="flex flex-1 items-center justify-center py-6 sm:py-10">
+          <div className="w-full max-w-[420px]">
+            <div className="rounded-[24px] border border-black/[0.08] bg-white p-7 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)] sm:p-9">
               {children}
             </div>
 
             {/* Alt Menü Linkleri */}
-            <div className="mt-6 flex justify-center gap-6 text-[12px] text-ink-muted">
-              <Link href="/kvkk" className="transition-colors hover:text-ink">
+            <div className="mt-6 flex justify-center items-center gap-5 text-[12px] text-[#6B7280]">
+              <Link href="/kvkk" className="transition-colors hover:text-[#0A0A0A]">
                 {privacyLabel}
               </Link>
-              <span>·</span>
-              <Link href="/kosullar" className="transition-colors hover:text-ink">
+              <span className="text-black/20">·</span>
+              <Link href="/kosullar" className="transition-colors hover:text-[#0A0A0A]">
                 {termsLabel}
               </Link>
             </div>
@@ -116,7 +121,7 @@ export function AuthShell({
         </div>
 
         {/* Telif & Güvenlik Alt Notu */}
-        <footer className="text-center text-[11.5px] text-ink-faint">
+        <footer className="text-center text-[12px] text-[#9CA3AF]">
           © {new Date().getFullYear()} {BRAND_NAME}. Tüm hakları saklıdır.
         </footer>
       </main>

@@ -16,17 +16,21 @@ export default function LoginPage() {
         <>
           WhatsApp ile
           <br />
-          <span className="text-[#25D366]">satışlarınızı büyütün.</span>
+          <span className="bg-gradient-to-r from-[#25D366] via-[#00A884] to-[#25D366] bg-clip-text text-transparent">
+            satışlarınızı büyütün.
+          </span>
         </>
       }
       asideLead="WhatsApp hatlarınızı bağlayın, hedef kitlenizi hazırlayın, kişiselleştirilmiş kampanyalarınızı güvenle gönderin."
     >
       <Suspense
         fallback={
-          <h1 className="mb-5 text-[22px] font-semibold tracking-[-0.02em]">Giriş yap</h1>
+          <div className="mb-6">
+            <h1 className="text-[24px] font-bold tracking-[-0.03em] text-[#0A0A0A]">Panele Giriş Yap</h1>
+          </div>
         }
       >
-        <div className="mb-5">
+        <div className="mb-6">
           <AuthModeCopy />
         </div>
       </Suspense>
