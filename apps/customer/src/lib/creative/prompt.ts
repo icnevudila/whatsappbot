@@ -655,7 +655,8 @@ export function buildLegacySimpleCreativePrompt(
           'A base campaign ad is attached as the reference canvas (role: base).',
           '1. STRICT IDENTITY & HUMAN SUBJECT PRESERVATION: If the base image features a person (e.g. female agronomist/worker, male craftsman, business owner), you MUST KEEP THE EXACT SAME PERSON. Do NOT replace a woman with a man or vice versa. Keep the exact same gender, face, hair, clothing, and posture.',
           '2. ENVIRONMENT & PRODUCT FREEZE: Strictly preserve the exact existing scene environment, background scenery, orchard/studio, lighting, shadows, colors, and layout framing from the base ad.',
-          '3. ONLY REVISE THE TARGET TYPOGRAPHY: Seamlessly update ONLY the headline/text/price requested in the instruction. Do NOT generate a completely new composition or environment.',
+          '3. SUPPORTING COPY PRESERVATION: Do NOT change or rewrite the supporting text, badge text, or CTA unless explicitly commanded. Keep the existing supporting copy identical.',
+          '4. ONLY REVISE THE TARGET TYPOGRAPHY: Seamlessly update ONLY the headline/text/price requested in the instruction. Do NOT generate a completely new composition or environment.',
         ].join('\n')
       : snapshot.baseCreativeId && snapshot.generationType === 'variation'
         ? 'VARIATION DIRECTIVE: Create a dynamic new variation inheriting the authentic product and brand identity. Do NOT freeze or copy the old canvas layout; adapt the scene, camera angle, and composition to the user directive.'
@@ -886,7 +887,8 @@ export function buildOverDirectedCreativePrompt(
           'A base campaign ad is attached as the reference canvas (role: base).',
           '1. STRICT IDENTITY & HUMAN SUBJECT PRESERVATION: If the base image features a person (e.g. female agronomist/worker, male craftsman, business owner), you MUST KEEP THE EXACT SAME PERSON. Do NOT replace a woman with a man or vice versa. Keep the exact same gender, face, hair, clothing, and posture.',
           '2. ENVIRONMENT & PRODUCT FREEZE: Strictly preserve the exact existing scene environment, background scenery, orchard/studio, lighting, shadows, colors, and layout framing from the base ad.',
-          '3. ONLY REVISE THE TARGET TYPOGRAPHY: Seamlessly update ONLY the headline/text/price requested in the instruction. Do NOT generate a completely new composition or environment.',
+          '3. SUPPORTING COPY PRESERVATION: Do NOT change or rewrite the supporting text, badge text, or CTA unless explicitly commanded. Keep the existing supporting copy identical.',
+          '4. ONLY REVISE THE TARGET TYPOGRAPHY: Seamlessly update ONLY the headline/text/price requested in the instruction. Do NOT generate a completely new composition or environment.',
         ].join('\n')
       : snapshot.baseCreativeId && snapshot.generationType === 'variation'
         ? 'VARIATION DIRECTIVE: Create a dynamic new variation inheriting the authentic product and brand identity. Do NOT freeze or copy the old canvas layout; adapt the scene, camera angle, and composition to the user directive.'

@@ -39,7 +39,12 @@ const MESAJIFY_LOGO = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/objec
 const MESAJIFY_UI = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/2881f690-6853-4064-8768-307463ae6255/products/2f047fbe-a90c-4bdc-b472-d969031048e1/0c2a3629-35d5-4d3a-bdc1-d13dad24f8e1.jpg'
 
 const BOFE_LOGO = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/brand-assets/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/kits/5bd94b86-156a-450f-99b1-4b4a650179d2/logo.jpg'
-const BOFE_PRODUCT = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/products/20cec3de-b581-4e7e-a3fa-4ac5c2835226/e08e3adb-9633-4e14-a799-619762ae28e0.jpg'
+// Distinct SKUs:
+// 1. Delta 10L: Mekanik Basınçlı İlaçlama Pompası (Yeşil silindirik gövde, Delta 10L)
+const DELTA_10L_PRODUCT = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/products/20cec3de-b581-4e7e-a3fa-4ac5c2835226/e08e3adb-9633-4e14-a799-619762ae28e0.jpg'
+// 2. Bofe 16L: Otomatik Şarjlı Akülü Sırt İlaçlama Pompası (Geniş açık mavi sırt deposu, Bofe logolu)
+const BOFE_16L_PRODUCT = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/products/b359ccd3-1616-4000-8000-000000000016/7f776e2c-adf2-45ac-8e99-21e8ac782013.jpg'
+const BOFE_PRODUCT = BOFE_16L_PRODUCT
 
 const MESAJIFY_BRAND_KIT = {
   name: 'Mesajify',
@@ -217,18 +222,19 @@ const BENCHMARK_JOBS: BenchmarkSpec[] = [
     brandName: 'Bofe Tarım',
     sector: 'Tarım & Bahçe Ekipmanları',
     styleMode: 'PREMIUM_SHOWCASE',
-    userPrompt: 'Koyu antrasit doğal taş podyum üstünde Bofe 16L pompa, dramatik sinematik ışık ve heykelsi gölgeler',
+    userPrompt: 'Koyu antrasit doğal taş podyum üstünde Delta 10L mekanik pompa, dramatik sinematik ışık ve heykelsi gölgeler',
     headline: 'Mühendislik ve Gücün Kusursuz Uyumu',
-    supportingLine: 'Yeni nesil lityum teknolojisiyle en zorlu arazilerde yanınızda.',
+    supportingLine: 'Endüstriyel dayanıklılık ve yüksek basınç performansı.',
     cta: 'Detaylı Bilgi',
     brandKit: BOFE_BRAND_KIT,
     product: {
-      name: 'Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L',
-      imageUrl: BOFE_PRODUCT
+      name: 'Delta Mekanik İlaçlama Pompası 10lt',
+      description: '10L yeşil silindirik gövde, yüksek basınçlı mekanik pompa, pirinç nozullu sağlam tetik.',
+      imageUrl: DELTA_10L_PRODUCT
     },
     referenceImages: [
       { role: 'logo', url: BOFE_LOGO },
-      { role: 'product', url: BOFE_PRODUCT }
+      { role: 'product', url: DELTA_10L_PRODUCT }
     ]
   },
 
@@ -356,20 +362,22 @@ async function runSingleBenchmark(spec: BenchmarkSpec) {
   // 2. Fetch reference images as base64
   const refs: { role: string; data: string; mimeType: string }[] = []
 
-  // ATTACH PARENT BASE IMAGE IF REVISION OR VARIATION
+  // ATTACH PARENT BASE IMAGE IF REVISION OR VARIATION (FAIL-CLOSED)
   if (spec.parentJobId) {
     const parentFilePath = path.join(DESKTOP_DIR, `${spec.parentJobId}.png`)
-    if (fs.existsSync(parentFilePath)) {
-      const parentBuf = fs.readFileSync(parentFilePath)
-      refs.push({
-        role: 'base',
-        data: parentBuf.toString('base64'),
-        mimeType: 'image/png'
-      })
-      console.log(`✓ Attached [base] reference canvas from parent: ${spec.parentJobId}.png (${parentBuf.length} bytes, role: base)`)
-    } else {
-      console.warn(`! Parent image file not found: ${parentFilePath}`)
+    if (!fs.existsSync(parentFilePath)) {
+      throw new Error(`FAIL-CLOSED: Parent base image not found for ${spec.generationType || 'revision'}: ${parentFilePath}. Cannot proceed without authentic base reference.`)
     }
+    const parentBuf = fs.readFileSync(parentFilePath)
+    if (parentBuf.length < 1000) {
+      throw new Error(`FAIL-CLOSED: Parent base image is corrupted or too small (${parentBuf.length} bytes): ${parentFilePath}`)
+    }
+    refs.push({
+      role: 'base',
+      data: parentBuf.toString('base64'),
+      mimeType: 'image/png'
+    })
+    console.log(`✓ Attached [base] reference canvas from parent: ${spec.parentJobId}.png (${parentBuf.length} bytes, role: base)`)
   }
 
   for (const ref of spec.referenceImages) {
