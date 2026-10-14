@@ -381,9 +381,20 @@ const TEMPLATE_FAMILY_INSTRUCTIONS: Record<TemplateFamily, string> = {
   ].join('\n'),
 }
 
-function getSectorArtDirectionHint(sector?: string | null, brief?: string | null): string | null {
+function getSectorArtDirectionHint(
+  sector?: string | null,
+  brief?: string | null,
+  styleMode?: string | null,
+  instruction?: string | null,
+): string | null {
   const text = `${sector || ''} ${brief || ''}`.toLowerCase()
+  const userText = `${instruction || ''} ${brief || ''}`.toLowerCase()
+  const isStudioOrPodium = /stüdyo|studio|podyum|podium|kaide|plinth|koyu|dark|antrasit|anthracite|heykelsi|sculpted|sinematik|cinematic/i.test(userText)
+
   if (/tarım|bahçe|çiftlik|ilaçlama|gübre|tohum|sprayer|tarim/i.test(text)) {
+    if (styleMode === 'PREMIUM_SHOWCASE' || isStudioOrPodium) {
+      return 'Sector art direction (Premium Vitrin & Endüstriyel Tarım): Showcase the equipment as a feat of precision engineering. Place on the requested dark anthracite stone podium / sculpted plinth with dramatic cinematic studio lighting, deep architectural shadows, and refined material reflections. Do NOT force an outdoor orchard, farm field, or foliage background when a premium studio showcase is explicitly requested.'
+    }
     return 'Sector art direction (Tarım & Bahçe): The product is physically integrated into a real orchard, field, or foliage setting with natural morning daylight and realistic ground shadows. High-contrast agricultural campaign energy. Avoid generic neon supermarket flyer modules or repetitive badge strips.'
   }
   if (/inşaat|yapı|tuğla|klinker|çimento|şantiye|mimari|insaat/i.test(text)) {
@@ -518,7 +529,12 @@ export function buildLegacySimpleCreativePrompt(
     ? VARIATION_PRESETS.find((row) => row.id === snapshot.variationPreset)?.label
     : null
 
-  const sectorArtDirection = getSectorArtDirectionHint(verified.sector, snapshot.brief)
+  const sectorArtDirection = getSectorArtDirectionHint(
+    verified.sector,
+    snapshot.brief,
+    snapshot.styleMode,
+    snapshot.instruction,
+  )
 
   const isBrandOnly = snapshot.objective === 'BRAND_AWARENESS' || snapshot.objective === 'BRAND_SHOWCASE'
   const isSalesOffer = !isBrandOnly && (
@@ -634,7 +650,13 @@ export function buildLegacySimpleCreativePrompt(
     brandKitLines.length ? brandKitLines.join('\n') : null,
     refInstruction,
     snapshot.baseCreativeId && snapshot.generationType === 'revision'
-      ? 'CONTROLLED REVISION DIRECTIVE: A base campaign ad is attached as the reference canvas. STRICTLY PRESERVE the exact existing scene environment, background, product angle, lighting, colors, and layout framing. ONLY revise the specific headline/text/price elements requested in the instruction. Do NOT generate a completely new composition or environment.'
+      ? [
+          'CONTROLLED REVISION DIRECTIVE (STRICT PIXEL-LEVEL BASE EDIT):',
+          'A base campaign ad is attached as the reference canvas (role: base).',
+          '1. STRICT IDENTITY & HUMAN SUBJECT PRESERVATION: If the base image features a person (e.g. female agronomist/worker, male craftsman, business owner), you MUST KEEP THE EXACT SAME PERSON. Do NOT replace a woman with a man or vice versa. Keep the exact same gender, face, hair, clothing, and posture.',
+          '2. ENVIRONMENT & PRODUCT FREEZE: Strictly preserve the exact existing scene environment, background scenery, orchard/studio, lighting, shadows, colors, and layout framing from the base ad.',
+          '3. ONLY REVISE THE TARGET TYPOGRAPHY: Seamlessly update ONLY the headline/text/price requested in the instruction. Do NOT generate a completely new composition or environment.',
+        ].join('\n')
       : snapshot.baseCreativeId && snapshot.generationType === 'variation'
         ? 'VARIATION DIRECTIVE: Create a dynamic new variation inheriting the authentic product and brand identity. Do NOT freeze or copy the old canvas layout; adapt the scene, camera angle, and composition to the user directive.'
         : snapshot.baseCreativeId
@@ -859,7 +881,13 @@ export function buildOverDirectedCreativePrompt(
         ? 'Clean brand identity. If no authentic logo file is attached, do NOT invent a fictional logo.'
         : 'Do not invent fake logos. Do not type a brand name as a fake logo unless the advertiser brief explicitly asks for the business name as headline text.',
     snapshot.baseCreativeId && snapshot.generationType === 'revision'
-      ? 'CONTROLLED REVISION DIRECTIVE: A base campaign ad is attached as the reference canvas. STRICTLY PRESERVE the exact existing scene environment, background, product angle, lighting, colors, and layout framing. ONLY revise the specific headline/text/price elements requested in the instruction. Do NOT generate a completely new composition or environment.'
+      ? [
+          'CONTROLLED REVISION DIRECTIVE (STRICT PIXEL-LEVEL BASE EDIT):',
+          'A base campaign ad is attached as the reference canvas (role: base).',
+          '1. STRICT IDENTITY & HUMAN SUBJECT PRESERVATION: If the base image features a person (e.g. female agronomist/worker, male craftsman, business owner), you MUST KEEP THE EXACT SAME PERSON. Do NOT replace a woman with a man or vice versa. Keep the exact same gender, face, hair, clothing, and posture.',
+          '2. ENVIRONMENT & PRODUCT FREEZE: Strictly preserve the exact existing scene environment, background scenery, orchard/studio, lighting, shadows, colors, and layout framing from the base ad.',
+          '3. ONLY REVISE THE TARGET TYPOGRAPHY: Seamlessly update ONLY the headline/text/price requested in the instruction. Do NOT generate a completely new composition or environment.',
+        ].join('\n')
       : snapshot.baseCreativeId && snapshot.generationType === 'variation'
         ? 'VARIATION DIRECTIVE: Create a dynamic new variation inheriting the authentic product and brand identity. Do NOT freeze or copy the old canvas layout; adapt the scene, camera angle, and composition to the user directive.'
         : options?.verifiedRefs?.base || snapshot.baseCreativeId

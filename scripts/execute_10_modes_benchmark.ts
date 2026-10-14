@@ -36,10 +36,10 @@ interface BenchmarkSpec {
 }
 
 const MESAJIFY_LOGO = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/brand-assets/2881f690-6853-4064-8768-307463ae6255/original-logo-e383102bc1be7a58.png'
-const MESAJIFY_UI = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/2881f690-6853-4064-8768-307463ae6255/products/89ca0756-806e-42ea-8b30-db6c6ad1da63/e8a4c1eb-c09e-48cd-92ff-bf171140aaff.jpg'
+const MESAJIFY_UI = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/2881f690-6853-4064-8768-307463ae6255/products/2f047fbe-a90c-4bdc-b472-d969031048e1/0c2a3629-35d5-4d3a-bdc1-d13dad24f8e1.jpg'
 
 const BOFE_LOGO = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/brand-assets/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/kits/5bd94b86-156a-450f-99b1-4b4a650179d2/logo.jpg'
-const BOFE_PRODUCT = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/afc4ff9f-67a4-4dd1-af1d-e60b38c9ccdc/products/7f776e2c-adf2-45ac-8e99-21e8ac782013.jpg'
+const BOFE_PRODUCT = 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/b359ccd3-3ec8-40fd-928e-bc6dbbd489c0/products/20cec3de-b581-4e7e-a3fa-4ac5c2835226/e08e3adb-9633-4e14-a799-619762ae28e0.jpg'
 
 const MESAJIFY_BRAND_KIT = {
   name: 'Mesajify',
@@ -281,6 +281,8 @@ const BENCHMARK_JOBS: BenchmarkSpec[] = [
 
 const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || process.env.OMNISTUDIO_API_KEY || ''
 
+const FORCE_JOBS = process.env.FORCE_JOBS ? process.env.FORCE_JOBS.split(',') : []
+
 async function runSingleBenchmark(spec: BenchmarkSpec) {
   console.log(`\n--------------------------------------------------------------------------------`)
   console.log(`[JOB ${spec.num}/10] ${spec.label}`)
@@ -290,10 +292,15 @@ async function runSingleBenchmark(spec: BenchmarkSpec) {
   console.log(`--------------------------------------------------------------------------------`)
 
   const desktopFile = path.join(DESKTOP_DIR, `${spec.id}.png`)
-  if (fs.existsSync(desktopFile) && fs.statSync(desktopFile).size > 10000) {
+  const isForced = FORCE_JOBS.some(fj => {
+    const clean = fj.trim()
+    return clean === spec.num || clean === String(parseInt(spec.num, 10)) || clean === spec.id || clean === 'all'
+  })
+
+  if (!isForced && fs.existsSync(desktopFile) && fs.statSync(desktopFile).size > 10000) {
     const buf = fs.readFileSync(desktopFile)
     const sha256 = crypto.createHash('sha256').update(buf).digest('hex')
-    console.log(`✓ Mevcut doğrulanmış görsel korundu: ${desktopFile} (${buf.length} bytes, SHA: ${sha256})`)
+    console.log(`⚡ [REUSED] Mevcut doğrulanmış görsel korundu: ${desktopFile} (${buf.length} bytes, SHA: ${sha256})`)
     return {
       spec,
       imgUrl: 'local://' + desktopFile,
@@ -301,7 +308,10 @@ async function runSingleBenchmark(spec: BenchmarkSpec) {
       fileName: `${spec.id}.png`,
       sha256,
       sizeBytes: buf.length,
-      elapsedSec: 0
+      elapsedSec: 0,
+      status: 'REUSED',
+      jobId: 'cached_verified',
+      refsCount: spec.referenceImages.length + (spec.parentJobId ? 1 : 0)
     }
   }
 
@@ -339,14 +349,29 @@ async function runSingleBenchmark(spec: BenchmarkSpec) {
       extra: null,
       include: { name: true, description: true, price: true, promo: true, image: true, boxContents: false }
     }] : [],
-    generationType: spec.generationType || 'initial'
+    generationType: spec.generationType || 'initial',
+    baseCreativeId: spec.parentJobId || undefined
   }
-
-  const { prompt } = buildCreativePrompt(snapshot)
-  console.log(`✓ Compiled Prompt preview: ${prompt.slice(0, 160)}...`)
 
   // 2. Fetch reference images as base64
   const refs: { role: string; data: string; mimeType: string }[] = []
+
+  // ATTACH PARENT BASE IMAGE IF REVISION OR VARIATION
+  if (spec.parentJobId) {
+    const parentFilePath = path.join(DESKTOP_DIR, `${spec.parentJobId}.png`)
+    if (fs.existsSync(parentFilePath)) {
+      const parentBuf = fs.readFileSync(parentFilePath)
+      refs.push({
+        role: 'base',
+        data: parentBuf.toString('base64'),
+        mimeType: 'image/png'
+      })
+      console.log(`✓ Attached [base] reference canvas from parent: ${spec.parentJobId}.png (${parentBuf.length} bytes, role: base)`)
+    } else {
+      console.warn(`! Parent image file not found: ${parentFilePath}`)
+    }
+  }
+
   for (const ref of spec.referenceImages) {
     try {
       const res = await fetch(ref.url)
@@ -364,6 +389,16 @@ async function runSingleBenchmark(spec: BenchmarkSpec) {
       console.warn(`! Failed to fetch ref [${ref.role}]:`, err.message)
     }
   }
+
+  const { prompt } = buildCreativePrompt(snapshot, {
+    verifiedRefs: {
+      logo: refs.some(r => r.role === 'logo'),
+      product: refs.some(r => r.role === 'product'),
+      base: refs.some(r => r.role === 'base'),
+      inspiration: false
+    }
+  })
+  console.log(`✓ Compiled Prompt preview: ${prompt.slice(0, 160)}...`)
 
   // 3. Submit to OmniStudio gateway
   const payload = {
@@ -453,7 +488,7 @@ async function runSingleBenchmark(spec: BenchmarkSpec) {
   const sha256 = crypto.createHash('sha256').update(buf).digest('hex')
 
   fs.writeFileSync(desktopFile, buf)
-  console.log(`✅ Saved physical image: ${desktopFile} (${buf.length} bytes, SHA: ${sha256})`)
+  const jobId = resultData.job_id || resultData.id || (imgUrl.match(/job_[a-f0-9]+/i) ? imgUrl.match(/job_[a-f0-9]+/i)![0] : 'omnistudio_direct')
 
   return {
     spec,
@@ -462,7 +497,11 @@ async function runSingleBenchmark(spec: BenchmarkSpec) {
     fileName: `${spec.id}.png`,
     sha256,
     sizeBytes: buf.length,
-    elapsedSec
+    elapsedSec,
+    status: 'GENERATED',
+    jobId,
+    refsCount: refs.length,
+    refsRoles: refs.map(r => r.role)
   }
 }
 
@@ -664,13 +703,17 @@ function generateHtmlGallery(results: any[]) {
           <div class="card-top">
             <span class="mode-pill">${r.spec.styleMode}</span>
             <span class="brand-tag">${r.spec.brandName}</span>
+            <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 4px; ${r.status === 'GENERATED' ? 'background: rgba(37,211,102,0.15); color: #25D366; border: 1px solid rgba(37,211,102,0.3);' : 'background: rgba(234,179,8,0.15); color: #EAB308; border: 1px solid rgba(234,179,8,0.3);'}">
+              ${r.status === 'GENERATED' ? `GENERATED (${r.elapsedSec}s)` : 'REUSED (0s)'}
+            </span>
           </div>
           <div class="headline">${r.spec.headline}</div>
           <div class="info-row">
             <div><strong>CTA:</strong> ${r.spec.cta}</div>
             ${r.spec.price ? `<div><strong>Fiyat / Teklif:</strong> ${r.spec.price} (${r.spec.offer || ''})</div>` : ''}
             <div><strong>İstem (Prompt):</strong> ${r.spec.userPrompt || '<em>Boş (AI Kararı)</em>'}</div>
-            <div><strong>Süre:</strong> ${r.elapsedSec}s · ${(r.sizeBytes / 1024).toFixed(0)} KB</div>
+            <div><strong>Gateway Job ID:</strong> <code>${r.jobId || 'N/A'}</code></div>
+            <div><strong>Referanslar:</strong> ${r.refsRoles ? r.refsRoles.map((role: string) => `[${role}]`).join(' ') : `${r.refsCount || 0} adet`} · ${(r.sizeBytes / 1024).toFixed(0)} KB</div>
           </div>
           <div class="hash">SHA256: ${r.sha256}</div>
         </div>
