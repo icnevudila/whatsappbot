@@ -10,7 +10,7 @@ export function CreativeStylePicker({
   onChange: (mode: CreativeStyleMode) => void
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
       {STYLE_MODES.map((mode) => {
         const isSelected = value === mode.id
         const badge = (mode as any).badge

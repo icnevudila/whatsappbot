@@ -41,7 +41,7 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "tsx --tsconfig apps/customer/tsconfig.json --test tests/*.test.ts",
     "scaffold:channels": "node scripts/scaffold-channel-services.mjs",
     "db:types": "npx --yes supabase@latest gen types typescript --project-id rnkrjmblgcdqlyslbhob --schema public > packages/shared/src/database.types.ts",
     "pack:whatsapp-service": "node whatsapp-service/scripts/pack-from-monorepo.mjs"

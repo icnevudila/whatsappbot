@@ -553,7 +553,18 @@ export function buildLegacySimpleCreativePrompt(
   // OPTIONAL SUPPORTING SIGNALS (At most 1-2 concise facts, only if verified):
   const supportingLines: string[] = []
   if (verified.primaryBenefits.length) {
-    supportingLines.push(`Key verified selling point: ${verified.primaryBenefits.slice(0, 2).join(' · ')}`)
+    const cleanedBenefits = verified.primaryBenefits.slice(0, 2).map((b) => {
+      let text = b.trim()
+      if (verified.brandName && (verified.headline === verified.brandName || verified.headline?.includes(verified.brandName))) {
+        const brandRegex = new RegExp(`^${verified.brandName}\\s*(—|-|:)?\\s*`, 'i')
+        text = text.replace(brandRegex, '')
+        if (text) text = text.charAt(0).toUpperCase() + text.slice(1)
+      }
+      return text
+    }).filter(Boolean)
+    if (cleanedBenefits.length) {
+      supportingLines.push(`Key verified selling point: ${cleanedBenefits.join(' · ')}`)
+    }
   }
   if (verified.deliveryFact) {
     const fact = verified.deliveryFact.trim()
@@ -682,6 +693,8 @@ export function buildLegacySimpleCreativePrompt(
     'no generic minimalist empty poster',
     'no cinematic lifestyle drift away from the product',
     'no literal transcription of user instructions or prompt notes on the artwork',
+    'no repetitive brand name duplication between headline and body copy',
+    'no plain hand holding phone in blank void without environmental context or dynamic brand energy',
     ...(options?.verifiedRefs?.inspiration ? ['no clone or literal replica of the inspiration ad layout'] : []),
     ...(options?.artDirectionPlan?.commercial_grammar?.negativeLayoutRules || []),
     ...(options?.artDirectionPlan?.anti_generic_rules || []),
