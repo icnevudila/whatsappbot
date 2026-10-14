@@ -190,6 +190,8 @@ export type CreativeSnapshot = {
   styleMode?: import('./style-mode').CreativeStyleMode
   stylePreset?: string | null
   generationType?: string | null
+  variationMode?: 'new_composition' | 'enhance' | null
+  visualDiversityPlan?: import('./visual-diversity').VisualDiversityPlan | null
 }
 
 export type CreativePayload = CreativeSnapshot & {

@@ -15,12 +15,16 @@ import * as policy from '../apps/customer/src/lib/creative/promotion-policy'
 import * as campaignFacts from '../apps/customer/src/lib/creative/campaign-facts'
 import * as creativeTypes from '../apps/customer/src/lib/creative/types'
 import * as wizardTypes from '../apps/customer/src/app/(panel)/icerik/wizard-types'
+import * as styleMode from '../apps/customer/src/lib/creative/style-mode'
+import * as visualDiversity from '../apps/customer/src/lib/creative/visual-diversity'
+import * as creativeDirector from '../apps/customer/src/lib/creative/director/creative-director'
+import * as creativeMemory from '../apps/customer/src/lib/creative/director/creative-memory'
 
 test('Actual server action accepts brand logo-only snapshot without catalog mutation; offering still requires true reference',async()=>{
   const orgId='00000000-0000-4000-8000-000000000001'
   const inserted:Array<Record<string,any>>=[],queued:Array<unknown>=[]
   const supabase={from(table:string){
-    const query:any={select(){return this},eq(){return this},contains(){return this},in(){return this},order(){return this},limit(){return this},gte(){return this},
+    const query:any={select(){return this},eq(){return this},contains(){return this},in(){return this},order(){return this},limit(){return this},gte(){return this},not(){return this},
       insert(row:Record<string,unknown>){assert.equal(table,'creatives','Brand must not create fake catalog/product-knowledge rows');inserted.push(row);return this},
       single:async()=>({data:{id:'new-creative'},error:null}),
       maybeSingle:async()=>({data:table==='brand_kits'?{id:'verified-kit',name:'Verified Brand',colors:{primary:'#2f5bff'},fonts:{},tone:null,logo_path:`${orgId}/logo.png`}
@@ -33,6 +37,8 @@ test('Actual server action accepts brand logo-only snapshot without catalog muta
     '@/lib/jobs':{enqueueJob:async(value:unknown)=>{queued.push(value);return {error:null}}},
     '@/lib/creative/campaign-facts':campaignFacts,'@/lib/creative/types':creativeTypes,'./wizard-types':wizardTypes,
     '@/lib/creative/promotion-policy':policy,'@/lib/creative/required-image-assets':{requiredImageAssets},
+    '@/lib/creative/style-mode':styleMode,'@/lib/creative/visual-diversity':visualDiversity,
+    '@/lib/creative/director/creative-director':creativeDirector,'@/lib/creative/director/creative-memory':creativeMemory,
     '@/lib/org':{isOrgAdminRole:(role:string)=>role==='admin',requireActiveOrg:async()=>({userId:'verified-user',org:{id:orgId,name:'Verified Brand',role:'admin'},supabase})},
     '@/lib/ai/image':{hasImageProvider:()=>true},'@/lib/creative/prompt':{deriveVerifiedCampaignData:()=>({})},
     '@/lib/ai/campaign-message':{generateCampaignWhatsAppMessage:()=>''},

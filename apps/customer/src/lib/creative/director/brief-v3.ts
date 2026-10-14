@@ -1,4 +1,5 @@
 import { styleModeDirective, normalizeStyleMode } from '../style-mode'
+import { visualDiversityDirective } from '../visual-diversity'
 import type { CreativeSnapshot } from '../types'
 import { campaignFactsError } from '../campaign-facts'
 
@@ -73,6 +74,7 @@ export function buildCreativePromptV3(snapshot: CreativeSnapshot) {
     'Do not render JSON keys, reference URLs or technical instructions as visible copy. Compose typography, product, light and environment as one original scene.',
     'User scene direction may change layout, lighting and environment only. It cannot replace the canonical product, alter its geometry/color/label, change the original logo, or invent commercial facts.',
     snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : '',
+    snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : '',
     JSON.stringify(brief),
   ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts' }
 }

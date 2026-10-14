@@ -1,4 +1,5 @@
 import { styleModeDirective } from './style-mode'
+import { visualDiversityDirective } from './visual-diversity'
 import type { CreativeSnapshot, TemplateFamily } from './types'
 import { buildCreativePromptV3 } from './director/brief-v3'
 import { CREATIVE_FORMATS, CREATIVE_STYLES, TEMPLATE_FAMILIES, VARIATION_PRESETS } from './types'
@@ -51,6 +52,34 @@ export const DENSITY_HINT: Record<string, string> = {
   low: 'Text density guidance: At most a short headline. No paragraphs, no tiny disclaimers.',
   balanced: 'Text density guidance: Headline and core campaign message. No long body copy. Keep mobile-readable.',
   detailed: 'Text density guidance: Headline, core offer, and concise contact details. Never fill the image with paragraphs.',
+}
+
+export function formatUserSceneInstruction(instruction?: string | null): string | null {
+  if (!instruction || !instruction.trim()) return null
+  const trimmed = instruction.trim()
+
+  const isDenseTextMeta = /(?:bol\s+bol\s+yazı|çok\s+yazı|yazı\s+bol|yazılar\s+çok|metin\s+bol|fazla\s+yazı|metin\s+ağırlıklı|yazı\s+yoğun)/i.test(trimmed)
+  const isMinimalTextMeta = /(?:az\s+yazı|sade\s+yazı|tek\s+cümle|az\s+metin|az\s+yazılı)/i.test(trimmed)
+
+  let cleanInstruction = trimmed
+  let layoutGuidance = ''
+
+  if (isDenseTextMeta) {
+    layoutGuidance = 'TECHNICAL TYPOGRAPHY DENSITY: Multi-tier editorial typography layout with prominent headline, clear benefit lines, and high-visibility CTA. CRITICAL: NEVER print the meta-phrase ("bol bol yazı olsun" or user instructions) as text on the visual; all copy on the artwork must consist exclusively of the professional advertising copy provided in the brief.'
+    cleanInstruction = cleanInstruction.replace(/(?:bol\s+bol\s+yazı|çok\s+yazı|yazı\s+bol|yazılar\s+çok|metin\s+bol|fazla\s+yazı|metin\s+ağırlıklı|yazı\s+yoğun)[.,!?:;]?\s*/gi, '').trim()
+  } else if (isMinimalTextMeta) {
+    layoutGuidance = 'TECHNICAL TYPOGRAPHY DENSITY: Restrained minimal layout with generous whitespace and only the primary headline and CTA. NEVER print user meta-prompts as text.'
+    cleanInstruction = cleanInstruction.replace(/(?:az\s+yazı|sade\s+yazı|tek\s+cümle|az\s+metin|az\s+yazılı)[.,!?:;]?\s*/gi, '').trim()
+  }
+
+  const parts: string[] = []
+  if (cleanInstruction) {
+    parts.push(`USER SCENE ART DIRECTION (Environmental staging, camera framing, lighting and models ONLY): "${cleanInstruction}". STRICT COPY SEPARATION RULE: This scene direction must ONLY be used to stage the physical environment, models, and camera. NEVER print, render, or transcribe this scene description text anywhere on the visual image. Advertising copy is governed strictly by the Verified Commercial Core below.`)
+  }
+  if (layoutGuidance) {
+    parts.push(layoutGuidance)
+  }
+  return parts.length ? parts.join('\n') : null
 }
 
 function formatLabel(formatId: string): string {
@@ -468,7 +497,9 @@ export function buildLegacySimpleCreativePrompt(
     return bits.join('. ')
   })
 
-  const templateInstruction = TEMPLATE_FAMILY_INSTRUCTIONS[verified.templateFamily] ?? TEMPLATE_FAMILY_INSTRUCTIONS.CAMPAIGN_POSTER
+  const templateInstruction = snapshot.offeringKind === 'software' && verified.templateFamily === 'CAMPAIGN_POSTER'
+    ? 'Design mode: Professional software campaign. Balance readable approved copy with one authentic interface crop or one normal-sized device in a believable everyday setting. Device scale must remain physically plausible; do not enlarge a phone to dominate a person or desk. Preserve the exact supplied interface and canonical logo. Display the approved headline and one CTA; show a price or offer only when explicitly supplied and verified. Use natural lighting, restrained brand accents and clear negative space.'
+    : TEMPLATE_FAMILY_INSTRUCTIONS[verified.templateFamily] ?? TEMPLATE_FAMILY_INSTRUCTIONS.CAMPAIGN_POSTER
 
   // Proven historical reference phrasing (matches preflight contract)
   const refInstruction = [
@@ -604,9 +635,7 @@ export function buildLegacySimpleCreativePrompt(
     snapshot.style && snapshot.style !== 'auto'
       ? `Visual style preset: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] || ''}`
       : null,
-    snapshot.instruction
-      ? `USER SCENE ART DIRECTION (Environmental staging, camera framing, lighting and models ONLY): "${snapshot.instruction}". STRICT COPY SEPARATION RULE: This scene direction must ONLY be used to stage the physical environment, models, and camera. NEVER print, render, or transcribe this scene description text anywhere on the visual image. Advertising copy is governed strictly by the Verified Commercial Core below.`
-      : null,
+    formatUserSceneInstruction(snapshot.instruction),
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${snapshot.brief}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
@@ -618,6 +647,8 @@ export function buildLegacySimpleCreativePrompt(
     'CRITICAL TEXT RENDERING DISCIPLINE: Only the Verified Commercial Core (Headline, Offer/Price, CTA) should appear as typography on the ad. Never print user instructions, scene descriptions, or camera prompts as copy.',
     'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
     'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
+    snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : null,
+    snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : null,
   ]
     .filter(Boolean)
     .join('\n')
@@ -650,6 +681,7 @@ export function buildLegacySimpleCreativePrompt(
     'no tiny product in distant background',
     'no generic minimalist empty poster',
     'no cinematic lifestyle drift away from the product',
+    'no literal transcription of user instructions or prompt notes on the artwork',
     ...(options?.verifiedRefs?.inspiration ? ['no clone or literal replica of the inspiration ad layout'] : []),
     ...(options?.artDirectionPlan?.commercial_grammar?.negativeLayoutRules || []),
     ...(options?.artDirectionPlan?.anti_generic_rules || []),
@@ -820,9 +852,7 @@ export function buildOverDirectedCreativePrompt(
         : options?.verifiedRefs?.base || snapshot.baseCreativeId
           ? 'A base/reference campaign image is attached. Keep the exact same product and brand identity; apply the requested change.'
           : null,
-    snapshot.instruction
-      ? `USER SCENE DIRECTION (composition, environment and lighting only; canonical product/logo identity and verified commercial facts are immutable): ${snapshot.instruction}`
-      : null,
+    formatUserSceneInstruction(snapshot.instruction),
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${briefText || 'Özel Kampanya'}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
@@ -884,6 +914,7 @@ export function buildOverDirectedCreativePrompt(
     'no tacky gradient banners',
     'no distorted Turkish typography',
     'no muddy vignette corners',
+    'no literal transcription of user instructions or prompt notes on the artwork',
     ...(options?.artDirectionPlan?.commercial_grammar?.negativeLayoutRules || []),
     ...(options?.artDirectionPlan?.anti_generic_rules || []),
   ].join(', ')
@@ -909,7 +940,9 @@ export function buildCreativePrompt(
   const compiled = options?.mode === 'OVER_DIRECTED_DESIGNER'
     ? buildOverDirectedCreativePrompt(snapshot, options)
     : buildLegacySimpleCreativePrompt(snapshot, options)
-  return snapshot.styleMode ? { ...compiled, prompt: `${compiled.prompt}\n${styleModeDirective(snapshot.styleMode)}` } : compiled
+  const direction = [snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : '',
+    snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : ''].filter(Boolean).join('\n')
+  return direction ? { ...compiled, prompt: `${compiled.prompt}\n${direction}` } : compiled
 }
 
 const VIDEO_STYLE_MOODS: Record<string, string> = {

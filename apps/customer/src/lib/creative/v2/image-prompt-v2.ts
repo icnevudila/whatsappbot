@@ -1,4 +1,5 @@
 import { styleModeDirective, type CreativeStyleMode } from '../style-mode'
+import { visualDiversityDirective, type VisualDiversityPlan } from '../visual-diversity'
 import { type CreativePlanV2, type CreativeStylePreset, type ImageFormatV2 } from './types'
 
 export type ImagePromptV2Options = {
@@ -11,6 +12,7 @@ export type ImagePromptV2Options = {
   plan?: CreativePlanV2 | null
   hasLogoRef?: boolean
   hasProductRef?: boolean
+  visualDiversityPlan?: VisualDiversityPlan | null
 }
 
 export function buildImagePromptV2(options: ImagePromptV2Options): {
@@ -54,6 +56,7 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     `[SCENE & ENVIRONMENT]: ${sceneEnvironment}`,
     `[COMPOSITION]: ${composition}. Ensure comfortable negative space in the upper or outer zones for clean graphic finishing.`,
     `[LIGHTING & DEPTH]: ${lighting}. Realistic material physics, authentic physical shadows, no floating elements.`,
+    visualDiversityDirective(options.visualDiversityPlan),
     desc ? `[PRODUCT SPECIFICS]: ${desc}.` : '',
     options.hasProductRef
       ? `[STRICT PRODUCT FIDELITY]: The physical product photo is provided as canonical reference @HeroProduct. Preserve the exact physical shape, materials, proportions, buttons, nozzle/accessories, and authentic colors of @HeroProduct with 100% fidelity. Do NOT mutate or redesign the product.`

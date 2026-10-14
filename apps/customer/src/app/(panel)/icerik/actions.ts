@@ -47,6 +47,7 @@ import {
   resolveArtDirectionPlanAtSubmission,
 } from '@/lib/creative/director/creative-director'
 import { recordCreativeMemory } from '@/lib/creative/director/creative-memory'
+import { selectVisualDiversityPlan } from '@/lib/creative/visual-diversity'
 
 export type CreativeActionState = { error?: string; ok?: string; id?: string; publicUrl?: string } | null
 
@@ -111,7 +112,7 @@ async function kickGeneration(
     after(async () => {
       for (let attempt = 0; attempt < 12; attempt += 1) {
         try {
-          const result = await processCreativeGeneration(creativeId)
+          const result = await processCreativeGeneration(creativeId, authContext?.supabase)
           if (result.ok && !result.pending) return
           if (!result.pending && !result.busy) {
             console.error('[creative.kick.local]', creativeId, result.error)
@@ -323,8 +324,9 @@ export async function startCreativeGeneration(
       .select('id, payload, created_at')
       .eq('org_id', org.id)
       .not('payload', 'is', null)
+      .not('format', 'eq', 'video')
       .order('created_at', { ascending: false })
-      .limit(5),
+      .limit(20),
   ])
   const parallelReadsMs = Date.now() - tParallelStart
 
@@ -399,6 +401,12 @@ export async function startCreativeGeneration(
       if (identityError) return { error: identityError }
     }
     draft = inheritVariationContext(draft, parentPayload)
+    if (generationType === 'revision') {
+      const revisedCopy = [draft.customHeadline, draft.customSupporting]
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+        .map(value => value.trim())
+      if (revisedCopy.length) brief = revisedCopy.join(' ')
+    }
     if (brief.length < 8 && parentPayload?.brief) brief = parentPayload.brief.trim()
     if (parentPayload?.brandKit && !kitId) {
       kitRow = {
@@ -504,7 +512,7 @@ export async function startCreativeGeneration(
     if (socials.length === 0 && parentPayload.socials?.length) socials.push(...parentPayload.socials)
     if (labels.length === 0 && parentPayload.labels?.length) labels.push(...parentPayload.labels)
   }
-  const title = titleFromBrief(String(draft.instruction ?? '').trim() || brief)
+  const title = titleFromBrief(String(draft.customHeadline ?? '').trim() || brief)
   const logoSource = String(kitRow?.logo_path || orgLogoPath || '').trim()
   const subjectMode = promotionMode(draft.promotionMode)
   // Brand-only is explicit, never inferred from an objective or missing product.
@@ -615,6 +623,17 @@ export async function startCreativeGeneration(
     customSupporting: (draft.customSupporting as string) || null,
     heroProductId: heroProductId || (products[0]?.id as string) || null,
     generationType,
+    variationMode: (draft.variationMode as any) || (draft.variationPreset as any) || null,
+    visualDiversityPlan: format.format === 'video' ? null : selectVisualDiversityPlan({
+      requestKey: requestKey || randomBytes(16).toString('hex'),
+      subject: subjectMode === 'brand' ? 'brand' : offeringKind(draft.offeringKind),
+      styleMode: normalizeStyleMode(draft.styleMode),
+      generationType,
+      variationMode: (draft.variationMode as any) || (draft.variationPreset as any) || null,
+      parent: parentPayload?.visualDiversityPlan,
+      recent: (Array.isArray(recentCreativesRes.data) ? recentCreativesRes.data : [])
+        .map(row => (row.payload as CreativePayload | null)?.visualDiversityPlan),
+    }),
     styleMode: normalizeStyleMode(draft.styleMode),
     stylePreset: normalizedStylePreset,
     objective: subjectMode === 'brand' ? 'BRAND_AWARENESS' : (draft.objective as string) || null,

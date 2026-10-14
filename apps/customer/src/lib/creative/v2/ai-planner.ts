@@ -1,4 +1,4 @@
-import { styleModeDirective, type CreativeStyleMode } from '../style-mode'
+import { normalizeStyleMode, styleModeDirective, type CreativeStyleMode } from '../style-mode'
 import { completeText } from '@/lib/ai/text'
 import {
   type CampaignObjective,
@@ -55,24 +55,52 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
     cta = 'Detaylı Bilgi Alın'
   }
 
-  const campaignBold = !isVideo && input.styleMode === 'campaign_bold'
+  const mode = input.styleMode ? normalizeStyleMode(input.styleMode) : 'SMART_CAMPAIGN'
+  const isShowstopper = !isVideo && mode === 'SHOWSTOPPER_CAMPAIGN'
+  const isRealLife = !isVideo && mode === 'REAL_LIFE_CAMPAIGN'
+  const isPremium = !isVideo && mode === 'PREMIUM_SHOWCASE'
+
   const voiceover = isVideo
     ? `${brand} ${product}. Ayrıntılı bilgi almak için bize ulaşın.`
     : undefined
+
+  let environment = 'Sade, aydınlık ve modern ticari ortam'
+  let humanPresence: 'none' | 'actor' | 'hands_only' = input.stylePreset === 'REAL_USAGE' ? 'actor' : 'none'
+  let productInteraction = input.stylePreset === 'REAL_USAGE' ? 'doğal profesyonel kullanım' : 'statik ürün sunumu'
+  let composition = 'merkezde net odak, dengeli reklam yerleşimi'
+  let background = 'ürünü öne çıkaran sade, şık ve uyumlu arka plan'
+  let lighting = 'doğal ticari aydınlatma, yumuşak gölgeler'
+
+  if (isShowstopper) {
+    environment = 'Ürüne ve marka sektörüne uygun, güçlü kontrastlı ticari afiş ortamı'
+    composition = 'Büyük başlık, güçlü CTA, belirgin ana ürün ve zengin kampanya vurgu alanları'
+    background = 'Marka renklerine uygun katmanlı ve düzenli kampanya sahnesi'
+  } else if (isRealLife) {
+    environment = 'Doğal işletme veya sahada gerçek kullanım ortamı'
+    humanPresence = 'actor'
+    productInteraction = 'doğal profesyonel kullanım ve kullanıcı etkileşimi'
+    composition = 'İşletme sahibi veya saha uzmanı ile ürünün dengeli birlikteliği'
+    background = 'Gerçekçi, inandırıcı ve sektöre uygun mekan'
+  } else if (isPremium) {
+    environment = 'Sinematik ve lüks stüdyo ortamı, prestijli taş podyum veya mimari yüzey'
+    composition = 'Merkezde podyum üstünde parlayan ürün, heykelsi derinlik ve kontrollü gölgeler'
+    lighting = 'sinematik dramatik yönlü ışık, zarif gölgeler'
+    background = 'Mat taş veya mimari dokulu lüks arka plan'
+  }
 
   return {
     source: 'DETERMINISTIC_FALLBACK',
     objective: input.objective,
     creative_style: input.stylePreset,
     scene: {
-      environment: campaignBold ? 'Ürüne ve marka sektörüne uygun, güçlü kontrastlı ticari ortam' : 'Sade, aydınlık ve modern ticari ortam',
-      human_presence: input.stylePreset === 'REAL_USAGE' ? 'actor' : 'none',
+      environment,
+      human_presence: humanPresence,
       subject: product,
-      product_interaction: input.stylePreset === 'REAL_USAGE' ? 'doğal profesyonel kullanım' : 'statik ürün sunumu',
-      composition: campaignBold ? 'Büyük başlık, güçlü CTA, belirgin ana ürün ve kontrollü vurgu alanları' : 'merkezde net odak, dengeli reklam yerleşimi',
-      lighting: 'doğal ticari aydınlatma, yumuşak gölgeler',
+      product_interaction: productInteraction,
+      composition,
+      lighting,
       camera_feel: '35mm sinematik netlik, derinlikli kadraj',
-      background: campaignBold ? 'Marka renklerine uygun katmanlı ve düzenli kampanya sahnesi' : 'ürünü öne çıkaran sade, şık ve uyumlu arka plan',
+      background,
     },
     copy: {
       headline,

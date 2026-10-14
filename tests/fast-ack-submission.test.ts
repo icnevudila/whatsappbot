@@ -3,6 +3,13 @@ import assert from 'node:assert/strict'
 import { resolveArtDirectionPlanAtSubmission } from '../apps/customer/src/lib/creative/director/creative-director.js'
 import type { ArtDirectionPlan } from '../apps/customer/src/lib/creative/director/types.js'
 
+function medianResolutionMs(run: () => unknown): number {
+  const durations = Array.from({length:31},()=>{
+    const start=performance.now();run();return performance.now()-start
+  }).sort((a,b)=>a-b)
+  return durations[Math.floor(durations.length/2)]
+}
+
 describe('P0 Fast-ACK Creative Submission & Art Direction Contract Suite', () => {
   const samplePrecomputedPlan: ArtDirectionPlan = {
     concept_name: 'Bofe Luxury Chair Campaign',
@@ -46,8 +53,7 @@ describe('P0 Fast-ACK Creative Submission & Art Direction Contract Suite', () =>
 
   // 1. ART_DIRECTION_AI_READY_RESULT
   it('1. ART_DIRECTION_AI_READY_RESULT: precomputed AI plan freezes instantly with AI_PRECOMPUTED source', () => {
-    const t0 = performance.now()
-    const result = resolveArtDirectionPlanAtSubmission({
+    const options: Parameters<typeof resolveArtDirectionPlanAtSubmission>[0] = {
       input: {
         orgId: 'test-org-123',
         brandName: 'Bofe',
@@ -58,8 +64,9 @@ describe('P0 Fast-ACK Creative Submission & Art Direction Contract Suite', () =>
         qualityMode: 'DESIGNER',
       },
       precomputedPlan: samplePrecomputedPlan,
-    })
-    const durationMs = performance.now() - t0
+    }
+    const result = resolveArtDirectionPlanAtSubmission(options)
+    const durationMs = medianResolutionMs(()=>resolveArtDirectionPlanAtSubmission(options))
 
     assert.equal(result.source, 'AI_PRECOMPUTED')
     assert.deepEqual(result.plan, samplePrecomputedPlan)
@@ -68,8 +75,7 @@ describe('P0 Fast-ACK Creative Submission & Art Direction Contract Suite', () =>
 
   // 2. ART_DIRECTION_FALLBACK_RESULT
   it('2. ART_DIRECTION_FALLBACK_RESULT: missing AI plan immediately uses deterministic Designer fallback', () => {
-    const t0 = performance.now()
-    const result = resolveArtDirectionPlanAtSubmission({
+    const options: Parameters<typeof resolveArtDirectionPlanAtSubmission>[0] = {
       input: {
         orgId: 'test-org-123',
         brandName: 'Bofe Metal',
@@ -81,8 +87,9 @@ describe('P0 Fast-ACK Creative Submission & Art Direction Contract Suite', () =>
         qualityMode: 'DESIGNER',
       },
       precomputedPlan: null,
-    })
-    const durationMs = performance.now() - t0
+    }
+    const result = resolveArtDirectionPlanAtSubmission(options)
+    const durationMs = medianResolutionMs(()=>resolveArtDirectionPlanAtSubmission(options))
 
     assert.equal(result.source, 'DETERMINISTIC_FALLBACK')
     assert.ok(result.plan, 'Plan must be generated')

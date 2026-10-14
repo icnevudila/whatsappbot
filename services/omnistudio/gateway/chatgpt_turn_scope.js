@@ -11,17 +11,33 @@ function readCurrentTurn(prompt, baseline) {
   const normalize = value => String(value || '').replace(/\s+/g, ' ').trim();
   const expected = normalize(prompt);
   const expectedClean = expected.replace(/\.{3,}$/, '').trim();
+  const expectedPrefix = expected.slice(0, 60);
   const before = new Set(baseline?.userKeys || []);
   let users = Array.from(document.querySelectorAll('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], [class*="user-message"]'));
   users = users.filter(node => !users.some(parent => parent !== node && parent.contains(node)));
   const userKey = u => u.getAttribute('data-message-id') || u.getAttribute('data-chatgpt-search-message-ids') || u.getAttribute('data-chatgpt-search-unit-key') || u.id || u.innerText;
-  const user = users.filter(u => !before.has(userKey(u)) && ((expected && normalize(u.innerText).includes(expected)) || (expectedClean && normalize(u.innerText).includes(expectedClean)))).pop();
+  const newUsers = users.filter(u => !before.has(userKey(u)));
+  let user = newUsers.filter(u => {
+    const text = normalize(u.innerText);
+    return (expected && text.includes(expected)) ||
+           (expectedClean && text.includes(expectedClean)) ||
+           (expectedPrefix && text.includes(expectedPrefix));
+  }).pop();
+  if (!user && newUsers.length > 0) {
+    user = newUsers.at(-1);
+  }
   if (!user) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
   let assistants = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
   if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-chatgpt-search-unit-key$=":assistant"]'));
   if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-conversation-role="assistant"]')).map(h => h.parentElement || h);
   const nextUser = users.find(u => !!(user.compareDocumentPosition(u) & 4));
-  const assistant = assistants.find(a => (user.compareDocumentPosition(a) & 4) && (!nextUser || (a.compareDocumentPosition(nextUser) & 4)));
+  let assistant = assistants.find(a => (user.compareDocumentPosition(a) & 4) && (!nextUser || (a.compareDocumentPosition(nextUser) & 4)));
+  if (!assistant && assistants.length > 0) {
+    const lastAssistant = assistants.at(-1);
+    if (user.compareDocumentPosition(lastAssistant) & 4) {
+      assistant = lastAssistant;
+    }
+  }
   if (!assistant) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
   const stop = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
   const isGenerating = !!stop || !!assistant.querySelector('[data-is-streaming="true"], .streaming-animation, .result-thinking, [data-testid*="generating"]');

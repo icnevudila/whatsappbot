@@ -103,7 +103,10 @@ test('VEO v4 Compiler - Deterministic Compilation & Quality Checks', () => {
   assert.strictEqual(result.qualityChecks.singleLocation, true);
 
   // 4. Post-Prodüksiyon Metin Ayrımı (Ham Videoda Yazı Yasağı)
-  assert.ok(result.finalVeoPrompt.includes('NO ON-SCREEN TEXT'), 'Ham video no-text kuralı bulunmalı');
+  for (const rule of ['NO PRICES', 'NO DISCOUNTS', 'NO PHONE NUMBERS', 'NO SUBTITLES', 'NO GRAPHIC OVERLAYS']) {
+    assert.ok(result.finalVeoPrompt.includes(rule), `Ham videoda ${rule} kuralı bulunmalı`);
+  }
+  assert.ok(result.finalVeoPrompt.includes('ALLOW LARGE CLEAN PHYSICAL BRAND SIGNAGE AND ORIGINAL LOGO ONLY'));
   assert.strictEqual(result.postProduction.subtitles, true);
   assert.strictEqual(result.postProduction.cta, 'Bizimle İletişime Geçin');
 

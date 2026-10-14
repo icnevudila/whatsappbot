@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AccentLink, Badge, Button, Field, Notice, Textarea } from '@/components/ui'
+import { AccentLink, Badge, Button, Field, Input, Notice, Textarea } from '@/components/ui'
 import { Icon, type IconName } from '@/components/icon'
 import { CreativeGenerating } from '@/components/creative-generating'
 import { CreativeDownload } from '@/components/creative-download'
@@ -13,7 +13,6 @@ import { useConfirm } from '@/components/confirm-dialog'
 import { useToast } from '@/components/toast'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { STYLE_MODES, normalizeStyleMode, type CreativeStyleMode } from '@/lib/creative/style-mode'
-import { VARIATION_PRESETS } from '@/lib/creative/types'
 import { detailRenderState, hasConfirmedRenderResult, renderRemainingText } from '@/lib/creative/detail-render-state'
 import {
   deleteCreative,
@@ -32,14 +31,6 @@ const DETAIL_STAGES = [
   { at: 68, label: 'Afiş detayları ve renk dengesi tamamlanıyor…', detail: 'Görsel kontrastı ve son rötuşlar uygulanıyor' },
   { at: 82, label: 'Son kontroller yapılıyor ve kütüphaneye aktarılıyor…', detail: 'Ultra yüksek çözünürlüklü çıktı hazırlanıyor' },
 ]
-
-const VARIATION_ICONS: Record<(typeof VARIATION_PRESETS)[number]['id'], IconName> = {
-  similar: 'copy',
-  minimal: 'circle',
-  premium: 'gem',
-  bold: 'zap',
-  layout: 'overview',
-}
 
 import { getSafeMediaUrl } from '@/lib/media-url'
 export { getSafeMediaUrl }
@@ -315,7 +306,7 @@ export function CreativeDetail({
       try {
         setVariationInstruction(localStorage.getItem(variationDraftKey) || '')
         const savedStyle = localStorage.getItem(`${variationDraftKey}.style`)
-        setVariationStyleMode(savedStyle === 'balanced_modern' || savedStyle === 'campaign_bold' ? savedStyle : 'inherit')
+        setVariationStyleMode(savedStyle && savedStyle !== 'inherit' ? normalizeStyleMode(savedStyle) : 'inherit')
       }
       catch { setVariationInstruction('') }
       setVariationDraftReady(variationDraftKey)
@@ -348,6 +339,7 @@ export function CreativeDetail({
   }
 
   const [reviseOpen, setReviseOpen] = useState(Boolean(openRevise))
+  const [revisionCopy, setRevisionCopy] = useState({ headline: '', supporting: '', cta: '' })
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const toast = useToast()
   const [tick, setTick] = useState(0)
@@ -856,6 +848,8 @@ export function CreativeDetail({
             open={reviseOpen}
             pending={pending}
             instruction={instruction}
+            copy={revisionCopy}
+            onCopy={(field, value) => setRevisionCopy(current => ({ ...current, [field]: value }))}
             previewUrl={displayPublicUrl}
             onClose={() => setReviseOpen(false)}
             onInstruction={setInstruction}
@@ -874,7 +868,10 @@ export function CreativeDetail({
                 parentId: creative.id,
                 baseCreativeId: creative.id,
                 generationType: 'revision',
-                instruction: instruction.trim(),
+                instruction: instruction.trim() || 'Yalnız onaylı reklam metinlerini değiştir; mevcut sahne, kadraj, ışık, insan, ürün ve logo aynen korunsun.',
+                ...(revisionCopy.headline.trim() ? {customHeadline: revisionCopy.headline.trim()} : {}),
+                ...(revisionCopy.supporting.trim() ? {customSupporting: revisionCopy.supporting.trim()} : {}),
+                ...(revisionCopy.cta.trim() ? {cta: revisionCopy.cta.trim()} : {}),
               })
             }
           />
@@ -886,93 +883,79 @@ export function CreativeDetail({
           <div className="space-y-1">
             <h2 className="text-[14px] font-bold text-[#111b21] flex items-center gap-1.5">
               <Icon name="sparkles" className="size-4 text-[#008069]" />
-              <span>Bu Varyasyonda Neyi Değiştirelim?</span>
+              <span>Akıllı Varyasyon</span>
             </h2>
             <p className="text-[11.5px] text-[#667781]">
-              Boş bırakırsanız AI yeni bir fikir üretir. İsterseniz sahneyi, kompozisyonu veya ürünün konumunu belirtebilirsiniz.
+              Prompt yazmadan tek tıkla yeni bir kompozisyon deneyin veya mevcut yönü koruyarak tasarımı geliştirin.
             </p>
           </div>
 
-          {creative.format !== 'video' && <label className="flex flex-wrap items-center gap-2 text-[12px] font-medium">
-            Tasarım Stili
-            <select value={variationStyleMode} disabled={pending} onChange={event => setVariationStyleMode(event.target.value === 'inherit' ? 'inherit' : normalizeStyleMode(event.target.value))} className="min-h-9 rounded-lg border border-hairline bg-white px-2 text-[12px]">
-              <option value="inherit">Aynı kalsın</option>
-              {STYLE_MODES.map(mode => <option key={mode.id} value={mode.id}>{mode.label} yap</option>)}
-            </select>
-          </label>}
-          <Textarea
-            rows={2}
-            value={variationInstruction}
-            onChange={(e) => setVariationInstruction(e.target.value)}
-            placeholder="Örn: Ürünü bu kez modern bir serada göster, ürün sağda olsun, daha premium..."
-            className="text-[12.5px] leading-relaxed"
-          />
+          {creative.format !== 'video' ? (
+            <div className="space-y-1.5">
+              <label className="block text-[12px] font-semibold text-[#111b21]">
+                Reklam Modu / Tarzı
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setVariationStyleMode('inherit')}
+                  className={`rounded-lg border px-2.5 py-1.5 text-center text-[11px] font-medium transition-all ${
+                    variationStyleMode === 'inherit'
+                      ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
+                      : 'border-[#e9edef] bg-white text-[#667781] hover:text-[#111b21]'
+                  }`}
+                >
+                  Mevcut Mod
+                </button>
+                {STYLE_MODES.map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setVariationStyleMode(mode.id)}
+                    className={`rounded-lg border px-2.5 py-1.5 text-center text-[11px] font-medium transition-all ${
+                      variationStyleMode === mode.id
+                        ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-bold ring-1 ring-[#008069]'
+                        : 'border-[#e9edef] bg-white text-[#667781] hover:text-[#111b21]'
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="space-y-1.5">
-            <span className="text-[11px] font-semibold text-[#667781] block">Hızlı Yönlendirmeler:</span>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { label: 'Farklı Kompozisyon', hint: 'Bu reklamdan tamamen farklı bir kompozisyon ve kadraj tasarla.' },
-                { label: 'Daha Premium', hint: 'Daha premium, şık ve lüks bir atmosferde sun.' },
-                { label: 'Gerçek Kullanım', hint: 'Ürünü gerçek kullanım anında ve doğal ortamında göster.' },
-                { label: 'Daha Minimal', hint: 'Göz yormayan, sade ve ferah bir minimal tasarım yap.' },
-                { label: 'Daha Dikkat Çekici', hint: 'Yüksek kontrastlı, cesur ve anında dikkat çeken bir tasarım oluştur.' },
-              ].map((chip) => (
-                <button
-                  key={chip.label}
-                  type="button"
-                  disabled={pending}
-                  onClick={() => {
-                    const current = variationInstruction.trim()
-                    setVariationInstruction(current ? `${current}. ${chip.hint}` : chip.hint)
-                  }}
-                  className="rounded-full border border-hairline bg-canvas px-2.5 py-1 text-[11px] font-medium text-ink hover:border-[#008069] hover:bg-[#e7f8f2] hover:text-[#008069] transition-colors"
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
+            <label htmlFor="variation-instruction-input" className="block text-[12px] font-semibold text-[#111b21]">
+              Bu tasarımda neyi değiştirelim? <span className="font-normal text-[#667781]">(İsteğe bağlı)</span>
+            </label>
+            <Textarea
+              id="variation-instruction-input"
+              rows={2}
+              value={variationInstruction}
+              onChange={(e) => setVariationInstruction(e.target.value)}
+              placeholder="Örn: Kadın işletme sahibi ve farklı cihazlarda Mesajify arayüzü... (Boş bırakabilirsiniz)"
+              className="text-[12.5px] leading-relaxed bg-white"
+            />
           </div>
 
-          <div className="pt-1 flex items-center justify-between gap-2">
-            <div className="flex flex-wrap gap-1.5">
-              {VARIATION_PRESETS.map((preset) => (
-                <Button
-                  key={preset.id}
-                  type="button"
-                  variant="quiet"
-                  className="h-8 text-[11.5px] px-2.5"
-                  disabled={pending}
-                  onClick={() =>
-                    spawn({
-                      requestKey: crypto.randomUUID(),
-                      brief: creative.brief || creative.title || 'Kampanya görseli varyasyonu',
-                      style: preset.id === 'minimal' ? 'minimal' : preset.id === 'premium' ? 'premium' : 'auto',
-                      formatId: formatToId(creative.format),
-                      textDensity: 'balanced',
-                      useLogo: true,
-                      productIds: creative.heroProductId ? [creative.heroProductId] : [],
-                      phoneIds: [],
-                      socialIds: [],
-                      labels: [],
-                      parentId: creative.id,
-                      baseCreativeId: creative.id,
-                      generationType: 'variation',
-                      variationPreset: preset.id,
-                      instruction: variationInstruction.trim(),
-                    })
-                  }
-                >
-                  <Icon name={VARIATION_ICONS[preset.id]} className="size-3.5" />
-                  {preset.label}
-                </Button>
-              ))}
-            </div>
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
+            <Button
+              type="button"
+              variant="quiet"
+              disabled={pending}
+              className="h-9 text-[12px] px-3 font-semibold flex items-center justify-center gap-1.5 border border-[#c3c7c9] hover:bg-[#f0f2f5] rounded-lg"
+              onClick={() => setReviseOpen(true)}
+            >
+              <Icon name="edit" className="size-3.5 text-[#667781]" />
+              <span>Bu Tasarımı Düzenle</span>
+            </Button>
 
             <Button
               type="button"
+              variant="quiet"
               disabled={pending}
-              className="!bg-[#008069] !text-white hover:!bg-[#006b58] h-8 text-[12px] px-3.5 shrink-0 rounded-full font-semibold"
+              className="h-9 text-[12px] px-3.5 font-semibold flex items-center justify-center gap-1.5 border border-[#008069]/40 bg-[#e7f8f2]/40 text-[#008069] hover:bg-[#e7f8f2] rounded-lg"
               onClick={() =>
                 spawn({
                   requestKey: crypto.randomUUID(),
@@ -988,12 +971,41 @@ export function CreativeDetail({
                   parentId: creative.id,
                   baseCreativeId: creative.id,
                   generationType: 'variation',
+                  variationMode: 'new_composition',
                   instruction: variationInstruction.trim(),
                 })
               }
             >
-              <Icon name="sparkles" className="size-3.5 mr-1" />
-              Varyasyon Oluştur
+              <Icon name="refresh" className="size-3.5 text-[#008069]" />
+              <span>Başka Tasarım Dene</span>
+            </Button>
+
+            <Button
+              type="button"
+              disabled={pending}
+              className="!bg-[#008069] !text-white hover:!bg-[#006b58] h-9 text-[12px] px-4 font-semibold flex items-center justify-center gap-1.5 rounded-lg shadow-xs"
+              onClick={() =>
+                spawn({
+                  requestKey: crypto.randomUUID(),
+                  brief: creative.brief || creative.title || 'Kampanya görseli varyasyonu',
+                  style: 'auto',
+                  formatId: formatToId(creative.format),
+                  textDensity: 'balanced',
+                  useLogo: true,
+                  productIds: creative.heroProductId ? [creative.heroProductId] : [],
+                  phoneIds: [],
+                  socialIds: [],
+                  labels: [],
+                  parentId: creative.id,
+                  baseCreativeId: creative.id,
+                  generationType: 'variation',
+                  variationMode: 'enhance',
+                  instruction: variationInstruction.trim(),
+                })
+              }
+            >
+              <Icon name="sparkles" className="size-3.5" />
+              <span>Bu Tasarımı Geliştir</span>
             </Button>
           </div>
         </section>
@@ -1170,6 +1182,8 @@ function ReviseModal({
   open,
   pending,
   instruction,
+  copy,
+  onCopy,
   previewUrl,
   onClose,
   onInstruction,
@@ -1178,6 +1192,8 @@ function ReviseModal({
   open: boolean
   pending: boolean
   instruction: string
+  copy: { headline: string; supporting: string; cta: string }
+  onCopy: (field: 'headline' | 'supporting' | 'cta', value: string) => void
   previewUrl: string | null
   onClose: () => void
   onInstruction: (value: string) => void
@@ -1185,6 +1201,7 @@ function ReviseModal({
 }) {
   const titleId = useId()
   const [mounted, setMounted] = useState(false)
+  const hasCopyChange = Object.values(copy).some(value => value.trim().length > 0)
 
   useEffect(() => {
     setMounted(true)
@@ -1254,7 +1271,7 @@ function ReviseModal({
           className="mt-4 space-y-3"
           onSubmit={(event) => {
             event.preventDefault()
-            if (instruction.trim().length < 4 || pending) return
+            if ((!hasCopyChange && instruction.trim().length < 4) || pending) return
             onSubmit()
           }}
         >
@@ -1263,10 +1280,26 @@ function ReviseModal({
               rows={4}
               value={instruction}
               onChange={(event) => onInstruction(event.target.value)}
-              placeholder="Marka adını Ayvazoğlu İnşaat yap. Fiyatı 10 TL yaz, yanına sınırlı sayıda ekle. Hemen iletişime geçin yazısını koy."
+              placeholder="Başlığı kısalt; sahneyi, ürünü ve orijinal logoyu koru."
               autoFocus
             />
           </Field>
+
+          <details className="rounded-lg border border-hairline p-3">
+            <summary className="cursor-pointer text-sm font-medium focus-visible:outline-2">Reklam metinlerini doğrudan değiştir (isteğe bağlı)</summary>
+            <p className="mt-2 text-xs text-ink-muted">Boş bıraktığınız metinler aynı kalır. Yeni metinler görselde ve kampanya kaydında birlikte kullanılır.</p>
+            <div className="mt-3 space-y-3">
+              <Field label="Yeni ana başlık">
+                <Input value={copy.headline} onChange={event => onCopy('headline',event.target.value)} disabled={pending} maxLength={180} />
+              </Field>
+              <Field label="Yeni kısa açıklama">
+                <Input value={copy.supporting} onChange={event => onCopy('supporting',event.target.value)} disabled={pending} maxLength={300} />
+              </Field>
+              <Field label="Yeni buton yazısı">
+                <Input value={copy.cta} onChange={event => onCopy('cta',event.target.value)} disabled={pending} maxLength={60} />
+              </Field>
+            </div>
+          </details>
 
           <div className="wb-modal-actions">
             <Button type="button" variant="quiet" disabled={pending} onClick={onClose}>
@@ -1276,7 +1309,7 @@ function ReviseModal({
               type="submit"
               variant="accent"
               className="wb-wa-submit"
-              disabled={pending || instruction.trim().length < 4}
+              disabled={pending || (!hasCopyChange && instruction.trim().length < 4)}
             >
               <Icon name="sparkles" className="size-4" />
               {pending ? 'Üretiliyor…' : 'Revizyon üret'}

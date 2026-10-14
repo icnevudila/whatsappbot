@@ -328,6 +328,15 @@ async function dismissAnyModals(cdp) {
           dismissed = true;
         }
 
+        // Auto-heal floating usage/notification toasts
+        const toastCloses = Array.from(document.querySelectorAll('button[aria-label="Close"], button[aria-label*="close" i], button[aria-label*="kapat" i]'));
+        for (const b of toastCloses) {
+          if (b.offsetParent !== null || b.getClientRects().length > 0) {
+            b.click();
+            dismissed = true;
+          }
+        }
+
         return dismissed;
       })()`,
       returnByValue: true
@@ -1114,6 +1123,7 @@ async function executeChatGPTJob(tab, job) {
     // 4. Görselin üretilmesini bekle (Stale korumalı adaptif bounded polling)
     let foundImgSrc = null;
     let consecutiveCandidateHits = 0;
+    let checkResult = null;
     const maxAttempts = 180; // 180 * 1.5s = 270s
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       await sleep(1500);
@@ -1134,7 +1144,7 @@ async function executeChatGPTJob(tab, job) {
         body: JSON.stringify({ jobId: job.id, progress, statusText })
       }).catch(() => {});
 
-      let checkResult = null;
+      checkResult = null;
       try {
         const checkEval = await cdp.send('Runtime.evaluate', {
           expression: `(${readCurrentTurn.toString()})(${JSON.stringify(job.prompt)}, ${JSON.stringify(turnBaseline)})`,

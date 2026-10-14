@@ -108,7 +108,7 @@ export function CreativeStudioV2({
   const [productsList, setProductsList] = useState<ProductCard[]>(data.products)
 
   // Step 2: Creative Direction & Copy
-  const [styleMode, setStyleMode] = useState<CreativeStyleMode>('balanced_modern')
+  const [styleMode, setStyleMode] = useState<CreativeStyleMode>('SMART_CAMPAIGN')
   const [stylePreset, setStylePreset] = useState<CreativeStylePreset>('AUTO')
   const [isPlanning, setIsPlanning] = useState(false)
   const [planError, setPlanError] = useState<string | null>(null)
@@ -1246,7 +1246,6 @@ export function CreativeStudioV2({
                         setStyleMode(mode)
                         void requestCreativePlan(false, stylePreset, true, mode)
                       }} />
-                      {(objective === 'CAMPAIGN' || objective === 'SALES_OFFER') && styleMode !== 'campaign_bold' && <p className="text-[11px] text-[#008069]">Bu kampanya için Kampanya / Dikkat Çekici stilini deneyebilirsiniz.</p>}
                     </fieldset>
                   ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
@@ -1315,7 +1314,7 @@ export function CreativeStudioV2({
                         <span>Nasıl Bir Tasarım İstiyorsunuz?</span>
                       </span>
                       <p className="text-[11px] text-[#667781]">
-                        AI sizin için bir fikir hazırladı. İsterseniz değiştirebilirsiniz.
+                        İsteğe bağlı. Bir cümle yazmanız yeterli. Yapay zekâ tasarımı sizin için hazırlasın.
                       </p>
                     </div>
                     <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -1347,7 +1346,7 @@ export function CreativeStudioV2({
                       setVisualScenePrompt(e.target.value)
                       setScenePromptDirty(true)
                     }}
-                    placeholder="İsteğe bağlı: Kendi tasarım fikrinizi, arka planı, ışığı veya sahneyi yazın (boş bırakabilirsiniz)."
+                    placeholder="İsteğe bağlı: Kendi tasarım fikrinizi, sahneyi veya vurgulamak istediğiniz detayları yazın (boş bırakabilirsiniz)."
                     className="text-[12.5px] leading-relaxed"
                   />
                 </div>

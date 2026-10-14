@@ -642,7 +642,8 @@ export async function processCreativeGeneration(
     }
 
     // Beklenen referansların tespiti (Pre-flight Gate Kontratı)
-    const expectedBase = Boolean(snapshot.baseCreativeId)
+    const shouldAttachBase = Boolean(snapshot.baseCreativeId && snapshot.variationMode !== 'new_composition')
+    const expectedBase = shouldAttachBase
     const expectedProducts = snapshot.products.filter((p) => Boolean(p.include?.image && p.imageUrl))
     const shouldIncludeLogo = snapshot.useLogo !== false
     let expectedLogoPath: string | null = null
@@ -671,8 +672,9 @@ export async function processCreativeGeneration(
     const expectedRefUrls = Array.isArray(snapshot.referenceImageUrls) ? snapshot.referenceImageUrls : []
     const expected_reference_count = (expectedBase ? 1 : 0) + expectedProducts.length + (expectedLogo ? 1 : 0) + expectedRefUrls.length
 
-    // 1. Kaynak görsel (Revizyon, Varyasyon veya Görselden Türet):
-    if (snapshot.baseCreativeId) {
+    // 1. Kaynak görsel (Revizyon veya Bu Tasarımı Geliştir varyasyonu):
+    // "new_composition" (Başka Tasarım Dene) durumunda eski görseli yapay zekaya görsel referans olarak bağlamıyoruz.
+    if (shouldAttachBase && snapshot.baseCreativeId) {
       const { data: base } = await supabase
         .from('creatives')
         .select('public_url, org_id')
@@ -794,6 +796,7 @@ export async function processCreativeGeneration(
         ? payload.quickSendPrompt
         : useLockedCopy
           ? buildImagePromptV2({
+              visualDiversityPlan: snapshot.generationType === 'revision' ? null : snapshot.visualDiversityPlan,
               styleMode: snapshot.styleMode,
               brandName: customerName,
               productName: snapshot.products?.[0]?.name || 'Ürün',
