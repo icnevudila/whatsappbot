@@ -125,24 +125,24 @@ export function selectVisualDiversityPlan(input: {
   const scenes: Record<VisualDiversityPlan['subject'], string> = {
     brand: 'A graphic brand campaign using only the canonical logo and supplied company facts; no invented product, interface, staff or facilities.',
     software: direction.family === 'human_centric'
-      ? 'An authentic modern business setting with a confident female or male business owner holding a phone displaying the real Mesajify interface.'
+      ? 'An authentic business setting with a credible owner in a candid working moment. Present the supplied interface as a separate flat, front-facing panel at its original aspect ratio.'
       : direction.family === 'human_product_hybrid'
         ? 'A contemporary workplace where an entrepreneur actively operates the authentic Mesajify customer panel on desktop or mobile.'
         : direction.family === 'environment_scene'
           ? 'A thriving commercial workspace (boutique, modern office, agency) with Mesajify running naturally on a desk device.'
           : direction.family === 'commercial_spectacle'
-            ? 'A high-impact tech commercial visual with layered depth, prominent headline, and sleek display of the real Mesajify interface.'
-            : 'A professional software scene staging the authentic supplied interface as the dominant hero on a sleek borderless display.',
+            ? 'A bold editorial software campaign with strong typography, asymmetric spacing and the supplied interface as a flat, front-facing panel.'
+            : 'A clean software campaign presenting the supplied interface at its original aspect ratio with generous space for a short headline.',
     service: 'Use the authentic service, workplace or completed-work photograph as the main evidence; surrounding presentation may vary without inventing facilities or outcomes.',
     physical: 'Stage the exact canonical product in a believable setting suited to its actual use and sector. Human interaction is optional and cannot obscure or redesign the product.',
   }
 
   const softwareComposition: Record<CompositionFamily, string> = {
-    human_centric: 'Warm human-first commercial portrait: A credible female or male business owner at their workstation or modern commercial setting. The authentic Mesajify interface is showcased clearly on their device, accented by subtle floating frosted-glass WhatsApp notification pills or incoming customer message cues. Headline framed in clean contrast space.',
-    product_dashboard: 'Hero dashboard layout: The authentic Mesajify interface displayed crisply on a sleek device or flat crop, flanked by generous breathing room, subtle ambient brand glow, and strong CTA.',
+    human_centric: 'Warm human-first commercial portrait: A credible business owner in a natural commercial setting. Balance the portrait with a separate authentic interface panel, a short headline and one CTA. Keep the scene uncluttered.',
+    product_dashboard: 'Editorial dashboard layout: The supplied interface remains flat and front-facing at its original aspect ratio, balanced with generous breathing room, a short headline and one CTA.',
     human_product_hybrid: 'Operator interaction: Entrepreneur actively reviewing incoming WhatsApp messages or campaigns on the real interface, balancing human presence with software clarity and realistic office context.',
     environment_scene: 'Environmental workspace: The Mesajify control center in an active, sunlit Turkish business setting, showing effortless multi-hat communication and natural device placement.',
-    commercial_spectacle: 'Dynamic commercial presentation: Bold angled device perspective, volumetric lighting, dimensional headline typography, subtle floating frosted-glass notification pills, and refined campaign graphical accents.',
+    commercial_spectacle: 'Bold campaign poster: Create impact through large readable typography, asymmetric composition and controlled brand color. Keep the authentic interface flat and front-facing; use no floating notifications or decorative interface cards.',
   }
 
   return {
@@ -155,11 +155,11 @@ export function selectVisualDiversityPlan(input: {
     camera: input.subject === 'software'
       ? direction.family === 'human_centric'
         ? '50mm eye-level portrait lens with natural depth of field.'
-        : 'Natural eye-level perspective with realistic device proportions. No exaggerated wide-angle distortion.'
+        : 'Front-facing interface presentation at its original aspect ratio. Natural eye-level perspective for any surrounding scene.'
       : direction.camera,
     lighting: input.subject === 'software'
       ? direction.family === 'commercial_spectacle'
-        ? 'Dramatic commercial studio lighting with volumetric brand light beams and clean contrast.'
+        ? 'Clean high-contrast editorial lighting with restrained brand color and no neon beams.'
         : 'Believable daylight or soft practical office lighting with ordinary material reflections.'
       : direction.lighting,
   }
@@ -178,6 +178,7 @@ export function visualDiversityDirective(plan: VisualDiversityPlan | null | unde
     'Create meaningful differences in composition, framing and depth, not merely another color tint or a changed headline. Existing advertisements are identity references, not a layout to duplicate.',
     ...(plan.subject === 'software' ? [
       'SOFTWARE REALISM: Use the authentic supplied screenshot/interface. Device scale must remain physically plausible. If a person appears, show a candid believable working posture and a physically plausible grip. Keep interface details faithful to the supplied reference; do not fabricate alternate screens.',
+      'SCREEN PRESENTATION: Do not stretch a portrait screenshot into a widescreen laptop. Prefer the original flat screenshot panel over a device mockup. If hardware is explicitly requested, keep it secondary, nearly front-facing and physically plausible. Avoid steep screen perspective, oversized laptops, nested screens and invented interface overlays.',
       'Attention comes from clear hierarchy, cropping and contrast. Keep one primary CTA and restrained readable copy; do not fill every area with repeated buttons, text stickers or decorative interface cards.',
     ] : []),
     'The explicit user design request takes precedence. Preserve the exact canonical logo/product/interface, approved literal copy and verified facts. Do not invent UI, metrics, conversations, features, prices or badges. Do not print this plan, its ID or instructions.',
