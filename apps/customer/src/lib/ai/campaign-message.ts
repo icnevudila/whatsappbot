@@ -86,7 +86,7 @@ const REWRITE_HINT: Record<RewriteAction, string> = {
   improve: 'Mesajın akıcılığını artır, anlatımı güçlendir, faydayı ve satış açısını netleştir. Ticari bilgileri harfiyen koru.',
   shorten: 'Gereksiz dolgu kelimeleri at, doğrudan öze gir; ana kampanya, ürün ve fiyat bilgisini eksiksiz tutarak mesajı belirgin şekilde kısalt.',
   expand: 'Mevcut bilgileri koruyarak ürünün pratik faydasını ve kullanım değerini biraz daha detaylandır. Asla yeni iddia, fiyat veya tarih uydurma.',
-  attention_grabbing: 'İlk cümleyi durdurucu, merak uyandıran veya doğrudan ana faydayı vurgulayan güçlü bir reklam manşetine dönüştür.',
+  attention_grabbing: 'Tüm mesajı koruyarak ilk cümleyi dikkat çekici, merak uyandıran veya doğrudan ana faydayı vurgulayan güçlü bir reklam kancasına dönüştür; fiyat ve kampanya şartlarını eksiksiz koru.',
   sales_focused: 'Değer önerisini ve satın alma gerekçesini öne çıkar; doğrudan satışa ve siparişe yönlendir.',
   friendly: 'Resmiyeti kır, sıcak bir selamla başla, müşteriyle yüz yüze sohbet ediyormuş gibi samimi ve içten yaz.',
   professional: 'Dili kurumsallaştır, saygın, ölçülü ve resmi iş ciddiyeti taşıyan berrak bir tona kavuştur.',
@@ -159,15 +159,29 @@ function formatBusiness(business: BusinessContext): string | null {
 }
 
 export function cleanAiMessage(text: string, businessName?: string | null): string {
+  if (!text || !text.trim()) return ''
   const brand = businessName?.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   const withoutBrandHeading = brand
     ? text.replace(new RegExp(`^${brand}\\s+(?:WhatsApp\\s+)?Kampanya\\s+(?:Mesajı|Metni)\\s*:?\\s*\\r?\\n+`, 'i'), '')
     : text
-  return withoutBrandHeading
+
+  let cleaned = withoutBrandHeading
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/^(?:işte|İşte|iste|İste)\s+(?:mesajınız|metniniz)[:\s]*/iu, '')
     .replace(/^(?:(?:Samimi|Profesyonel|Satış\s+Odaklı|Kısa|Detaylı)\s+)?(?:WhatsApp\s+)?Kampanya\s+(?:Mesajı|Metni)\s*:?\s*\r?\n+/i, '')
+    .replace(/^(?:[^\n]{1,60}(?:kampanya|reklam|mesaj|metin|öneri)[^\n]{0,40}:?\s*\r?\n+)/i, '')
     .trim()
+
+  // Sızan AI komutları ve meta açıklamaları temizle (ör. "Kampanya tasarrufunu vurgula", "Not: ...")
+  cleaned = cleaned
+    .replace(/\r?\n+(?:(?:Kampanya\s+)?tasarrufunu\s+vurgula|Teklifi\s+daha\s+cazip\s+hale\s+getir|Not\s*:.*|Açıklama\s*:.*|Değişiklikler\s*:.*)$/gi, '')
+    .trim()
+
+  if (!cleaned && text.trim()) {
+    cleaned = text.replace(/^["'`]+|["'`]+$/g, '').trim()
+  }
+
+  return cleaned
 }
 
 export function formatPriceText(raw: string | null | undefined): string {

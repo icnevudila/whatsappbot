@@ -105,26 +105,25 @@ async function kickGeneration(
     return queued.error
   }
 
-  // Yerel geliştirmede worker ile uygulama aynı sırrı paylaşmıyorsa worker iç
-  // route'a yetkili istek yapamaz. Production'da bu kol çalışmaz; localde ise
-  // Flow jobını yeni üretim açmadan kısa turlarla takip eder.
-  if (process.env.NODE_ENV !== 'production' && !process.env.JOB_INTERNAL_SECRET?.trim() && hasImageProvider()) {
+  // Üretimi arkaplanda hemen başlat: Sekme değişse veya worker atlaması olsa bile
+  // Next.js after() kancası ile görsel veya video üretimi güvenle tamamlanır.
+  if (hasImageProvider()) {
     after(async () => {
-      for (let attempt = 0; attempt < 12; attempt += 1) {
+      for (let attempt = 0; attempt < 24; attempt += 1) {
         try {
           const result = await processCreativeGeneration(creativeId, authContext?.supabase)
           if (result.ok && !result.pending) return
           if (!result.pending && !result.busy) {
-            console.error('[creative.kick.local]', creativeId, result.error)
+            console.error('[creative.kick.bg]', creativeId, result.error)
             return
           }
           await new Promise((resolve) => setTimeout(resolve, result.retryAfterSeconds ? result.retryAfterSeconds * 1000 : 5_000))
         } catch (error) {
-          console.error('[creative.kick.local]', creativeId, error)
+          console.error('[creative.kick.bg]', creativeId, error)
           return
         }
       }
-      console.warn('[creative.kick.local] Flow takibi süre sınırına ulaştı:', creativeId)
+      console.warn('[creative.kick.bg] Üretim takibi süre sınırına ulaştı:', creativeId)
     })
   }
   return null

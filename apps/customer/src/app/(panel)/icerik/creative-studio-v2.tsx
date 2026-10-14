@@ -668,6 +668,7 @@ export function CreativeStudioV2({
           creativePlan,
           qualityMode,
           instruction: visualScenePrompt.trim() || undefined,
+          customText: visualScenePrompt.trim() || undefined,
           templateFamily,
           textDensity,
           sector: sector.trim() || undefined,
@@ -1469,6 +1470,21 @@ export function CreativeStudioV2({
                             }}
                             placeholder="Hemen İnceleyin"
                             className="text-[12.5px] h-9"
+                          />
+                        </Field>
+                      </div>
+
+                      <div className="sm:col-span-12 pt-1.5 border-t border-hairline/60">
+                        <Field
+                          label="Görsel Sahne / Ortam Tarifi"
+                          hint="İsteğe bağlı: Yapay zekaya özel bir sahne, atmosfer veya arka plan tarif edin."
+                        >
+                          <Textarea
+                            rows={2}
+                            value={visualScenePrompt}
+                            onChange={(e) => setVisualScenePrompt(e.target.value)}
+                            placeholder="Örn: Modern açık ofiste kahvesini yudumlayan çalışanlar, arkada yeşil WhatsApp bildirimleri veya kafe tezgahında telefonla sipariş alan işletmeci."
+                            className="text-[13px]"
                           />
                         </Field>
                       </div>

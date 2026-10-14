@@ -110,7 +110,8 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
       label: 'OmniStudio AI Engine',
       isConfigured: () => process.env.OMNISTUDIO_DISABLED !== 'true',
       async generate(prompt, aspect, references, metadata) {
-        const gatewayUrl = (metadata?.submissionGatewayUrl || process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+        const rawGateway = process.env.OMNISTUDIO_GATEWAY_URL || metadata?.submissionGatewayUrl || 'http://167.233.201.31:3456'
+        const gatewayUrl = (rawGateway.includes('nip.io') ? 'http://167.233.201.31:3456' : rawGateway).replace(/\/$/, '')
 
         // Sağlık Kontrolü (Gateway erişilebilir mi?)
         const healthRes = await fetch(`${gatewayUrl}/health`, { signal: AbortSignal.timeout(5000) }).catch(() => null)

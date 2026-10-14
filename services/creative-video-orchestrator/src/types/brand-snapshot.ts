@@ -64,6 +64,7 @@ export interface CampaignFacts {
   motion_style?: string
   subtitles?: 'auto' | 'off'
   outro?: 'auto' | 'off'
+  creative_idea?: string
 }
 
 export type AspectRatio = '9:16' | '16:9' | '1:1' | '4:3' | '3:4'
@@ -203,6 +204,7 @@ export function createBrandContextSnapshot(input: RawBrandInput): Readonly<Brand
       user_style_preference: input.campaign.user_style_preference?.trim(),
       environment_preset: input.campaign.environment_preset?.trim(),
       motion_style: input.campaign.motion_style?.trim(),
+      creative_idea: (input.campaign as any)?.creative_idea?.trim(),
       subtitles: input.campaign.subtitles,
       outro: input.campaign.outro,
     },

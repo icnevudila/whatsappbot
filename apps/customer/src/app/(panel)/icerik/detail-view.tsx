@@ -341,6 +341,7 @@ export function CreativeDetail({
   const [reviseOpen, setReviseOpen] = useState(Boolean(openRevise))
   const [revisionCopy, setRevisionCopy] = useState({ headline: '', supporting: '', cta: '' })
   const [lightboxOpen, setLightboxOpen] = useState(false)
+  const confirm = useConfirm()
   const toast = useToast()
   const [tick, setTick] = useState(0)
   const [pending, startTransition] = useTransition()
@@ -853,7 +854,7 @@ export function CreativeDetail({
             previewUrl={displayPublicUrl}
             onClose={() => setReviseOpen(false)}
             onInstruction={setInstruction}
-            onSubmit={() =>
+            onSubmit={({ keepBaseScene }) =>
               spawn({
                 requestKey: crypto.randomUUID(),
                 brief: creative.brief || instruction.trim(),
@@ -866,7 +867,7 @@ export function CreativeDetail({
                 socialIds: [],
                 labels: [],
                 parentId: creative.id,
-                baseCreativeId: creative.id,
+                baseCreativeId: keepBaseScene ? creative.id : null,
                 generationType: 'revision',
                 instruction: instruction.trim() || 'Yalnız onaylı reklam metinlerini değiştir; mevcut sahne, kadraj, ışık, insan, ürün ve logo aynen korunsun.',
                 ...(revisionCopy.headline.trim() ? {customHeadline: revisionCopy.headline.trim()} : {}),
@@ -1016,29 +1017,73 @@ export function CreativeDetail({
           <h2 className="mb-2 text-[14px] font-bold">Versiyonlar</h2>
           <ol className="space-y-2">
             {versions.map((row, index) => (
-              <li key={row.id}>
-                <Link
-                  href={`/icerik/${row.id}`}
-                  className={`flex items-center gap-3 rounded-md border px-3 py-2 ${
+              <li key={row.id} className="group relative">
+                <div
+                  className={`flex items-center justify-between gap-3 rounded-md border px-3 py-2 ${
                     row.id === creative.id ? 'border-accent bg-accent-soft/40' : 'border-hairline bg-surface'
                   }`}
                 >
-                  {row.publicUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={getSafeMediaUrl(row.publicUrl)} alt="" className="size-12 rounded object-cover" />
-                  ) : (
-                    <span className="size-12 rounded bg-canvas" />
-                  )}
-                  <span>
-                    <span className="block text-[13px] font-semibold">
-                      v{versions.length - index} {row.title || typeLabel(row.generationType)}
+                  <Link
+                    href={`/icerik/${row.id}`}
+                    className="flex min-w-0 flex-1 items-center gap-3"
+                  >
+                    {row.publicUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={getSafeMediaUrl(row.publicUrl)} alt="" className="size-12 shrink-0 rounded object-cover" />
+                    ) : (
+                      <span className="size-12 shrink-0 rounded bg-canvas" />
+                    )}
+                    <span className="min-w-0">
+                      <span className="block truncate text-[13px] font-semibold">
+                        v{versions.length - index} {row.title || typeLabel(row.generationType)}
+                      </span>
+                      <span className="text-[12px] text-ink-muted">
+                        {new Date(row.createdAt).toLocaleString('tr-TR')}
+                      </span>
                     </span>
-                    <span className="text-[12px] text-ink-muted">
-                      {new Date(row.createdAt).toLocaleString('tr-TR')}
-                    </span>
-                  </span>
-                  <Badge>{row.status === 'ready' ? 'Hazır' : row.status}</Badge>
-                </Link>
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Badge>{row.status === 'ready' ? 'Hazır' : row.status}</Badge>
+                    {canManage ? (
+                      <button
+                        type="button"
+                        aria-label={`v${versions.length - index} sil`}
+                        title="Bu versiyonu sil"
+                        className="inline-flex size-7 items-center justify-center rounded text-ink-muted opacity-0 transition-opacity hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          void (async () => {
+                            const ok = await confirm({
+                              title: `v${versions.length - index} versiyonunu sil`,
+                              confirmLabel: 'Sil',
+                              tone: 'danger',
+                            })
+                            if (!ok) return
+                            startTransition(() => {
+                              void deleteCreative(row.id).then((result) => {
+                                if (result?.error) {
+                                  toast(result.error, 'danger')
+                                } else {
+                                  toast('Versiyon silindi.', 'success')
+                                  if (row.id === creative.id) {
+                                    const nextTarget = versions.find((v) => v.id !== row.id)
+                                    if (nextTarget) router.push(`/icerik/${nextTarget.id}`)
+                                    else router.push('/icerik')
+                                  } else {
+                                    router.refresh()
+                                  }
+                                }
+                              })
+                            })
+                          })()
+                        }}
+                      >
+                        <Icon name="trash" className="size-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
               </li>
             ))}
           </ol>
@@ -1197,9 +1242,10 @@ function ReviseModal({
   previewUrl: string | null
   onClose: () => void
   onInstruction: (value: string) => void
-  onSubmit: () => void
+  onSubmit: (options: { keepBaseScene: boolean }) => void
 }) {
   const titleId = useId()
+  const [keepBaseScene, setKeepBaseScene] = useState(false)
   const [mounted, setMounted] = useState(false)
   const hasCopyChange = Object.values(copy).some(value => value.trim().length > 0)
 
@@ -1272,18 +1318,48 @@ function ReviseModal({
           onSubmit={(event) => {
             event.preventDefault()
             if ((!hasCopyChange && instruction.trim().length < 4) || pending) return
-            onSubmit()
+            onSubmit({ keepBaseScene: keepBaseScene || hasCopyChange })
           }}
         >
           <Field label="Neyi değiştirmek istiyorsunuz?" hint="Kısa ve net yazın: ne kalsın, ne değişsin.">
             <Textarea
-              rows={4}
+              rows={3}
               value={instruction}
               onChange={(event) => onInstruction(event.target.value)}
-              placeholder="Başlığı kısalt; sahneyi, ürünü ve orijinal logoyu koru."
+              placeholder="Başlığı kısalt; sahneyi, insanı, ürünü ve orijinal logoyu koru."
               autoFocus
             />
           </Field>
+
+          <div className="rounded-lg border border-hairline bg-canvas/60 p-2.5 space-y-1.5">
+            <p className="text-[12px] font-semibold text-ink">Sahne Kurgusu</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setKeepBaseScene(true)}
+                className={`rounded border p-2 text-left transition-all ${
+                  keepBaseScene
+                    ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-semibold ring-1 ring-[#008069]'
+                    : 'border-hairline bg-surface text-ink-muted hover:border-[#008069]/30'
+                }`}
+              >
+                <span className="block text-[12px] font-bold">🔒 Sahneyi Koru</span>
+                <span className="block text-[10.5px] opacity-80 mt-0.5">Aynı kompozisyonda sadece metin veya küçük detay değiştirir.</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setKeepBaseScene(false)}
+                className={`rounded border p-2 text-left transition-all ${
+                  !keepBaseScene
+                    ? 'border-[#008069] bg-[#e7f8f2] text-[#008069] font-semibold ring-1 ring-[#008069]'
+                    : 'border-hairline bg-surface text-ink-muted hover:border-[#008069]/30'
+                }`}
+              >
+                <span className="block text-[12px] font-bold">✨ Yeni Sahne / Açı</span>
+                <span className="block text-[10.5px] opacity-80 mt-0.5">Eski sahneye takılmaz, taze kompozisyon kurar.</span>
+              </button>
+            </div>
+          </div>
 
           <details className="rounded-lg border border-hairline p-3">
             <summary className="cursor-pointer text-sm font-medium focus-visible:outline-2">Reklam metinlerini doğrudan değiştir (isteğe bağlı)</summary>

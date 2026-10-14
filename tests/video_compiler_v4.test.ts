@@ -58,7 +58,7 @@ test('VEO v4 Compiler - Snapshot to Brief Normalization', () => {
   assert.strictEqual(brief.offer.subject, 'Tuğla');
   assert.strictEqual(brief.campaign.cta, 'Bizimle İletişime Geçin');
   assert.strictEqual(brief.text?.rawVideoPolicy, 'existing_only');
-  assert.strictEqual(brief.text?.postProductionSubtitles, true);
+  assert.strictEqual(brief.text?.postProductionSubtitles, false);
 });
 
 test('VEO v4 Compiler - Deterministic Compilation & Quality Checks', () => {
@@ -102,12 +102,11 @@ test('VEO v4 Compiler - Deterministic Compilation & Quality Checks', () => {
   assert.ok(result.finalVeoPrompt.includes('Tek Lokasyon'), 'Tek lokasyon kuralı yer almalı');
   assert.strictEqual(result.qualityChecks.singleLocation, true);
 
-  // 4. Post-Prodüksiyon Metin Ayrımı (Ham Videoda Yazı Yasağı)
-  for (const rule of ['NO PRICES', 'NO DISCOUNTS', 'NO PHONE NUMBERS', 'NO SUBTITLES', 'NO GRAPHIC OVERLAYS']) {
+  for (const rule of ['NO PRICES', 'NO DISCOUNTS', 'NO PHONE NUMBERS', 'NO SUBTITLES', 'NO GRAPHIC OVERLAYS', 'NO ON-SCREEN TEXT']) {
     assert.ok(result.finalVeoPrompt.includes(rule), `Ham videoda ${rule} kuralı bulunmalı`);
   }
   assert.ok(result.finalVeoPrompt.includes('ALLOW LARGE CLEAN PHYSICAL BRAND SIGNAGE AND ORIGINAL LOGO ONLY'));
-  assert.strictEqual(result.postProduction.subtitles, true);
+  assert.strictEqual(result.postProduction.subtitles, false);
   assert.strictEqual(result.postProduction.cta, 'Bizimle İletişime Geçin');
 
   // 5. Seslendirme Kelime Sınırı (Maksimum 18 Kelime)
@@ -123,6 +122,8 @@ test('VEO v4 Compiler - Deterministic Compilation & Quality Checks', () => {
   assert.ok(result.negativePrompt.includes('warped packaging'));
   assert.ok(result.negativePrompt.includes('gibberish typography'));
   assert.ok(result.negativePrompt.includes('unmotivated location change'));
+  assert.ok(result.negativePrompt.includes('fake placards'));
+  assert.ok(result.negativePrompt.includes('painted text on product surface'));
 });
 
 test('VEO v4 Compiler - Missing Subject Triggers Needs Clarification', () => {

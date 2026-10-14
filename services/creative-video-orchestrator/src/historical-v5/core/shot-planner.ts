@@ -31,6 +31,7 @@ export const V5_STANDARD_NEGATIVES = [
   'identity drift',
   'watermark',
   'graphic overlays, lower thirds, floating banners, text cards',
+  'black placard, acrylic sign, fake painted logo, distorted text, chalky letters, painted text on product surface, stickers on product',
   'cartoon, 3D animation look, cgi render, uncanny valley',
   'blurry artifacts, low quality, pixelated, amateur video, choppy jumps, abrupt view shifts, jerky camera',
 ].join(', ')
@@ -137,17 +138,17 @@ export function planShots(
   // Shot 1 Action: Immediate hook in genuine product context (0.0s - 2.2s)
   let shot1Action = `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively visible in the foreground engaging with the product.`
   if (isBackpackSprayer) {
-    shot1Action = `The professional operator straps on and wears the ${subject} comfortably on their back via ergonomic shoulder straps (properly worn backpack equipment, fully off the ground), walking forward along the crop rows with confident purposeful posture, holding the spray wand steadily at side. No spraying yet.`
+    shot1Action = `Deneyimli tarım çalışanı, sırtında ergonomik askılarla taşınan ${subject} ile güneşli zeytinlikte ağaçlar arasında güvenle adım atar; ergonomik püskürtme borusunu yönlendirerek bitki koruma uygulamasına başlar.`
   } else if (isManualPressureSprayer) {
     shot1Action = `The gardener or operator carries the ${subject} by its top ergonomic handle alongside garden beds, with the shoulder strap slung comfortably over one shoulder, holding the lightweight spray lance ready at side. No spraying yet.`
   } else if (isBrickOrMasonry) {
-    shot1Action = `The authentic terracotta ${subject} is showcased in clean hero presentation on an organized pallet at the active construction site, with clear focus on its precise geometry and structural durability.`
+    shot1Action = `Baret ve reflektörlü güvenlik yeleği giyen deneyimli inşaat ustası, hakiki terracotta ${subject} pişmiş kil tuğlasını iki eliyle kavrayarak inceler; malzemenin killi dokusu, delikli yapısı ve kusursuz geometrik kenarları net biçimde sergilenir.`
   } else if (isCosmeticOrSkincare) {
     shot1Action = `In front of the bright morning mirror, the user holds the elegant ${subject}, gently unsealing or inspecting the glass dropper bottle with delicate fingertips. No application yet.`
   } else if (ontology.offerType === 'food_or_consumable') {
     shot1Action = `The artisan chef presents the freshly prepared ${subject} onto the rustic serving counter with warm, appetizing motion.`
   } else if (ontology.offerType === 'digital_product_or_saas') {
-    shot1Action = `A professional user sits at a clean sunlit desk, typing a command or clicking to launch the ${subject} dashboard on screen.`
+    shot1Action = `Şık ve rahat giyimli yerel işletme sahibi, aydınlık modern kafe masasında akıllı telefonunda gelen WhatsApp müşteri bildirimini inceler.`
   }
 
   const shot1: ShotItem = {
@@ -169,16 +170,16 @@ export function planShots(
   if (isBackpackSprayer) {
     const foliageDesc = fullContext.match(/(sera|greenhouse)/)
       ? 'crop rows and vibrant green foliage'
-      : 'vibrant tree leaves and green foliage'
+      : 'olive tree branches, silver-green leaves and vibrant orchard foliage'
     shot2Action = `Clear proof of core function: The operator actively directs the spray wand toward ${foliageDesc}; an intense, continuous ultra-fine micronized mist spray coats the leaves with glistening fluid droplets. High-angle tight side view captures the fine aerosol spray mist and leaf surface contact in vivid detail. The ${subject} remains recognizable and firmly worn on the back.`
   } else if (isManualPressureSprayer) {
     shot2Action = `Clear proof of core function: The operator depresses the ergonomic trigger lance, releasing a focused, pressurized fine conical spray mist precisely onto target foliage and flowering shrubs. Tight macro side-profile camera follows the crisp spray pattern and clean nozzle dispersion. The ${subject} cylindrical canister rests steadily nearby.`
   } else if (isBrickOrMasonry) {
-    shot2Action = `Clear proof of core function: Uniform shrink-wrapped pallets of high-grade construction material (${subject}) are loaded smoothly in the active building site yard, highlighting structural durability and stock volume.`
+    shot2Action = `Clear proof of core function: Deneyimli inşaat ustası hakiki ${subject} tuğlasını örülmekte olan sağlam dış cephe duvarına nizami yerleştirir ve terazisini kontrol eder; harç ve tuğla birleşimi mimari sağlamlığı kanıtlar. Kesinlikle forklift, plastik sarılı palet veya taşıma aracı yoktur; gerçek duvar örme ustalığı ve yapısal dayanıklılık sergilenir.`
   } else if (isCosmeticOrSkincare) {
     shot2Action = `Clear proof of core function: The precision glass dropper pipette draws the smooth, translucent fluid and dispenses a single radiant drop onto the skin, gliding smoothly with instant hydrating glow and silky skin absorption. Tight macro beauty camera captures the luminous drop texture and skin glow.`
   } else if (ontology.offerType === 'digital_product_or_saas') {
-    shot2Action = `Clear proof of core function: The digital platform (${subject}) performs live radar business scanning on a premium laptop screen with clean glowing pin indicators.`
+    shot2Action = `Clear proof of core function: İşletme sahibi ekranda gelen sipariş ve müşteri mesajını tek tıkla yanıtlar; samimi ve güven dolu bir tebessümle süreci tamamlar. Kesinlikle anlamsız yabancı grafikler veya akrilik masa süsleri yoktur.`
   } else if (ontology.offerType === 'food_or_consumable') {
     shot2Action = `Clear proof of core function: Tight macro camera captures rich culinary textures, vibrant fresh ingredients, and steam or savory glaze glistening under warm lights.`
   }
@@ -243,8 +244,11 @@ export function planShots(
     ? `CAMERA MOVEMENT: continuous_take - Single unbroken slow forward push-in route maintained across all 8.0 seconds with distinct three-beat pacing: 0.0s–2.2s establishing action hook, 2.2s–5.8s steady operational tracking holding clear visibility of active function${(isBackpackSprayer || isManualPressureSprayer) ? ' and foliage' : ''}, and 5.8s–8.0s final smooth glide settling rock-steadily into hero close-up on physical product branding strictly for the concluding 2.2 seconds. Zero premature zoom before 5.8s.`
     : `CAMERA MOVEMENT: three_cut - Three visually distinct commercial shots connected by two motivated cuts (CUT 1 at approximately 2.2s, CUT 2 at approximately 5.8s). Strict camera perspective separation: Shot 1 is front-facing low angle tracking, Shot 2 is tight high-angle side-profile action, Shot 3 is static locked-off macro packshot. SHOT 1 CAMERA != SHOT 2 CAMERA, SHOT 1 ACTION != SHOT 2 ACTION, SHOT 2 ACTION != SHOT 3 ACTION. Single unbroken location and identical lighting continuity.`
 
+  const isMasonryOrBrick = subject.toLowerCase().includes('tuğla') || facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla')
   const brandRevealDirective = brandName
-    ? `HERO BRAND FIDELITY (5.8s - 8.0s): Preserve canonical product branding AS-IS. Do NOT repaint, invent, or force fake "${brandName}" lettering onto the product casing unless that exact wording already exists in the canonical reference image. The separate canonical logo reference is respected cleanly for brand identification. In the final framing (5.8s - 8.0s), the camera holds rock-steadily on the canonical product hero: centered at eye level, zero camera shake, zero rapid rotation, zero motion blur, zero distorted letters.`
+    ? isMasonryOrBrick
+      ? `HERO PRODUCT FIDELITY (5.8s - 8.0s): In the final framing (5.8s - 8.0s), the camera holds rock-steadily on the canonical terracotta brick hero in the real construction site setting: centered at eye level, natural raw clay texture, hollow chambers and vertical ribs. Strictly ZERO text, ZERO plaques, ZERO placards, ZERO painted signs on the brick itself; all corporate branding is applied in post-production.`
+      : `HERO BRAND FIDELITY (5.8s - 8.0s): Preserve canonical product branding AS-IS. Do NOT repaint, invent, or force fake "${brandName}" lettering onto the product casing unless that exact wording already exists in the canonical reference image. The separate canonical logo reference is respected cleanly for brand identification. In the final framing (5.8s - 8.0s), the camera holds rock-steadily on the canonical product hero: centered at eye level, zero camera shake, zero rapid rotation, zero motion blur, zero distorted letters.`
     : null
 
   // 7. Assemble Technical Veo English Prompt
@@ -256,7 +260,7 @@ export function planShots(
       facts.assets.productReference
         ? 'A reference product photo is provided; preserve physical geometry, materials, casing, and colors exactly with zero mutation.' + (
             (subject.toLowerCase().includes('tuğla') || facts.verifiedFacts.rawBrief.toLowerCase().includes('tuğla'))
-              ? ' Specifically, the hero product is a perforated hollow clay brick with core rectangular air chambers on top and vertical ribbed fluting on side walls; DO NOT generate solid stone or unperforated bricks.'
+              ? ' Specifically, the hero product is a perforated hollow clay brick with core rectangular air chambers on top and vertical ribbed fluting on side walls; DO NOT generate solid stone or unperforated bricks. Strictly DO NOT draw, engrave, or place any placards, signs, logos, or text on the brick surface; the clay brick remains an authentic, clean structural material without any surface writing or labels.'
               : isBackpackSprayer
               ? ' Specifically, the hero product is an ergonomic backpack sprayer worn comfortably on the back via shoulder straps; preserve molded tank casing, caps, hose connection, and handheld spray lance exactly. The product is worn on the operator\'s back, NOT placed on the floor as wheeled equipment.'
               : isManualPressureSprayer

@@ -49,25 +49,45 @@ export class SimpleV5BriefNormalizer {
     let cameraMotion = domainProfile.cameraMotion
 
     const requestedEnvironment = (snapshot.campaign.environment_preset || 'auto').toLowerCase()
+    const userIdea = ((snapshot.campaign as any)?.creative_idea || (snapshot.campaign as any)?.custom_scene_idea || snapshot.brand_description || '').trim()
+    const userIdeaLower = userIdea.toLowerCase()
+
     const environmentOverrides: Record<string, string> = {
       garden: 'Güneşli, verimli açık meyve bahçesi, yeşil asma bağları ve sağlıklı doğal bitki örtüsü',
+      olive_grove: 'Güneşli, bereketli Ege zeytinliği, kadim gümüşi yeşil zeytin ağaçları ve doğal zeytinlik toprağı',
+      greenhouse: 'Aydınlık modern cam sera, düzenli yeşil sebze ve bitki sıraları',
       studio: 'Sade ve kontrollü profesyonel ürün stüdyosu',
       kitchen: 'Hijyenik ve profesyonel ticari mutfak istasyonu ve taze sunum tezgâhı',
       office: 'Modern ve aydınlık mimari ofis çalışma alanı',
+      cafe: 'Modern, aydınlık ve şık bir kafe çalışma masası, ahşap doku ve arka planda sıcak doğal ışık',
       workshop: 'Gerçek düzenli atölye veya sanayi çalışma alanı',
-      construction: 'Otantik ticari şantiye sahasında tek sabit ürün sergileme yüzeyi',
+      construction: 'Aktif ve düzenli modern inşaat şantiyesi, doğal gün ışığı alan açık hava yapı alanı',
     }
     if (environmentOverrides[requestedEnvironment]) {
       location = environmentOverrides[requestedEnvironment]
       const environmentLighting: Record<string, string> = {
         studio: 'çekim boyunca değişmeyen yumuşak kontrollü stüdyo ana ışığı ve dengeli dolgu ışığı',
         garden: 'çekim boyunca değişmeyen doğal bahçe gün ışığı',
+        olive_grove: 'çekim boyunca değişmeyen berrak sabah altın saat doğal gün ışığı ve yapraklar arasından süzülen yumuşak aydınlatma',
+        greenhouse: 'çekim boyunca değişmeyen homojen doğal gün ışığı',
         kitchen: 'çekim boyunca değişmeyen hijyenik mutfak aydınlatması ve yumuşak dolgu ışığı',
         office: 'çekim boyunca değişmeyen dengeli ofis aydınlatması',
+        cafe: 'çekim boyunca değişmeyen dengeli sıcak gün ışığı',
         workshop: 'çekim boyunca değişmeyen kontrollü atölye aydınlatması',
         construction: 'çekim boyunca değişmeyen doğal açık saha gün ışığı',
       }
       lighting = environmentLighting[requestedEnvironment]
+    } else if (requestedEnvironment === 'auto') {
+      if (userIdeaLower.includes('zeytin') || userIdeaLower.includes('olive')) {
+        location = environmentOverrides.olive_grove
+        lighting = 'çekim boyunca değişmeyen berrak sabah altın saat doğal gün ışığı ve yapraklar arasından süzülen yumuşak aydınlatma'
+      } else if (userIdeaLower.includes('sera') || userIdeaLower.includes('greenhouse')) {
+        location = environmentOverrides.greenhouse
+        lighting = 'çekim boyunca değişmeyen homojen doğal gün ışığı'
+      } else if (userIdeaLower.includes('kafe') || userIdeaLower.includes('cafe')) {
+        location = environmentOverrides.cafe
+        lighting = 'çekim boyunca değişmeyen dengeli sıcak gün ışığı'
+      }
     }
 
     const style = (snapshot.campaign.user_style_preference || 'AUTO').toUpperCase()
@@ -87,11 +107,24 @@ export class SimpleV5BriefNormalizer {
       cameraMotion = 'tek yönde yavaş, kısa mesafeli ve sarsıntısız kamera yaklaşımı; ürün ve yüzey sabit'
     }
 
-    // 2. One Primary Idea & One Primary Action
+    // 2. One Primary Idea & One Primary Action with Authentic Human Action
+    let derivedAction = ''
+    if (userIdeaLower.includes('kadın') || userIdeaLower.includes('female') || userIdeaLower.includes('woman')) {
+      if (domainProfile.domain === 'AGRICULTURE_NATURE') {
+        derivedAction = `Doğal açık hava iş kıyafetleri giyen profesyonel kadın tarım çalışanı, ergonomik @HeroProduct akülü sırt pompasını taşırken teleskopik püskürtme borusuyla zeytin ağaçlarının yeşil yapraklarına doğru mikronize ince sisleme uygular.`
+      }
+    } else if (userIdeaLower.includes('zeytin')) {
+      derivedAction = `Doğal açık hava iş kıyafetleri giyen profesyonel tarım çalışanı, ergonomik @HeroProduct akülü sırt pompasını taşırken teleskopik püskürtme borusuyla zeytin ağaçlarının yeşil yapraklarına doğru mikronize ince sisleme uygular.`
+    } else if (domainProfile.domain === 'CONSTRUCTION_STRUCTURAL' && (userIdeaLower.includes('usta') || userIdeaLower.includes('inşaat') || userIdeaLower.includes('şantiye') || usageStyle)) {
+      derivedAction = `Baret ve reflektörlü güvenlik yeleği giyen deneyimli inşaat ustası, hakiki @HeroProduct pişmiş kil tuğlasını elleriyle kavrayıp inceler ve duvara nizami yerleştirir; malzemenin killi dokusu, delikli yapısı ve geometrik kenarları net biçimde sergilenir.`
+    } else if (domainProfile.domain === 'TECH_DIGITAL' && (userIdeaLower.includes('kafe') || userIdeaLower.includes('whatsapp') || userIdeaLower.includes('sipariş') || userIdeaLower.includes('müşteri'))) {
+      derivedAction = `Şık ve rahat giyimli yerel işletme sahibi, masasında otururken akıllı telefonunda gelen WhatsApp müşteri bildirimini inceler ve güven dolu samimi bir tebessümle tek tıkla yanıtlar.`
+    }
+
     const primaryIdea = `${brandName} bünyesindeki ${productName} ürününün referansa sadık tek bir tanıtım anı.`
     const primaryAction = usageStyle && verifiedAction
       ? `${productName} ürününün doğrulanmış kullanım adımı: ${verifiedAction}`
-      : `${productName} ürününün referanstaki biçimi korunarak tek bir sade ürün gösteriminde sergilenmesi.`
+      : derivedAction || `${productName} ürününün referanstaki biçimi korunarak tek bir sade ürün gösteriminde sergilenmesi.`
 
     // 3. Build Spoken Turkish Voiceover (Strict 10-14 words, max 18 words, zero banned formulas)
     let spokenScript = snapshot.campaign.approved_spoken_line?.trim() || ''
@@ -120,6 +153,12 @@ export class SimpleV5BriefNormalizer {
 
     const durationSeconds = snapshot.requested_duration || 8
 
+    const productPresentationDirective = usageStyle && verifiedAction
+      ? `Tek doğrulanmış eylem: ${verifiedAction}. Aynı ürün, aynı ortam ve kesintisiz tek çekim; gerekirse anatomik olarak tutarlı bir operatör kullanılır.`
+      : derivedAction
+      ? `Otantik insan ve ürün etkileşimi: Ürün formu, rengi ve oranları @HeroProduct referansına %100 sadık kalır. Profesyonel insan operatör doğru el anatomisi, 5 parmak ve gerçekçi tutuş fiziğiyle ürünü kullanır. Ürün havada uçmaz, zemine veya operatöre gerçek yerçekimiyle bağlıdır. Kesintisiz tek akıcı sinematik çekim.`
+      : 'Ürün tek bir gerçek destek yüzeyinde sabit durur. Yüzey, yerleşim, arka plan ve ışık çekim boyunca değişmez. Ürün duvara, başka ürüne veya kullanım sahnesine dönüşmez; insan, el, taşıma, montaj ve püskürtme eklenmez.'
+
     const brief: SimpleV5Brief = {
       goal: 'Commercial Video',
       subject: productName,
@@ -145,9 +184,7 @@ export class SimpleV5BriefNormalizer {
       domainNegatives: environmentOverrides[requestedEnvironment]
         ? domainProfile.isolationNegatives.filter(term => !/indoor|warehouse|shelv|interior|ceiling|fluorescent|office|room|depot|workbench|carpet|store|furniture/i.test(term))
         : domainProfile.isolationNegatives,
-      productPresentationDirective: usageStyle && verifiedAction
-        ? `Tek doğrulanmış eylem: ${verifiedAction}. Aynı ürün, aynı ortam ve kesintisiz tek çekim; gerekirse anatomik olarak tutarlı bir operatör kullanılır.`
-        : 'Ürün tek bir gerçek destek yüzeyinde sabit durur. Yüzey, yerleşim, arka plan ve ışık çekim boyunca değişmez. Ürün duvara, başka ürüne veya kullanım sahnesine dönüşmez; insan, el, taşıma, montaj ve püskürtme eklenmez.',
+      productPresentationDirective,
     }
 
     const styleDescriptions: Record<string, { hook: string; proof: string; close: string }> = {
