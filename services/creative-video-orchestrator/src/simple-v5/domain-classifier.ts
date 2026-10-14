@@ -160,7 +160,8 @@ export function classifyOperationalDomain(input: DomainInput): DomainProfile {
   // 6. TECH & SOFTWARE
   const techKeywords = [
     'yazılım', 'teknoloji', 'dijital', 'bilişim', 'yapay zeka', 'telekom',
-    'app', 'uygulama', 'sistem', 'platform', 'otomasyon', 'tech', 'software'
+    'app', 'uygulama', 'sistem', 'platform', 'otomasyon', 'tech', 'software',
+    'saas', 'whatsapp', 'mesajify'
   ]
   if (techKeywords.some(k => containsDomainTerm(combined, k))) {
     return {

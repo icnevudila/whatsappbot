@@ -144,12 +144,12 @@ export class SimpleV5PromptCompiler {
     const sceneSpecificRule = /mortar|worker|mason(?:ry craftsmanship| wearing)|pallet|building bond|natural building application|active real-world application|outdoor nature immersion|authentic foley|warehouse|depot floor|storage shelves|ergonomic usage/i
     const fidelityLock = formatFidelityLockSection({
       ...fidelityReport.contract,
-      must_preserve: fidelityReport.contract.must_preserve.filter(rule => !sceneSpecificRule.test(rule)),
-      surface_rules: [
+      must_preserve: Array.from(new Set(fidelityReport.contract.must_preserve.filter(rule => !sceneSpecificRule.test(rule)))),
+      surface_rules: Array.from(new Set([
         ...fidelityReport.contract.surface_rules.filter(rule => !sceneSpecificRule.test(rule)),
         'Preserve the reference product orientation and every visible structural detail; obey gravity on the selected support surface',
-      ],
-      forbidden_mutations: fidelityReport.contract.forbidden_mutations.filter(rule => !sceneSpecificRule.test(rule)),
+      ])),
+      forbidden_mutations: Array.from(new Set(fidelityReport.contract.forbidden_mutations.filter(rule => !sceneSpecificRule.test(rule)))),
       safe_camera_rules: [brief.cameraMotion, 'Do not expose unsupported unseen geometry or change the selected location'],
       allowed_actions: [brief.primaryAction],
     })

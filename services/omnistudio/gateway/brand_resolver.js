@@ -152,7 +152,7 @@ function getLogoVisualDescription(brandName, logoPath, hasExplicitLogo = false) 
     return "Orijinal yeşil bağlantılı veri ağı (connected network nodes constellation) amblemi: Merkezinde büyük yeşil dairesel çekirdek düğüm ve etrafında ince yeşil çizgilerle birbirine bağlanan farklı yeşil tonlarında veri düğüm noktaları (network graph nodes). Yanında temiz, modern sans-serif 'Veri Burada' kurumsal tipografisi. KESİNLİKLE uydurma yeşil altıgen, uydurma 'V' harfi amblemi, onay tiki, sahte üçgen veya soyut sembol KULLANILMAYACAKTIR; yalnızca ekli görseldeki orijinal yeşil bağlantılı veri ağı amblemi ve temiz 'Veri Burada' kurumsal tipografisi fırçalanmış metal isimliğe işlenecektir.";
   }
   if (lower.includes('ayvazoğlu')) {
-    return "Minimalist kırmızı ince çizgili çatı piktogramı ve ortasından yukarı doğru yükselen kırmızı dikey ok sembolü. Altında siyah, net ve büyük harflerle 'AYVAZOĞLU' ve hemen altında geniş aralıklı 'İ N Ş A A T' yazısı içeren resmi kurumsal logo amblemi. Sahnedeki akrilik plaket veya tabela üzerinde KESİNLİKLE EN ÜSTTE BU KIRMIZI ÇATI VE DİKEY OK AMBLEMİ çizilecektir; yalnızca yazı yazıp amblem ASLA atlanmayacaktır.";
+    return "Hakiki pişmiş kil tuğla; doğal killi dokusu, dikey oluklu çizgileri ve delikli hava kanalları temiz biçimde korunur. KESİNLİKLE tuğla üzerine akrilik tabela, siyah plaket, uydurma yazı veya yapay etiket ÇİZİLMEYECEKTİR; ürün saf ve doğal inşaat malzemesi olarak kalır. Marka logosu ve tipografi post-prodüksiyon katmanında bindirilecektir.";
   }
 
   // Tanımlı logo yoksa: SIFIR UYDURMA LOGO — sadece şirket adı yazılır

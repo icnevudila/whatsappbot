@@ -32,6 +32,7 @@ export const BUILTIN_SECTOR_PROFILES: Record<string, CreativeEnvironmentProfile>
     sectorId: 'agriculture_equipment',
     label: 'Tarım, Bahçe & Ziraat Ekipmanları',
     preferredEnvironments: [
+      'Sunlit fertile Mediterranean olive grove with ancient olive trees, silver-green leaves and natural orchard soil under warm morning sunlight',
       'Sunlit fertile agricultural orchard with lush green fruit trees and natural orchard soil under warm morning sunlight',
       'Vibrant commercial greenhouse with healthy vegetable crops under diffuse natural daylight',
       'Expansive sunlit agricultural field with clean rows of crops under open skies',
@@ -52,7 +53,7 @@ export const BUILTIN_SECTOR_PROFILES: Record<string, CreativeEnvironmentProfile>
       'indoor retail store',
     ],
     preferredUsageContext: [
-      'Outdoors in a sunlit green agricultural orchard or lush garden with ripe fruit trees. A professional grower wearing practical outdoor attire is actively operating the spraying equipment ({subject}), with a fine, even mist spray visible in the morning sunlight over vibrant foliage.',
+      'Outdoors in a sunlit green agricultural olive grove or orchard with ancient olive trees. A professional female or male grower wearing practical outdoor attire is actively operating the spraying equipment ({subject}), with a fine, even mist spray visible in the morning sunlight over vibrant foliage.',
       'Active outdoor agricultural operation in a healthy orchard or greenhouse setting with natural morning illumination.',
     ],
     brandPillar: 'Agricultural excellence and dependable crop care — high-performance farm and garden equipment trusted by growers.',
@@ -61,15 +62,15 @@ export const BUILTIN_SECTOR_PROFILES: Record<string, CreativeEnvironmentProfile>
     defaultAffordance: 'apply_spray_mist',
     defaultProofMode: 'product_in_use',
     defaultPrimaryValue: 'reliability',
-    actionHookTemplate: 'Güneşli, bereketli bir meyve bahçesinde {subject} nozülünden fışkıran mikronize ince sis bulutu ağaç yapraklarını homojen kaplarken profesyonel bahçe/tarım bakımı 0.3 saniyede devreye girer.',
+    actionHookTemplate: 'Güneşli, bereketli bir zeytinlik veya meyve bahçesinde {subject} nozülünden fışkıran mikronize ince sis bulutu ağaç yapraklarını homojen kaplarken profesyonel tarım bakımı 0.3 saniyede devreye girer.',
   },
 
   construction_materials: {
     sectorId: 'construction_materials',
     label: 'Yapı, İnşaat Malzemeleri & Şantiye',
     preferredEnvironments: [
+      'Active contemporary architectural construction site and organized building staging yard under bright natural daylight',
       'Modern, immaculate brick manufacturing facility and sunlit outdoor dispatch loading yard',
-      'Active contemporary architectural construction site under bright natural daylight',
       'Organized high-grade building material staging area with clean structural elements',
     ],
     forbiddenEnvironments: [
@@ -80,7 +81,7 @@ export const BUILTIN_SECTOR_PROFILES: Record<string, CreativeEnvironmentProfile>
       'unlicensed hazardous worker depiction',
     ],
     preferredUsageContext: [
-      'Modern structural building yard or architectural site. A skilled construction professional inspects high-precision materials ({subject}), demonstrating robust structural integrity and precision finish.',
+      'Active structural construction site or architectural masonry project. A skilled mason or engineer wearing hardhat and safety vest holds and inspects genuine high-precision clay bricks ({subject}), demonstrating robust structural integrity, precise geometric edges and masonry craftsmanship.',
     ],
     brandPillar: 'Industrial strength and reliable delivery — this brand is the structural backbone of serious construction projects.',
     colorGradeDirective: 'COLOR GRADE: Warm industrial amber, rich earth tones, deep material textures, documentary-grade lifted blacks — conveying strength, scale and reliability.',
@@ -105,7 +106,7 @@ export const BUILTIN_SECTOR_PROFILES: Record<string, CreativeEnvironmentProfile>
       'unappetizing artificial lighting',
     ],
     preferredUsageContext: [
-      'An artisan chef or culinary presenter freshly prepares and serves the appetizing food item ({subject}) with sensory texture and rich aroma.',
+      'An artisan chef or culinary presenter freshly prepares and serves the appetizing food item ({subject}) with sensory texture, sizzling heat and rich aroma.',
     ],
     brandPillar: 'Freshness and craft — this product is made with care and should feel delicious and inviting.',
     colorGradeDirective: 'COLOR GRADE: Warm artisan amber tones, rich saturated food colors, soft lifted highlights — appetizing and inviting.',
@@ -120,17 +121,22 @@ export const BUILTIN_SECTOR_PROFILES: Record<string, CreativeEnvironmentProfile>
     sectorId: 'saas_digital',
     label: 'SaaS, Yazılım & Dijital Servisler',
     preferredEnvironments: [
+      'Modern sunlit welcoming cafe or boutique workspace with warm wooden table, gentle ambient daylight, and indoor plants',
       'Modern sunlit minimalist office desk with natural window light, sleek workstation, and subtle warm indoor plants',
       'Contemporary tech collaborative studio workspace with crisp architectural lines',
     ],
     forbiddenEnvironments: [
+      'hallucinated alien computer dashboards',
+      'acrylic desk signs',
+      'desk trophies',
+      'unreadable floating UI code',
       'messy cluttered industrial floor',
       'dirt and outdoor mud',
       'outdated CRT screens',
       'gloomy dark spaces',
     ],
     preferredUsageContext: [
-      'A focused professional effortlessly navigates the modern digital workflow, seamlessly accomplishing high-value results with instant responsiveness.',
+      'A friendly business owner or entrepreneur comfortably checks real-time customer WhatsApp notifications on a smartphone, smiling with confidence and closing orders effortlessly.',
     ],
     brandPillar: 'Precision and ease — this platform removes friction and makes complex work feel effortless.',
     colorGradeDirective: 'COLOR GRADE: Cool-neutral with clean whites and precise midtones — modern tech-product visual identity.',
