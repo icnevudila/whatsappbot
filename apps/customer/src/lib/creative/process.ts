@@ -15,6 +15,7 @@ import { formatToAspect, type CreativePayload, type CreativeSnapshot } from './t
 import { createVideoGenerationIdentity } from './video-generation-identity'
 import { submitVideoWithIntent, VideoJobTerminalError, VideoSubmissionUncertainError } from './video-submit-job'
 import { resolveAssetSource } from './asset-source-resolver'
+import { resolveOwnedLogoPath } from './brand-logo-source'
 import { compositeCommercialCreative } from './v2/image-compositor'
 import { buildImagePromptV2 } from './v2/image-prompt-v2'
 import { mapLegacyStyleToPreset } from './v2/adapter'
@@ -649,15 +650,20 @@ export async function processCreativeGeneration(
     const shouldIncludeLogo = snapshot.useLogo !== false
     let expectedLogoPath: string | null = null
     if (shouldIncludeLogo) {
-      expectedLogoPath = (snapshot as any).customLogoUrl || snapshot.brandKit?.logoPath || null
-      if (!expectedLogoPath) {
-        const { data: orgLogo } = await supabase
-          .from('organizations')
-          .select('logo_path')
-          .eq('id', creative.org_id)
-          .maybeSingle()
-        expectedLogoPath = orgLogo?.logo_path ?? null
-      }
+      expectedLogoPath = await resolveOwnedLogoPath({tenantId:creative.org_id,
+        kitId:snapshot.brandKit?.id || (snapshot as any).brandKitId || creative.brand_kit_id,
+        customLogoUrl:(snapshot as any).customLogoUrl}, {
+        kit: async (tenantId,kitId) => {
+          const {data,error} = await supabase.from('brand_kits').select('logo_path').eq('org_id',tenantId).eq('id',kitId).maybeSingle()
+          if(error) throw new Error('BRAND_KIT_LOOKUP_FAILED')
+          return data
+        },
+        organization: async tenantId => {
+          const {data,error} = await supabase.from('organizations').select('logo_path').eq('id',tenantId).maybeSingle()
+          if(error) throw new Error('ORGANIZATION_LOGO_LOOKUP_FAILED')
+          return data
+        },
+      })
     }
     const expectedLogo = Boolean(shouldIncludeLogo && expectedLogoPath)
     const identityGate = requiredImageAssets({ useLogo: shouldIncludeLogo, hasLogo: expectedLogo,
