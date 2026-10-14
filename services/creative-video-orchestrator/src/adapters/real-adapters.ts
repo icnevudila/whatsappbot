@@ -1011,18 +1011,26 @@ export class RealImageGenerationProvider implements IImageGenerationProvider {
     references: ImageReferencePayload[],
     options: KeyframeGenOptions
   ): Promise<KeyframeGenResult> {
-    const hash = createHash('sha256').update(prompt + JSON.stringify(options)).digest('hex')
+    if (!options.tenantId || !/^[a-zA-Z0-9_-]+$/.test(options.tenantId)) throw new Error('KEYFRAME_TENANT_REQUIRED')
+    const referenceImages = references.map(reference => {
+      const data = readFileSync(reference.filePath)
+      if (createHash('sha256').update(data).digest('hex') !== reference.sha256) throw new Error('KEYFRAME_REFERENCE_SHA_MISMATCH')
+      return { role: reference.role, data: data.toString('base64'), sha256: reference.sha256 }
+    })
+    const hash = createHash('sha256').update(prompt + JSON.stringify(options) + JSON.stringify(referenceImages)).digest('hex')
     const keyframeId = `kf_${hash.substring(0, 12)}`
-    const outputPath = join('/shared/outputs/keyframes', `${keyframeId}.png`)
-    mkdirSync(dirname(outputPath), { recursive: true })
+    const outputPath = join(process.env.SHARED_OUTPUTS_DIR || '/shared/outputs', 'keyframes', options.tenantId, `${keyframeId}.png`)
 
     // Try OmniStudio image endpoint if reachable
     try {
       const resp = await fetch(`${this.gatewayUrl}/v1/images/generations`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY || ''}` },
         body: JSON.stringify({
           prompt,
+          tenant_id: options.tenantId,
+          referenceImages,
+          expected_reference_count: referenceImages.length,
           size: options.aspectRatio === '9:16' ? '1024x1820' : '1024x1024',
           response_format: 'b64_json',
         }),
@@ -1034,6 +1042,8 @@ export class RealImageGenerationProvider implements IImageGenerationProvider {
         const b64 = json.data?.[0]?.b64_json
         if (b64) {
           const buf = Buffer.from(b64, 'base64')
+          if (buf.length < 32 || !buf.subarray(0, 8).equals(Buffer.from('89504e470d0a1a0a', 'hex'))) throw new Error('KEYFRAME_OUTPUT_INVALID')
+          mkdirSync(dirname(outputPath), { recursive: true })
           writeFileSync(outputPath, buf)
           return {
             keyframeId,
@@ -1044,21 +1054,11 @@ export class RealImageGenerationProvider implements IImageGenerationProvider {
           }
         }
       }
-    } catch {
-      // Gateway offline: create synthetic keyframe placeholder file for verification
+    } catch (error) {
+      throw new Error('KEYFRAME_GENERATION_FAILED', { cause: error })
     }
 
-    // Deterministic keyframe file creation
-    const syntheticBuffer = Buffer.from(`KEYFRAME:${keyframeId}:${prompt}`, 'utf8')
-    writeFileSync(outputPath, syntheticBuffer)
-
-    return {
-      keyframeId,
-      outputPath,
-      sha256: createHash('sha256').update(syntheticBuffer).digest('hex'),
-      width: options.width || 1080,
-      height: options.height || 1920,
-    }
+    throw new Error('KEYFRAME_GENERATION_FAILED')
   }
 
   async generateReferenceComposition(

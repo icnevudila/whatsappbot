@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { inspectImageOutput } from './image-output'
+import { gatewayAuthHeaders } from './gateway-auth'
 
 export type ImageJobReceipt = { id: string; gatewayUrl: string; queuedAt: string; expectedReferenceCount?: number }
 export class ImageSubmissionUncertainError extends Error {
@@ -31,7 +32,7 @@ export async function submitImageJob(gatewayUrl: string, body: Record<string, un
   const expectedReferenceCount = body.expected_reference_count
   if (typeof expectedReferenceCount !== 'number' || !Number.isSafeInteger(expectedReferenceCount) || expectedReferenceCount < 0 || expectedReferenceCount > 4) throw new Error('REFERENCE_ATTACHMENT_FAILED')
   const response = await fetch(`${gatewayUrl}/v1/images/generations`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
     body: JSON.stringify({ ...body, async: true, response_format: 'url' }),
     signal: AbortSignal.timeout(20000),
   }).catch(() => { throw new ImageSubmissionUncertainError() })
@@ -55,7 +56,7 @@ export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expe
   const rawGateway = process.env.OMNISTUDIO_GATEWAY_URL || job.gatewayUrl || 'http://167.233.201.31:3456'
   const activeGateway = (rawGateway.includes('nip.io') ? 'http://167.233.201.31:3456' : rawGateway).replace(/\/$/, '')
   const query = tenantId ? '?tenant_id=' + encodeURIComponent(tenantId) : ''
-  const response = await fetch(`${activeGateway}/v1/images/status/${encodeURIComponent(job.id)}${query}`, { signal: AbortSignal.timeout(10000), cache: 'no-store' }).catch(() => {
+  const response = await fetch(`${activeGateway}/v1/images/status/${encodeURIComponent(job.id)}${query}`, { headers: gatewayAuthHeaders(), signal: AbortSignal.timeout(10000), cache: 'no-store' }).catch(() => {
     throw new ImageJobPendingError(job) // Transient network error
   })
   if (response.status === 401 || response.status === 403) {
@@ -84,11 +85,20 @@ export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expe
   }
   if (!/^[a-f0-9]{64}$/i.test(result.result_sha256 || '')) throw new ImageJobReconciliationError(job)
   if (!result.result_url) throw new ImageJobReconciliationError(job)
+  // A provider receipt must not redirect server credentials into an arbitrary
+  // URL. Gateway output aliases must be configured consistently before release.
+  let outputUrl: URL
+  try {
+    outputUrl = new URL(result.result_url, activeGateway)
+    if (!['http:', 'https:'].includes(outputUrl.protocol) || outputUrl.origin !== new URL(activeGateway).origin || outputUrl.username || outputUrl.password) {
+      throw new Error('UNTRUSTED_OUTPUT_ORIGIN')
+    }
+  } catch { throw new ImageJobReconciliationError(job) }
   const gwToken = (process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim()
   const fetchHeaders: Record<string, string> = {}
   if (gwToken) fetchHeaders['Authorization'] = `Bearer ${gwToken}`
   if (tenantId) fetchHeaders['X-Tenant-Id'] = tenantId
-  const output = await fetch(result.result_url, { headers: fetchHeaders, signal: AbortSignal.timeout(30000) }).catch(() => { throw new ImageJobReconciliationError(job) })
+  const output = await fetch(outputUrl.toString(), { headers: fetchHeaders, redirect: 'error', signal: AbortSignal.timeout(30000) }).catch(() => { throw new ImageJobReconciliationError(job) })
   const mimeType = output.headers.get('content-type')?.split(';')[0] || ''
   if (!output.ok || !mimeType.startsWith('image/')) throw new ImageJobReconciliationError(job)
   if (Number(output.headers.get('content-length') || 0) > 32 * 1024 * 1024 || !output.body) throw new ImageJobPendingError(job)

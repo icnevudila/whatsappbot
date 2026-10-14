@@ -189,6 +189,7 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
     let response: Response
     try {
       response = await fetch(`${this.gatewayUrl.replace(/\/$/, '')}/v1/videos/capability`, {
+        headers: { Authorization: `Bearer ${process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY || ''}` },
         signal: AbortSignal.timeout(15_000),
       })
     } catch (error: any) {
@@ -246,7 +247,7 @@ export class OmniStudioGeminiNativeVideoProvider implements VideoProvider {
     ws.logEvent('SUBMITTED', `POST ${endpoint}`)
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY || ''}` },
       body: JSON.stringify(buildGeminiNativeProviderPayload(request)),
       signal: AbortSignal.timeout(7 * 60_000),
     })

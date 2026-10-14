@@ -20,8 +20,8 @@ const { createJobMetrics, setStage, finishMetrics } = require('./runtime_metrics
 const { getTenantScopeKey, getRequestKey } = require('./tenant_scope.js');
 const { normalizeImageReferences, referenceRoleInstructions, assertReferenceCount } = require('./image_reference_contract.js');
 const { DurableJobStore } = require('./durable_job_store.js');
-const { VideoJobPersistence, videoRequestHash } = require('./video_job_persistence.js');
-const { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
+const { VideoJobPersistence, videoRequestHash, canonicalJSON } = require('./video_job_persistence.js');
+const { typedError, isWorkerControlPath, isAuthorizedWorker, isPublicGatewayPath, isAuthorizedGateway, configuredLimit, readBoundedBody } = require('./gateway_request_guard.js');
 const { BrowserWorkerSupervisor } = require('./browser_worker_supervisor.js');
 const { publicHealthStats } = require('./public_health.js');
 const { isMediaFilename, isPublicMediaFilename, registerMediaOwner, getMediaOwner, verifyMediaAccess, signMediaAccess } = require('./public_output_access.js');
@@ -51,14 +51,6 @@ if (!process.env.OMNISTUDIO_GATEWAY_TOKEN) {
     }
   } catch {}
 }
-if (!process.env.OMNISTUDIO_GATEWAY_TOKEN) {
-  process.env.OMNISTUDIO_GATEWAY_TOKEN = 'U9AIIyyd8DEuSORtTxd3kbtTRHujJvBhRyWLvpXCSjkQnbpgsUl_YaR7TxhqQjSr';
-}
-
-if (!process.env.ALLOW_SIMULATOR) {
-  process.env.ALLOW_SIMULATOR = '1';
-}
-
 if (require.main === module && process.env.NODE_ENV === 'production' && !process.env.WORKER_CONTROL_TOKEN) {
   throw typedError('WORKER_CONTROL_TOKEN_REQUIRED', 503);
 }
@@ -588,10 +580,21 @@ class AdvancedJobQueue {
     const operationType = type;
     if (this.storageError) throw new Error('DURABLE_JOB_STORAGE_UNAVAILABLE');
     const idempotencyKey = getRequestKey({ tenantId, requestId, operationType });
+    const requestHash = crypto.createHash('sha256').update(canonicalJSON({
+      prompt, size, platform, response_format, workspace, customer, referenceImages,
+      expectedReferenceCount, brandKit, optimizePrompt, type, rawPrompt, systemPrompt,
+      affordancePrompt, fallbackResult, incomingMessage, conversationHistory,
+      companyContext, tone, tenantId, conversationId, historicalDirector,
+      historicalCreativeJobId, historicalAttemptId, historicalDirectorRequestHash,
+    })).digest('hex');
     if (idempotencyKey) {
       const existingId = this.idempotencyMap.get(idempotencyKey);
       const existing = existingId && this.getJob(existingId);
-      if (existing) return existing;
+      if (existing) {
+        if (!existing.requestHash) throw typedError('JOB_IDEMPOTENCY_RECONCILIATION_REQUIRED', 409);
+        if (existing.requestHash !== requestHash) throw typedError(type === 'image' ? 'IMAGE_IDEMPOTENCY_CONFLICT' : 'JOB_IDEMPOTENCY_CONFLICT', 409);
+        return existing;
+      }
       this.idempotencyMap.delete(idempotencyKey);
     }
     this.cleanupCompletedJobs();
@@ -613,6 +616,7 @@ class AdvancedJobQueue {
 
     const job = {
       id,
+      requestHash,
       type,
       historicalDirector,
       historicalCreativeJobId,
@@ -1570,6 +1574,11 @@ const server = http.createServer(async (req, res) => {
   try {
     if (isWorkerControlPath(pathname) && !isInternalWorkerRequest(req)) {
       return sendJson(res, 403, { error: 'WORKER_UNAUTHORIZED', error_code: 'WORKER_UNAUTHORIZED' });
+    }
+    const historicalDirector = pathname === '/v1/chat/historical-video-director';
+    if (!isWorkerControlPath(pathname) && !historicalDirector && !isPublicGatewayPath(pathname)
+        && !isAuthorizedGateway(req)) {
+      return sendJson(res, 401, { error: 'GATEWAY_UNAUTHORIZED', error_code: 'GATEWAY_UNAUTHORIZED' });
     }
     if (method === 'POST' && pathname === '/v1/chat/historical-video-director') {
       if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'WORKER_UNAUTHORIZED' });
@@ -2801,29 +2810,8 @@ const server = http.createServer(async (req, res) => {
 
     // 1.0.9. Genel Sohbet (OpenAI Uyumlu Chat Completions): POST /v1/chat/completions & /chat/completions
     if (method === 'POST' && (pathname === '/v1/chat/completions' || pathname === '/chat/completions')) {
-      const configuredApiKey = process.env.CHATGPT_API_KEY;
-      const authHeader = req.headers['authorization'] || req.headers['x-api-key'] || '';
-      const providedKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : authHeader.trim();
-
-      if (configuredApiKey && configuredApiKey !== 'none') {
-        if (!providedKey || providedKey !== configuredApiKey) {
-          return sendJson(res, 401, {
-            error: {
-              message: 'Yetkisiz erişim. Geçerli bir API anahtarı gereklidir.',
-              type: 'invalid_request_error',
-              code: 'invalid_api_key'
-            }
-          });
-        }
-      } else if (!configuredApiKey) {
-        return sendJson(res, 500, {
-          error: {
-            message: 'Sunucu yapılandırma hatası: CHATGPT_API_KEY tanımlanmamış.',
-            type: 'server_error',
-            code: 'missing_api_key_config'
-          }
-        });
-      }
+      // The common gate above accepts the configured internal Gateway or chat
+      // credential. A second, chat-only gate would reject existing panel callers.
 
       const body = await parseJsonBody(req);
       let promptText = '';

@@ -1,4 +1,5 @@
 import type { Json } from '@wa/shared'
+import { gatewayAuthHeaders } from '../ai/gateway-auth'
 export type VideoSubmitIntent = { idempotencyKey: string; requestHash: string; attemptId: string; gatewayUrl: string; startedAt: string; body: { [key: string]: Json | undefined } }
 export class VideoSubmissionUncertainError extends Error {
   constructor() { super('VIDEO_SUBMISSION_UNCERTAIN'); this.name = 'VideoSubmissionUncertainError' }
@@ -21,7 +22,7 @@ function verifiedReceipt(receipt: any, intent: VideoSubmitIntent) {
 export async function submitVideoWithIntent(intent: VideoSubmitIntent, persist: (intent: VideoSubmitIntent) => Promise<void>, recovering: boolean) {
   if (recovering) {
     const query = new URLSearchParams({ idempotency_key: intent.idempotencyKey, org_id: String(intent.body.orgId) })
-    const observation = await fetch(`${intent.gatewayUrl}/v1/videos/reconcile?${query}`, { signal: AbortSignal.timeout(10000), cache: 'no-store' })
+    const observation = await fetch(`${intent.gatewayUrl}/v1/videos/reconcile?${query}`, { headers: gatewayAuthHeaders(), signal: AbortSignal.timeout(10000), cache: 'no-store' })
       .catch(() => { throw new VideoSubmissionUncertainError() })
     const receipt = await observation.json().catch(() => { throw new VideoSubmissionUncertainError() })
     if (observation.ok && receipt.job_id) return verifiedReceipt(receipt, intent)
@@ -29,7 +30,7 @@ export async function submitVideoWithIntent(intent: VideoSubmitIntent, persist: 
   }
   await persist(intent)
   const response = await fetch(`${intent.gatewayUrl}/v1/videos/generations`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(intent.body), signal: AbortSignal.timeout(20000),
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() }, body: JSON.stringify(intent.body), signal: AbortSignal.timeout(20000),
   }).catch(() => { throw new VideoSubmissionUncertainError() })
   const receipt = await response.json().catch(() => { throw new VideoSubmissionUncertainError() })
   if (response.status >= 500 || (response.ok && !receipt.job_id)) throw new VideoSubmissionUncertainError()

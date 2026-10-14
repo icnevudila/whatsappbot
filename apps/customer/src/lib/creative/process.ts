@@ -458,6 +458,7 @@ export async function processCreativeGeneration(
     if (flowJob && !payload.pendingVideoUrl) {
       try {
         const response = await fetch(`${flowJob.gatewayUrl}/v1/videos/status/${encodeURIComponent(flowJob.id)}`, {
+          headers: gatewayAuthHeaders(),
           signal: AbortSignal.timeout(12_000),
         })
         if (response.status === 404) {
@@ -1365,3 +1366,4 @@ export async function processCreativeGeneration(
     return { ok: false, error: message }
   }
 }
+import { gatewayAuthHeaders } from '../ai/gateway-auth'

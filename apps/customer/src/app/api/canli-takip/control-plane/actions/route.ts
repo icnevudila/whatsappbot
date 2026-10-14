@@ -1,3 +1,4 @@
+import { gatewayAuthHeaders } from '@/lib/ai/gateway-auth'
 import { NextResponse } from 'next/server'
 import { checkIsAuthenticated } from '@/app/canli-takip/auth'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
@@ -134,7 +135,7 @@ export async function POST(request: Request) {
     const gatewayUrl = process.env.AI_GATEWAY_URL
     if (!gatewayUrl) return NextResponse.json({ success: false, error: 'AI_GATEWAY_URL yapılandırılmamış' }, { status: 503 })
     const response = await fetch(`${gatewayUrl.replace(/\/$/, '')}/v1/ai-engine/accounts/reset-limit`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ port }),
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() }, body: JSON.stringify({ port }),
       signal: AbortSignal.timeout(5_000),
     })
     const result = await response.json().catch(() => ({}))

@@ -208,6 +208,7 @@ export interface ImageReferencePayload {
 }
 
 export interface KeyframeGenOptions {
+  tenantId?: string
   aspectRatio: string
   width?: number
   height?: number

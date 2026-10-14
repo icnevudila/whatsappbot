@@ -28,6 +28,25 @@ function isAuthorizedWorker(req, env = process.env) {
   return ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket?.remoteAddress);
 }
 
+function isPublicGatewayPath(pathname) {
+  return ['/', '/health', '/stats'].includes(pathname)
+    || pathname.startsWith('/outputs/') || pathname.startsWith('/public/');
+}
+
+function isAuthorizedGateway(req, env = process.env) {
+  const header = req.headers?.authorization || req.headers?.['x-api-key'];
+  if (typeof header !== 'string') return false;
+  const supplied = header.startsWith('Bearer ') ? header.slice(7).trim() : header.trim();
+  if (!supplied) return false;
+  // Both are existing server-to-server credentials; never accept the historical
+  // "none" sentinel or fall back to a source-controlled/default credential.
+  return [env.OMNISTUDIO_GATEWAY_TOKEN, env.CHATGPT_API_KEY].some(secret => {
+    if (!secret || secret === 'none') return false;
+    return crypto.timingSafeEqual(crypto.createHash('sha256').update(secret).digest(),
+      crypto.createHash('sha256').update(supplied).digest());
+  });
+}
+
 function configuredLimit(value, fallback) {
   if (value === undefined || value === '') return fallback;
   const parsed = Number(value);
@@ -70,4 +89,4 @@ function readBoundedBody(req, maximumBytes) {
   });
 }
 
-module.exports = { typedError, isWorkerControlPath, isAuthorizedWorker, configuredLimit, readBoundedBody };
+module.exports = { typedError, isWorkerControlPath, isAuthorizedWorker, isPublicGatewayPath, isAuthorizedGateway, configuredLimit, readBoundedBody };

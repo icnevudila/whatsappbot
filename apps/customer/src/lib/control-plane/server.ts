@@ -72,10 +72,11 @@ async function optionalRpc(promise: PromiseLike<{ data: any; error: any }>) {
   }
 }
 
-async function optionalJson(url: string | undefined, path: string, timeoutMs = 2500) {
+async function optionalJson(url: string | undefined, path: string, timeoutMs = 2500, headers: Record<string,string> = {}) {
   if (!url) return { data: null as any, ok: false }
   try {
     const response = await fetch(`${url.replace(/\/$/, '')}${path}`, {
+      headers,
       cache: 'no-store',
       signal: AbortSignal.timeout(timeoutMs),
     })
@@ -186,8 +187,8 @@ export async function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
     optionalRows(supabase.from('message_log').select('id,org_id,account_id,direction,phone_e164,push_name,body,message_type,status,error,created_at').order('created_at', { ascending: false }).limit(180)),
     optionalRows(supabase.from('auto_reply_log').select('id,org_id,account_id,phone_e164,source,reply_body,created_at').order('created_at', { ascending: false }).limit(180)),
     optionalRpc(supabase.rpc('get_canli_takip_feed')),
-    optionalJson(process.env.AI_GATEWAY_URL, '/v1/ai-engine/status', 3500),
-    optionalJson(process.env.AI_GATEWAY_URL, '/v1/browser-workers', 3500),
+    optionalJson(process.env.AI_GATEWAY_URL, '/v1/ai-engine/status', 3500, gatewayAuthHeaders()),
+    optionalJson(process.env.AI_GATEWAY_URL, '/v1/browser-workers', 3500, process.env.WORKER_CONTROL_TOKEN ? {'x-worker-token':process.env.WORKER_CONTROL_TOKEN} : {}),
     optionalJson(process.env.GFLOW_ENGINE_URL, '/v1/workers/health', 2500),
   ])
 
@@ -653,3 +654,4 @@ export async function recordOperatorEvent(event: {
     payload: event.payload || {},
   })
 }
+import { gatewayAuthHeaders } from '../ai/gateway-auth'

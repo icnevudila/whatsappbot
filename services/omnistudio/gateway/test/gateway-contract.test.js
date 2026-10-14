@@ -12,6 +12,7 @@ const baseUrl = `http://127.0.0.1:${port}`;
 let gateway;
 
 async function request(pathname, options = {}) {
+  options = { ...options, headers: { Authorization: 'Bearer test-gateway-key', ...options.headers } };
   if (/^\/(?:job(?:\/|$)|worker(?:\/|$)|upload(?:\?|$))/.test(pathname)) {
     options = { ...options, headers: { ...options.headers, 'x-worker-token': 'test-worker-control-key' } };
   }
@@ -46,6 +47,7 @@ before(async () => {
     env: {
       ...process.env, PORT: String(port), PUBLIC_HOST: '127.0.0.1',
       CHATGPT_API_KEY: 'test-gateway-key',
+      OMNISTUDIO_GATEWAY_TOKEN: 'test-gateway-backend-key',
       WORKER_CONTROL_TOKEN: 'test-worker-control-key',
       COMPLETED_JOB_TTL_MS: '10', FAILED_JOB_TTL_MS: '10', MAX_RETAINED_COMPLETED_JOBS: '3',
     },
@@ -225,7 +227,7 @@ test('a duplicate tenant/request/operation is executed once and shares its resul
 
 test('generic chat keeps the full prompt, system directive and tenant aliases', async () => {
   const pending = request('/v1/chat/completions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-key' },
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer test-gateway-backend-key' },
     body: JSON.stringify({ tenant_id: 'tenant-chat', request_id: 'full-chat', customer: 'Same display name', messages: [
       { role: 'system', content: 'Use only tenant-chat product facts' },
       { role: 'user', content: 'A full user request that must reach the worker, not a shortened display label' },

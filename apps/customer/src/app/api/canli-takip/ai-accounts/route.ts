@@ -1,3 +1,4 @@
+import { gatewayAuthHeaders } from '@/lib/ai/gateway-auth'
 import { NextResponse } from 'next/server'
 import { checkIsAuthenticated } from '@/app/canli-takip/auth'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
@@ -15,6 +16,7 @@ export async function GET() {
     }
 
     const res = await fetch(`${GATEWAY_URL}/v1/ai-engine/status`, {
+      headers: gatewayAuthHeaders(),
       cache: 'no-store',
       signal: AbortSignal.timeout(4000),
     })
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
       if (!port) return NextResponse.json({ success: false, error: 'Port gereklidir' }, { status: 400 })
       const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
         body: JSON.stringify({ port }),
         signal: AbortSignal.timeout(12000),
       })
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
       if (!port) return NextResponse.json({ success: false, error: 'Port gereklidir' }, { status: 400 })
       const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/reset-limit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
         body: JSON.stringify({ port }),
         signal: AbortSignal.timeout(5000),
       })
@@ -71,7 +73,7 @@ export async function POST(req: Request) {
       if (!port) return NextResponse.json({ success: false, error: 'Port gereklidir' }, { status: 400 })
       const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/provision`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
         body: JSON.stringify({ port, name, flowProjectUrl }),
         signal: AbortSignal.timeout(8000),
       })
@@ -84,7 +86,7 @@ export async function POST(req: Request) {
       const { flowCredits } = body
       const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/update-flow`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
         body: JSON.stringify({ port, flowProjectUrl, flowCredits }),
         signal: AbortSignal.timeout(20000),
       })
@@ -96,7 +98,7 @@ export async function POST(req: Request) {
       if (!port) return NextResponse.json({ success: false, error: 'Port gereklidir' }, { status: 400 })
       const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/auto-detect-flow`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
         body: JSON.stringify({ port }),
         signal: AbortSignal.timeout(20000),
       })
@@ -107,7 +109,7 @@ export async function POST(req: Request) {
     if (action === 'refresh_flow') {
       const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/refresh-flow`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
         body: JSON.stringify(port ? { port } : {}),
         signal: AbortSignal.timeout(135000),
       })
@@ -189,7 +191,7 @@ export async function POST(req: Request) {
       const { cookies, platform } = body
       const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/sync-cookies`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
         body: JSON.stringify({ port, cookies, platform }),
         signal: AbortSignal.timeout(15000),
       })
@@ -202,7 +204,7 @@ export async function POST(req: Request) {
       const { enabled } = body
       const gwRes = await fetch(`${GATEWAY_URL}/v1/ai-engine/accounts/update-slot`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...gatewayAuthHeaders() },
         body: JSON.stringify({ port, name, enabled }),
         signal: AbortSignal.timeout(5000),
       })

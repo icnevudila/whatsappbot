@@ -10,6 +10,21 @@ test('provider receipt and real output contract remain bound to the exact image 
   const reference = {job_id:'job-a',worker_id:'worker-a',target_id:'target-a',conversation_owner_job_id:'job-a',expected_reference_count:2,resolved_reference_count:2,uploaded_reference_count:2,composer_attachment_count:2,attachments_ready_at:'2026-10-03T12:00:00Z'}
   const result = {status:'completed',result_url:'https://fixture.invalid/output.png',result_sha256:createHash('sha256').update(bytes).digest('hex'),expected_reference_count:2,reference_receipt:reference}
   try {
+    await t.test('submit and polling carry the configured backend credential', async()=>{
+      const oldToken = process.env.OMNISTUDIO_GATEWAY_TOKEN
+      process.env.OMNISTUDIO_GATEWAY_TOKEN = 'fixture-backend-token'
+      try {
+        globalThis.fetch = async (input, init) => {
+          assert.equal(new Headers(init?.headers).get('authorization'), 'Bearer fixture-backend-token')
+          return String(input).includes('/status/') ? Response.json({status:'pending'}) : Response.json({job_id:'job-a'},{status:202})
+        }
+        await submitImageJob(job.gatewayUrl, {expected_reference_count:2})
+        assert.equal(await readImageJob(job,'tenant-a'),null)
+      } finally {
+        if(oldToken === undefined) delete process.env.OMNISTUDIO_GATEWAY_TOKEN
+        else process.env.OMNISTUDIO_GATEWAY_TOKEN=oldToken
+      }
+    })
     await t.test('two owned references and exact decoded output pass',async()=>{
       globalThis.fetch = async input=>String(input).includes('/status/') ? Response.json(result) : new Response(bytes,{headers:{'content-type':'image/png'}})
       const image = await readImageJob(job,'tenant-a')
@@ -19,6 +34,17 @@ test('provider receipt and real output contract remain bound to the exact image 
       for(const changed of [{reference_receipt:null},{expected_reference_count:1},{reference_receipt:{...reference,job_id:'job-b'}}]){
         let downloads=0
         globalThis.fetch = async input=>{if(!String(input).includes('/status/')) downloads++;return Response.json({...result,...changed})}
+        await assert.rejects(readImageJob(job,'tenant-a'),ImageJobReconciliationError)
+        assert.equal(downloads,0)
+      }
+    })
+    await t.test('foreign output origins cannot receive a backend credential or trigger SSRF',async()=>{
+      for (const result_url of ['http://127.0.0.1/private','https://other.invalid/output.png','file:///private/output.png','https://user:pass@fixture.invalid/output.png']) {
+        let downloads=0
+        globalThis.fetch=async input=>{
+          if(!String(input).includes('/status/')) downloads++
+          return Response.json({...result,result_url})
+        }
         await assert.rejects(readImageJob(job,'tenant-a'),ImageJobReconciliationError)
         assert.equal(downloads,0)
       }

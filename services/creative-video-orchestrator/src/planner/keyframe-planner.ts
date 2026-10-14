@@ -56,6 +56,7 @@ export class KeyframePlanner {
         .map(r => ({ role: r.role, filePath: r.file_path!, sha256: r.sha256 }))
 
       keyframeResult = await this.imageProvider.generateKeyframe(keyframePrompt, refAssets, {
+        tenantId: snapshot.org_id,
         aspectRatio: snapshot.aspect_ratio,
         width: snapshot.aspect_ratio === '9:16' ? 1080 : 1920,
         height: snapshot.aspect_ratio === '9:16' ? 1920 : 1080,

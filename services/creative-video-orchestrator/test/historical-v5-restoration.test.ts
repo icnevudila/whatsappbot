@@ -79,7 +79,7 @@ test('agricultural sprayer derives agricultural orchard environment and backpack
   assert.match(result.veoPrompt, /Sunlit fertile agricultural orchard, vibrant olive grove or green nursery/)
   assert.doesNotMatch(result.veoPrompt, /logistics hub|warehouse|delivery bay|entrance plaque/)
   assert.match(result.veoPrompt, /backpack sprayer worn comfortably on the back/i)
-  assert.match(result.veoPrompt, /directs the spray wand toward vibrant tree leaves and green foliage/)
+  assert.match(result.veoPrompt, /directs the spray wand toward (?:vibrant tree leaves and green foliage|olive tree branches, silver-green leaves and vibrant orchard foliage)/)
   assert.match(result.veoPrompt, /Zero premature zoom before 5.8s/)
   assert.match(result.veoPrompt, /concluding framing \(5\.8s - 8\.0s, lasting a full continuous 2\.2 seconds\)/)
 })

@@ -1,3 +1,4 @@
+import { gatewayAuthHeaders } from '@/lib/ai/gateway-auth'
 import { NextResponse } from 'next/server'
 import { checkIsAuthenticated } from '@/app/canli-takip/auth'
 import { createClient } from '@supabase/supabase-js'
@@ -37,6 +38,7 @@ export async function GET() {
     let aiEngineStatus = null
     try {
       const aiRes = await fetch('http://167.233.201.31:3456/v1/ai-engine/status', {
+        headers: gatewayAuthHeaders(),
         signal: AbortSignal.timeout(4500),
         cache: 'no-store',
       })

@@ -145,7 +145,7 @@ test('4. Standard generative image prompt preserves CTA, price, promo, brand ide
     assert.ok(directed.includes(customerScene), `${generationType} must retain the last customer instruction`)
     assert.match(directed, /STRICT PRODUCT FIDELITY/)
     assert.match(directed, /STRICT LOGO FIDELITY/)
-    if (generationType === 'revision') assert.match(directed, /STRICTLY PRESERVE the exact existing scene/)
+    if (generationType === 'revision') assert.match(directed, /strictly preserve the exact existing scene/i)
     if (generationType === 'variation') assert.match(directed, /Do NOT freeze or copy the old canvas layout/)
     const v3 = buildCreativePrompt({ ...snapshot, products: snapshot.products.map(product => ({ ...product, oldPrice: null, promo: null })), instruction: customerScene, generationType,
       baseCreativeId: generationType === 'new' ? null : 'parent-creative' }, { mode: 'V3' }).prompt

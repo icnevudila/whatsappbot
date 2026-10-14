@@ -72,7 +72,7 @@ function buildProviders(config: ResolvedAiConfig): Record<AiProviderId, ImagePro
         const response = await fetch(`${gatewayUrl}/v1/images/generations`, {
           method: 'POST',
           signal: AbortSignal.timeout(180000),
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY || ''}` },
           body: JSON.stringify({
             prompt,
             size,

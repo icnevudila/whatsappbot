@@ -1025,7 +1025,7 @@ async function handle(job: JobRow): Promise<unknown> {
       // Gateway'den video durumunu kontrol et
       const statusRes = await fetch(
         `${gatewayUrl}/v1/videos/status/${encodeURIComponent(flowJobId)}`,
-        { signal: AbortSignal.timeout(15_000) },
+        { headers: { Authorization: `Bearer ${process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY || ''}` }, signal: AbortSignal.timeout(15_000) },
       )
 
       if (statusRes.status === 404) {

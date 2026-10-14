@@ -169,17 +169,12 @@ export function cleanAiMessage(text: string, businessName?: string | null): stri
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/^(?:işte|İşte|iste|İste)\s+(?:mesajınız|metniniz)[:\s]*/iu, '')
     .replace(/^(?:(?:Samimi|Profesyonel|Satış\s+Odaklı|Kısa|Detaylı)\s+)?(?:WhatsApp\s+)?Kampanya\s+(?:Mesajı|Metni)\s*:?\s*\r?\n+/i, '')
-    .replace(/^(?:[^\n]{1,60}(?:kampanya|reklam|mesaj|metin|öneri)[^\n]{0,40}:?\s*\r?\n+)/i, '')
     .trim()
 
   // Sızan AI komutları ve meta açıklamaları temizle (ör. "Kampanya tasarrufunu vurgula", "Not: ...")
   cleaned = cleaned
     .replace(/\r?\n+(?:(?:Kampanya\s+)?tasarrufunu\s+vurgula|Teklifi\s+daha\s+cazip\s+hale\s+getir|Not\s*:.*|Açıklama\s*:.*|Değişiklikler\s*:.*)$/gi, '')
     .trim()
-
-  if (!cleaned && text.trim()) {
-    cleaned = text.replace(/^["'`]+|["'`]+$/g, '').trim()
-  }
 
   return cleaned
 }
