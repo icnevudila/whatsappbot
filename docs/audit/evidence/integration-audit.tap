@@ -1,0 +1,759 @@
+TAP version 13
+# Subtest: PostgreSQL fixture: exact video approval is atomic and rejects stale or foreign artifacts
+    # Subtest: current owned reviewed 10s bytes publish both records together
+    ok 1 - current owned reviewed 10s bytes publish both records together
+      ---
+      duration_ms: 86.313
+      type: 'test'
+      ...
+    # Subtest: raw 8s fails closed with neither record approved
+    ok 2 - raw 8s fails closed with neither record approved
+      ---
+      duration_ms: 37.1933
+      type: 'test'
+      ...
+    # Subtest: unverified fails closed with neither record approved
+    ok 3 - unverified fails closed with neither record approved
+      ---
+      duration_ms: 39.3937
+      type: 'test'
+      ...
+    # Subtest: foreign output fails closed with neither record approved
+    ok 4 - foreign output fails closed with neither record approved
+      ---
+      duration_ms: 38.4423
+      type: 'test'
+      ...
+    # Subtest: old job fails closed with neither record approved
+    ok 5 - old job fails closed with neither record approved
+      ---
+      duration_ms: 38.9108
+      type: 'test'
+      ...
+    # Subtest: wrong aspect fails closed with neither record approved
+    ok 6 - wrong aspect fails closed with neither record approved
+      ---
+      duration_ms: 32.2784
+      type: 'test'
+      ...
+    # Subtest: old revision fails closed with neither record approved
+    ok 7 - old revision fails closed with neither record approved
+      ---
+      duration_ms: 35.7956
+      type: 'test'
+      ...
+    # Subtest: storage absent fails closed with neither record approved
+    ok 8 - storage absent fails closed with neither record approved
+      ---
+      duration_ms: 30.6815
+      type: 'test'
+      ...
+    # Subtest: wrong SHA and foreign caller cannot release bytes
+    ok 9 - wrong SHA and foreign caller cannot release bytes
+      ---
+      duration_ms: 32.5504
+      type: 'test'
+      ...
+    1..9
+ok 1 - PostgreSQL fixture: exact video approval is atomic and rejects stale or foreign artifacts
+  ---
+  duration_ms: 10673.9289
+  type: 'test'
+  ...
+# Subtest: Brand Kit + Sales Campaign Fidelity Suite (EK P0)
+    # Subtest: 1. Bofe Tarım: Brand kit color roles, product immunity, and mandatory commercial core
+    ok 1 - 1. Bofe Tarım: Brand kit color roles, product immunity, and mandatory commercial core
+      ---
+      duration_ms: 12.8705
+      type: 'test'
+      ...
+    # Subtest: 2. Ayvazoğlu İnşaat: Brand kit color roles and heavy industry commercial facts
+    ok 2 - 2. Ayvazoğlu İnşaat: Brand kit color roles and heavy industry commercial facts
+      ---
+      duration_ms: 1.2096
+      type: 'test'
+      ...
+    # Subtest: 3. Mesajify: High-tech SaaS brand kit and conversion offer
+    ok 3 - 3. Mesajify: High-tech SaaS brand kit and conversion offer
+      ---
+      duration_ms: 2.377
+      type: 'test'
+      ...
+    # Subtest: 4. Negative claim safety: Unverified warranty seals or fake specs are strictly excluded
+    ok 4 - 4. Negative claim safety: Unverified warranty seals or fake specs are strictly excluded
+      ---
+      duration_ms: 2.8434
+      type: 'test'
+      ...
+    # Subtest: 5. Real Bofe snapshot regression: template family override, text density consistency, no floral or terracotta pollution
+    ok 5 - 5. Real Bofe snapshot regression: template family override, text density consistency, no floral or terracotta pollution
+      ---
+      duration_ms: 3.57
+      type: 'test'
+      ...
+    # Subtest: 6. BRAND_SHOWCASE mode: Price and discount are NOT mandatory, pure brand visual focus
+    ok 6 - 6. BRAND_SHOWCASE mode: Price and discount are NOT mandatory, pure brand visual focus
+      ---
+      duration_ms: 2.0019
+      type: 'test'
+      ...
+    1..6
+ok 2 - Brand Kit + Sales Campaign Fidelity Suite (EK P0)
+  ---
+  duration_ms: 28.3891
+  type: 'suite'
+  ...
+# Subtest: normalizes heterogeneous job states without changing source schemas
+ok 3 - normalizes heterogeneous job states without changing source schemas
+  ---
+  duration_ms: 5.0561
+  type: 'test'
+  ...
+# Subtest: projects minimum required control-plane job types
+ok 4 - projects minimum required control-plane job types
+  ---
+  duration_ms: 0.9177
+  type: 'test'
+  ...
+# Subtest: uses the canonical browser-worker state vocabulary
+ok 5 - uses the canonical browser-worker state vocabulary
+  ---
+  duration_ms: 1.2764
+  type: 'test'
+  ...
+# Subtest: warmup policy handles boundaries, missing, invalid and future dates conservatively
+ok 6 - warmup policy handles boundaries, missing, invalid and future dates conservatively
+  ---
+  duration_ms: 6.9099
+  type: 'test'
+  ...
+# Subtest: authentication redirects reject external and ambiguous paths
+ok 7 - authentication redirects reject external and ambiguous paths
+  ---
+  duration_ms: 1.4099
+  type: 'test'
+  ...
+# Subtest: successful delivery returns the original receipt
+ok 8 - successful delivery returns the original receipt
+  ---
+  duration_ms: 1.3973
+  type: 'test'
+  ...
+# Subtest: delivery timeout cannot turn a late success into an automatic retry
+ok 9 - delivery timeout cannot turn a late success into an automatic retry
+  ---
+  duration_ms: 16.8692
+  type: 'test'
+  ...
+# Subtest: lost receipts and network failures are uncertain, explicit account locks remain recognizable
+ok 10 - lost receipts and network failures are uncertain, explicit account locks remain recognizable
+  ---
+  duration_ms: 1.7918
+  type: 'test'
+  ...
+# Subtest: Private image download preserves exact bytes/hash, MIME, safe UTF-8 attachment and no cache
+ok 11 - Private image download preserves exact bytes/hash, MIME, safe UTF-8 attachment and no cache
+  ---
+  duration_ms: 200.2045
+  type: 'test'
+  ...
+# Subtest: Video streams exact approved FINAL identity; storage_url RAW alias never used
+ok 12 - Video streams exact approved FINAL identity; storage_url RAW alias never used
+  ---
+  duration_ms: 141.7879
+  type: 'test'
+  ...
+# Subtest: Gateway signature binds filename, exact tenant and expiration without master bearer exposure
+ok 13 - Gateway signature binds filename, exact tenant and expiration without master bearer exposure
+  ---
+  duration_ms: 12.9679
+  type: 'test'
+  ...
+# Subtest: Foreign, missing, invalid IDs fail before storage signing or upstream request
+ok 14 - Foreign, missing, invalid IDs fail before storage signing or upstream request
+  ---
+  duration_ms: 12.3538
+  type: 'test'
+  ...
+# Subtest: Storage namespace/path traversal and arbitrary signed destination fail closed
+ok 15 - Storage namespace/path traversal and arbitrary signed destination fail closed
+  ---
+  duration_ms: 21.8107
+  type: 'test'
+  ...
+# Subtest: Unapproved, foreign and RAW video outputs never fetch
+ok 16 - Unapproved, foreign and RAW video outputs never fetch
+  ---
+  duration_ms: 4.9453
+  type: 'test'
+  ...
+# Subtest: Hash mismatch, content-type mismatch and invalid image bytes never release attachment
+ok 17 - Hash mismatch, content-type mismatch and invalid image bytes never release attachment
+  ---
+  duration_ms: 402.3905
+  type: 'test'
+  ...
+# Subtest: Deleted upstream file and pending creative return actionable failure; HEAD has no body
+ok 18 - Deleted upstream file and pending creative return actionable failure; HEAD has no body
+  ---
+  duration_ms: 56.5346
+  type: 'test'
+  ...
+# Subtest: Oversized upstream and mismatched persisted length fail before disk download
+ok 19 - Oversized upstream and mismatched persisted length fail before disk download
+  ---
+  duration_ms: 22.6186
+  type: 'test'
+  ...
+# Subtest: Existing playback byte ranges and seek semantics remain unchanged
+ok 20 - Existing playback byte ranges and seek semantics remain unchanged
+  ---
+  duration_ms: 6.1267
+  type: 'test'
+  ...
+# Subtest: Actual download route rejects anonymous/missing/mismatched sessions before any media query
+ok 21 - Actual download route rejects anonymous/missing/mismatched sessions before any media query
+  ---
+  duration_ms: 496.8766
+  type: 'test'
+  ...
+# Subtest: Actual route requires active membership and scopes even platform-admin queries to active tenant
+ok 22 - Actual route requires active membership and scopes even platform-admin queries to active tenant
+  ---
+  duration_ms: 674.9073
+  type: 'test'
+  ...
+# Subtest: Actual server action accepts brand logo-only snapshot without catalog mutation; offering still requires true reference
+ok 23 - Actual server action accepts brand logo-only snapshot without catalog mutation; offering still requires true reference
+  ---
+  duration_ms: 3066.3358
+  type: 'test'
+  ...
+# Subtest: Only explicit brand mode permits logo-only; missing logo and physical offering still fail
+ok 24 - Only explicit brand mode permits logo-only; missing logo and physical offering still fail
+  ---
+  duration_ms: 1.1345
+  type: 'test'
+  ...
+# Subtest: Brand cannot smuggle products/base refs; provider contract blocks logo-only video
+ok 25 - Brand cannot smuggle products/base refs; provider contract blocks logo-only video
+  ---
+  duration_ms: 0.4601
+  type: 'test'
+  ...
+# Subtest: Brand drafts survive reload only for the same tenant and with no fake product identity
+ok 26 - Brand drafts survive reload only for the same tenant and with no fake product identity
+  ---
+  duration_ms: 0.4803
+  type: 'test'
+  ...
+# Subtest: Brand prompt treats logo as identity, no invented product; true company facts retained
+ok 27 - Brand prompt treats logo as identity, no invented product; true company facts retained
+  ---
+  duration_ms: 3.2462
+  type: 'test'
+  ...
+# Subtest: Actual video create API refuses brand before catalog/quota/write/provider calls
+ok 28 - Actual video create API refuses brand before catalog/quota/write/provider calls
+  ---
+  duration_ms: 46.9872
+  type: 'test'
+  ...
+# Subtest: Creative Studio V2 Non-Blocking AI Planner Contract Suite
+    # Subtest: A. AI planner responds in 1 second: suggestion populates untouched fields
+    ok 1 - A. AI planner responds in 1 second: suggestion populates untouched fields
+      ---
+      duration_ms: 3.4198
+      type: 'test'
+      ...
+    # Subtest: B. AI planner takes 20 seconds: aborted at <= 5000ms budget, wizard usable, preview clickable
+    ok 2 - B. AI planner takes 20 seconds: aborted at <= 5000ms budget, wizard usable, preview clickable
+      ---
+      duration_ms: 535.0045
+      type: 'test'
+      ...
+    # Subtest: C. AI planner never responds: controller abort guarantees termination, no infinite loading
+    ok 3 - C. AI planner never responds: controller abort guarantees termination, no infinite loading
+      ---
+      duration_ms: 65.7055
+      type: 'test'
+      ...
+    # Subtest: D. User edits headline while AI pending: late AI does not overwrite edited field
+    ok 4 - D. User edits headline while AI pending: late AI does not overwrite edited field
+      ---
+      duration_ms: 0.6422
+      type: 'test'
+      ...
+    # Subtest: E. User changes style while AI pending: previous request is aborted and superseded
+    ok 5 - E. User changes style while AI pending: previous request is aborted and superseded
+      ---
+      duration_ms: 0.4551
+      type: 'test'
+      ...
+    # Subtest: F. Video AI planner slow: deterministic Turkish VO immediately available within word limits
+    ok 6 - F. Video AI planner slow: deterministic Turkish VO immediately available within word limits
+      ---
+      duration_ms: 1.6273
+      type: 'test'
+      ...
+    # Subtest: G. Step 1 -> Step 2 local copy synthesis is strictly < 200ms
+    ok 7 - G. Step 1 -> Step 2 local copy synthesis is strictly < 200ms
+      ---
+      duration_ms: 1.2858
+      type: 'test'
+      ...
+    # Subtest: H. Terminal State FAILED: renders clear error UI and action controls, eliminating blank screen
+    ok 8 - H. Terminal State FAILED: renders clear error UI and action controls, eliminating blank screen
+      ---
+      duration_ms: 1.9857
+      type: 'test'
+      ...
+    # Subtest: I. Terminal State NEEDS_REVIEW: renders review banner and playback preview if available
+    ok 9 - I. Terminal State NEEDS_REVIEW: renders review banner and playback preview if available
+      ---
+      duration_ms: 0.6519
+      type: 'test'
+      ...
+    # Subtest: J. Terminal State COMPLETED without playback URL: renders processing placeholder instead of empty void
+    ok 10 - J. Terminal State COMPLETED without playback URL: renders processing placeholder instead of empty void
+      ---
+      duration_ms: 1.4581
+      type: 'test'
+      ...
+    # Subtest: K. No Invented Marketing Claims: fallback copy uses ONLY factual brand/product/offer, zero invented superiority or urgency claims
+    ok 11 - K. No Invented Marketing Claims: fallback copy uses ONLY factual brand/product/offer, zero invented superiority or urgency claims
+      ---
+      duration_ms: 17.2504
+      type: 'test'
+      ...
+    # Subtest: L. Voiceover Timing Contract: speechTimeline ends at 5.25s (< 5.5s) and prompt block enforces finishing before 5.5s
+    ok 12 - L. Voiceover Timing Contract: speechTimeline ends at 5.25s (< 5.5s) and prompt block enforces finishing before 5.5s
+      ---
+      duration_ms: 0.6866
+      type: 'test'
+      ...
+    # Subtest: M. Provider Prompt Validation: prompt satisfies real-video-providers validation
+    ok 13 - M. Provider Prompt Validation: prompt satisfies real-video-providers validation
+      ---
+      duration_ms: 0.6586
+      type: 'test'
+      ...
+    1..13
+ok 29 - Creative Studio V2 Non-Blocking AI Planner Contract Suite
+  ---
+  duration_ms: 636.8692
+  type: 'suite'
+  ...
+# Subtest: V3 images require explicit review with tenant-owned decoded receipt; legacy publication unchanged
+ok 30 - V3 images require explicit review with tenant-owned decoded receipt; legacy publication unchanged
+  ---
+  duration_ms: 6.2008
+  type: 'test'
+  ...
+# Subtest: Turkish money and discount validation fail closed before either provider
+ok 31 - Turkish money and discount validation fail closed before either provider
+  ---
+  duration_ms: 3.5021
+  type: 'test'
+  ...
+# Subtest: V3 brief preserves exact commerce, color roles and product identity across independent sectors
+ok 32 - V3 brief preserves exact commerce, color roles and product identity across independent sectors
+  ---
+  duration_ms: 5.9899
+  type: 'test'
+  ...
+# Subtest: V3 video keeps one physically supported subject and 3 beats; legacy remains three-cut
+ok 33 - V3 video keeps one physically supported subject and 3 beats; legacy remains three-cut
+  ---
+  duration_ms: 83.2258
+  type: 'test'
+  ...
+# Subtest: real embedded PostgreSQL: concurrent render INSERTs, tenant isolation and retry uniqueness
+ok 34 - real embedded PostgreSQL: concurrent render INSERTs, tenant isolation and retry uniqueness
+  ---
+  duration_ms: 13195.5747
+  type: 'test'
+  ...
+# Subtest: P0 Fast-ACK Creative Submission & Art Direction Contract Suite
+    # Subtest: 1. ART_DIRECTION_AI_READY_RESULT: precomputed AI plan freezes instantly with AI_PRECOMPUTED source
+    ok 1 - 1. ART_DIRECTION_AI_READY_RESULT: precomputed AI plan freezes instantly with AI_PRECOMPUTED source
+      ---
+      duration_ms: 9.9085
+      type: 'test'
+      ...
+    # Subtest: 2. ART_DIRECTION_FALLBACK_RESULT: missing AI plan immediately uses deterministic Designer fallback
+    ok 2 - 2. ART_DIRECTION_FALLBACK_RESULT: missing AI plan immediately uses deterministic Designer fallback
+      ---
+      duration_ms: 14.6019
+      type: 'test'
+      ...
+    # Subtest: 3. LATE_AI_MUTATION_TEST: persisted creative snapshot is strictly immutable against late background AI updates
+    ok 3 - 3. LATE_AI_MUTATION_TEST: persisted creative snapshot is strictly immutable against late background AI updates
+      ---
+      duration_ms: 0.7425
+      type: 'test'
+      ...
+    # Subtest: 4. IDEMPOTENCY_RESULT: duplicate submission with same requestKey preserves single durable job & creative
+    ok 4 - 4. IDEMPOTENCY_RESULT: duplicate submission with same requestKey preserves single durable job & creative
+      ---
+      duration_ms: 0.7844
+      type: 'test'
+      ...
+    # Subtest: 5. FAST_SUBMISSION_BUDGET: critical ACK path executes well within <3000ms budget
+    ok 5 - 5. FAST_SUBMISSION_BUDGET: critical ACK path executes well within <3000ms budget
+      ---
+      duration_ms: 0.7026
+      type: 'test'
+      ...
+    1..5
+ok 35 - P0 Fast-ACK Creative Submission & Art Direction Contract Suite
+  ---
+  duration_ms: 32.6484
+  type: 'suite'
+  ...
+# Subtest: Flow RLS migration is repeatable, safe before schema and rejects global tenant reads
+ok 36 - Flow RLS migration is repeatable, safe before schema and rejects global tenant reads
+  ---
+  duration_ms: 11720.1501
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Canonical 7-Stage Engine State Mapping
+ok 37 - Production Progress Authority: Canonical 7-Stage Engine State Mapping
+  ---
+  duration_ms: 5.2352
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: VISUAL_QA_EVALUATING is strictly QA, NEVER outro branding
+ok 38 - Production Progress Authority: VISUAL_QA_EVALUATING is strictly QA, NEVER outro branding
+  ---
+  duration_ms: 0.6084
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Terminal Failure & Review Mapping
+ok 39 - Production Progress Authority: Terminal Failure & Review Mapping
+  ---
+  duration_ms: 0.627
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Elapsed time alone NEVER mutates authoritative stage
+ok 40 - Production Progress Authority: Elapsed time alone NEVER mutates authoritative stage
+  ---
+  duration_ms: 0.5315
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Data-Driven ETA with Insufficient History yields LOW confidence
+ok 41 - Production Progress Authority: Data-Driven ETA with Insufficient History yields LOW confidence
+  ---
+  duration_ms: 1.3454
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Data-Driven ETA with Adequate History yields Medium/High Confidence
+ok 42 - Production Progress Authority: Data-Driven ETA with Adequate History yields Medium/High Confidence
+  ---
+  duration_ms: 0.6094
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Completed state always yields 0 remaining ETA
+ok 43 - Production Progress Authority: Completed state always yields 0 remaining ETA
+  ---
+  duration_ms: 0.7276
+  type: 'test'
+  ...
+# Subtest: Production Progress Authority: Worker Capacity Concurrency scaling
+ok 44 - Production Progress Authority: Worker Capacity Concurrency scaling
+  ---
+  duration_ms: 0.5428
+  type: 'test'
+  ...
+# Subtest: the actual retry action retains the authenticated tenant client for background logo resolution
+ok 45 - the actual retry action retains the authenticated tenant client for background logo resolution
+  ---
+  duration_ms: 734.2839
+  type: 'test'
+  ...
+# Subtest: VEO v4 Compiler - Snapshot to Brief Normalization
+ok 46 - VEO v4 Compiler - Snapshot to Brief Normalization
+  ---
+  duration_ms: 4.2257
+  type: 'test'
+  ...
+# Subtest: VEO v4 Compiler - Deterministic Compilation & Quality Checks
+ok 47 - VEO v4 Compiler - Deterministic Compilation & Quality Checks
+  ---
+  duration_ms: 2.2239
+  type: 'test'
+  ...
+# Subtest: VEO v4 Compiler - Missing Subject Triggers Needs Clarification
+ok 48 - VEO v4 Compiler - Missing Subject Triggers Needs Clarification
+  ---
+  duration_ms: 0.6105
+  type: 'test'
+  ...
+# [PASS] Fixture 1_brick_bulk: Tuğla / Toplu Ürün (İnşaat / Üretici) -> Offer: physical_product, Strat: scale_and_availability, Words: 11
+# [PASS] Fixture 2_sprayer_agri: Sırt Pompası / Tarım Ekipmanı -> Offer: physical_product, Strat: product_demonstration, Words: 9
+# [PASS] Fixture 3_b2b_data_saas: B2B Veri Yazılımı (SaaS / Dijital) -> Offer: digital_product_or_saas, Strat: discovery_or_opportunity, Words: 9
+# [PASS] Fixture 4_restaurant_food: Restoran / Gastronomi -> Offer: food_or_consumable, Strat: sensory_desire, Words: 10
+# [PASS] Fixture 5_dental_health: Diş Kliniği / Sağlık Hizmeti (Regüle Alan) -> Offer: local_service, Strat: process_proof, Words: 11
+# [PASS] Fixture 6_real_estate: Emlak / Villa Projesi (High Consideration) -> Offer: property_or_high_consideration_offer, Strat: experience_preview, Words: 11
+# [PASS] Fixture 7_auto_service: Oto Servis / Detailing -> Offer: local_service, Strat: problem_solution, Words: 10
+# [PASS] Fixture 8_beauty_salon: Kuaför / Güzellik Salonu -> Offer: local_service, Strat: problem_solution, Words: 10
+# [PASS] Fixture 9_furniture: Mobilya / Dekorasyon -> Offer: physical_product, Strat: offer_and_urgency, Words: 11
+# [PASS] Fixture 10_education_online: Online Eğitim / Akademi -> Offer: event_or_education, Strat: discovery_or_opportunity, Words: 10
+# [PASS] Fixture 11_hotel_tourism: Turizm / Butik Otel Deneyimi -> Offer: venue_or_experience, Strat: experience_preview, Words: 11
+# [PASS] Fixture 12_legal_consulting: Hukuk / Profesyonel Danışmanlık (Regüle / Hassas) -> Offer: professional_service, Strat: trust_and_expertise, Words: 11
+# [PASS] Fixture 13_fitness_gym: Spor Salonu / Fitness -> Offer: local_service, Strat: problem_solution, Words: 10
+# [PASS] Fixture 14_pet_service: Evcil Hayvan Hizmeti / Veteriner -> Offer: local_service, Strat: problem_solution, Words: 10
+# [PASS] Fixture 15_unseen_novel_sector: Daha Önce Tanımlanmamış Hayali Sektör (Biyolüminesan Yosun Filtresi) -> Offer: physical_product, Strat: product_demonstration, Words: 9
+# Subtest: V5 Engine - 15 Universal Sector & Business Scenarios Test
+ok 49 - V5 Engine - 15 Universal Sector & Business Scenarios Test
+  ---
+  duration_ms: 226.4571
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - Empty Sector Hint Works Gracefully
+ok 50 - V5 Engine Edge Case - Empty Sector Hint Works Gracefully
+  ---
+  duration_ms: 17.8364
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - Only Product Name Supplied
+ok 51 - V5 Engine Edge Case - Only Product Name Supplied
+  ---
+  duration_ms: 3.448
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - No Price in Input (Never Invent Price)
+ok 52 - V5 Engine Edge Case - No Price in Input (Never Invent Price)
+  ---
+  duration_ms: 1.696
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - Discount percentage missing but kampanya mentioned
+ok 53 - V5 Engine Edge Case - Discount percentage missing but kampanya mentioned
+  ---
+  duration_ms: 20.1811
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - No Logo Reference (Never Invent Emblem)
+ok 54 - V5 Engine Edge Case - No Logo Reference (Never Invent Emblem)
+  ---
+  duration_ms: 1.731
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - Product Reference Present (Locks Geometry)
+ok 55 - V5 Engine Edge Case - Product Reference Present (Locks Geometry)
+  ---
+  duration_ms: 2.0371
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - Missing Subject Triggers Needs Clarification
+ok 56 - V5 Engine Edge Case - Missing Subject Triggers Needs Clarification
+  ---
+  duration_ms: 1.8649
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - 30 Word Voiceover Request is Auto-Repaired to <= 16 Words
+ok 57 - V5 Engine Edge Case - 30 Word Voiceover Request is Auto-Repaired to <= 16 Words
+  ---
+  duration_ms: 11.8418
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - Regulated Health with Result Guarantee is Repaired
+ok 58 - V5 Engine Edge Case - Regulated Health with Result Guarantee is Repaired
+  ---
+  duration_ms: 4.2896
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - Multiple Products (One Focal Hero Selected)
+ok 59 - V5 Engine Edge Case - Multiple Products (One Focal Hero Selected)
+  ---
+  duration_ms: 1.8565
+  type: 'test'
+  ...
+# Subtest: V5 Engine Edge Case - Turkish Characters & Brand Spelling Preserved
+ok 60 - V5 Engine Edge Case - Turkish Characters & Brand Spelling Preserved
+  ---
+  duration_ms: 4.42
+  type: 'test'
+  ...
+# Subtest: Rule 1: Brand Information is Locked (Single Source of Truth, Model Cannot Alter)
+ok 61 - Rule 1: Brand Information is Locked (Single Source of Truth, Model Cannot Alter)
+  ---
+  duration_ms: 42.1662
+  type: 'test'
+  ...
+# Subtest: Rule 2: Protect Product & Offer (Brand kit colors are not confused with product features)
+ok 62 - Rule 2: Protect Product & Offer (Brand kit colors are not confused with product features)
+  ---
+  duration_ms: 8.1112
+  type: 'test'
+  ...
+# Subtest: Rule 3 & 5: Continuous Take default for product references to prevent geometry drift
+ok 63 - Rule 3 & 5: Continuous Take default for product references to prevent geometry drift
+  ---
+  duration_ms: 6.9945
+  type: 'test'
+  ...
+# Subtest: Rule 4: Decouple Video and Brand Layer (Raw Veo text-free, overlay carries logo & CTA badge)
+ok 64 - Rule 4: Decouple Video and Brand Layer (Raw Veo text-free, overlay carries logo & CTA badge)
+  ---
+  duration_ms: 4.0599
+  type: 'test'
+  ...
+# Subtest: Rule 6: Audio Definition (Voiceover is 10-14 words, Turkish, wired into AUDIO directive)
+ok 65 - Rule 6: Audio Definition (Voiceover is 10-14 words, Turkish, wired into AUDIO directive)
+  ---
+  duration_ms: 5.6652
+  type: 'test'
+  ...
+# Subtest: Rule 7: Standard Negative Constraints (Includes all forbidden hallucinations)
+ok 66 - Rule 7: Standard Negative Constraints (Includes all forbidden hallucinations)
+  ---
+  duration_ms: 0.712
+  type: 'test'
+  ...
+# Subtest: Rule 8: Real Video Artifact Validation (Returns not_checked if vision tool not connected)
+ok 67 - Rule 8: Real Video Artifact Validation (Returns not_checked if vision tool not connected)
+  ---
+  duration_ms: 1.2069
+  type: 'test'
+  ...
+# Subtest: 1. Dynamic hook candidate scoring: different inputs produce different winning candidates
+ok 68 - 1. Dynamic hook candidate scoring: different inputs produce different winning candidates
+  ---
+  duration_ms: 79.45
+  type: 'test'
+  ...
+# Subtest: 2. Claim validation counter-examples: %5 vs %50, material vs discount, "indirim yok", negation
+ok 69 - 2. Claim validation counter-examples: %5 vs %50, material vs discount, "indirim yok", negation
+  ---
+  duration_ms: 11.0538
+  type: 'test'
+  ...
+# Subtest: 3. Hook and scene descriptions subjected to claim validation (no unverified binlerce stok, steam, or cure)
+ok 70 - 3. Hook and scene descriptions subjected to claim validation (no unverified binlerce stok, steam, or cure)
+  ---
+  duration_ms: 17.9354
+  type: 'test'
+  ...
+# Subtest: 4. Decoupled mappings: "basınç" does NOT become "yorulmadan yüksek basınç" and percentage does NOT become "toptan iskonto"
+ok 71 - 4. Decoupled mappings: "basınç" does NOT become "yorulmadan yüksek basınç" and percentage does NOT become "toptan iskonto"
+  ---
+  duration_ms: 8.2763
+  type: 'test'
+  ...
+# Subtest: 5. claimsAllowed is dynamic; any unproven control stops production (status: blocked)
+ok 72 - 5. claimsAllowed is dynamic; any unproven control stops production (status: blocked)
+  ---
+  duration_ms: 6.8349
+  type: 'test'
+  ...
+# Subtest: 6. continuous_take maintains ONE simple unified camera route across all time segments
+ok 73 - 6. continuous_take maintains ONE simple unified camera route across all time segments
+  ---
+  duration_ms: 4.1365
+  type: 'test'
+  ...
+# Subtest: 7. Test objects strictly conform to TypeScript schemas (VoiceoverOutput, ShotPlanOutput)
+ok 74 - 7. Test objects strictly conform to TypeScript schemas (VoiceoverOutput, ShotPlanOutput)
+  ---
+  duration_ms: 11.8753
+  type: 'test'
+  ...
+# Subtest: 8. Overlay texts are clean of unverified hype words (özel reçeteli, kusursuz, anlık)
+ok 75 - 8. Overlay texts are clean of unverified hype words (özel reçeteli, kusursuz, anlık)
+  ---
+  duration_ms: 4.333
+  type: 'test'
+  ...
+# Subtest: 9. Complete removal of word-slicing across VO and overlay with recursive re-validation
+ok 76 - 9. Complete removal of word-slicing across VO and overlay with recursive re-validation
+  ---
+  duration_ms: 19.1232
+  type: 'test'
+  ...
+# Subtest: 10. Timeline continuity: 0.0s to 8.0s, sequential, positive durations, zero gaps, zero overlaps
+ok 77 - 10. Timeline continuity: 0.0s to 8.0s, sequential, positive durations, zero gaps, zero overlaps
+  ---
+  duration_ms: 18.3448
+  type: 'test'
+  ...
+# Subtest: 11. 100% voiceover text synchronization across voiceover, Veo AUDIO directive, and subtitles sourceText
+ok 78 - 11. 100% voiceover text synchronization across voiceover, Veo AUDIO directive, and subtitles sourceText
+  ---
+  duration_ms: 2.4022
+  type: 'test'
+  ...
+# Subtest: 12. Preserves ctaText, ctaDestination, campaignDeadline, deliveryArea, and Turkish brand characters
+ok 79 - 12. Preserves ctaText, ctaDestination, campaignDeadline, deliveryArea, and Turkish brand characters
+  ---
+  duration_ms: 3.1186
+  type: 'test'
+  ...
+# Subtest: 13. Three concrete defect regression tests: cotton vs discount, cross-product discount leakage, retail vs wholesale overlay
+ok 80 - 13. Three concrete defect regression tests: cotton vs discount, cross-product discount leakage, retail vs wholesale overlay
+  ---
+  duration_ms: 23.721
+  type: 'test'
+  ...
+# Subtest: 14. Four specific verification gap regression tests: sentence-isolated product scoping, promo negation, condition broadening prevention, and non-wholesale headline
+ok 81 - 14. Four specific verification gap regression tests: sentence-isolated product scoping, promo negation, condition broadening prevention, and non-wholesale headline
+  ---
+  duration_ms: 5.8498
+  type: 'test'
+  ...
+# [VideoScenario] V6 ChatGPT çağrısı başarısız, deterministik V6 motoru çalıştırılıyor: Error: Hiçbir metin sağlayıcı sonuç vermedi. Mesajify Custom AI (OmniStudio Gateway): CHATGPT_API_KEY_MISSING: OmniStudio API anahtarı (OMNISTUDIO_GATEWAY_TOKEN) yapılandırılmamış.
+#     at completeText (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\apps\\customer\\src\\lib\\ai\\text.ts:188:9)
+#     at async generateVideoScenarios (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\apps\\customer\\src\\lib\\creative\\video-scenario.ts:63:29)
+#     at async TestContext.<anonymous> (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\tests\\video_scenarios.test.ts:21:21)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+# Subtest: Video Scenarios Generator - Mesajify Dönerci & Digital Brochure Context
+ok 82 - Video Scenarios Generator - Mesajify Dönerci & Digital Brochure Context
+  ---
+  duration_ms: 519.261
+  type: 'test'
+  ...
+# [VideoScenario] V6 ChatGPT çağrısı başarısız, deterministik V6 motoru çalıştırılıyor: Error: Hiçbir metin sağlayıcı sonuç vermedi. Mesajify Custom AI (OmniStudio Gateway): CHATGPT_API_KEY_MISSING: OmniStudio API anahtarı (OMNISTUDIO_GATEWAY_TOKEN) yapılandırılmamış.
+#     at completeText (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\apps\\customer\\src\\lib\\ai\\text.ts:188:9)
+#     at async generateVideoScenarios (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\apps\\customer\\src\\lib\\creative\\video-scenario.ts:63:29)
+#     at async TestContext.<anonymous> (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\tests\\video_scenarios.test.ts:64:21)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+# Subtest: Video Scenarios Generator - Silent (Konuşmasız) Mode Check
+ok 83 - Video Scenarios Generator - Silent (Konuşmasız) Mode Check
+  ---
+  duration_ms: 51.356
+  type: 'test'
+  ...
+# [PASS] İnşaat / Tuğla -> Tuğla
+# [PASS] İnşaat / Çimento -> Hazır Harç & Çimento
+# [PASS] Tarım / Pompa -> 16L Şarjlı Sırt Pompası
+# [PASS] Gıda / Burger -> Gurme Dana Burger
+# [PASS] Gıda / Kahvaltı -> Serpme Köy Kahvaltısı
+# [PASS] Mobilya / Koltuk -> Modern Nubuk Köşe Koltuk
+# [PASS] Moda / Ayakkabı -> Hakiki Deri Klasik Ayakkabı
+# [PASS] Kozmetik / Parfüm -> Oud & Amber Parfüm
+# [PASS] Elektronik / Kulaklık -> Kablosuz ANC Kulaklık
+# [PASS] Otomotiv / Lastik -> Dört Mevsim Performans Lastiği
+# [PASS] Temizlik / Deterjan -> Doğal Yüzey Temizleyici
+# [PASS] Mücevher / Pırlanta -> Baget Kesim Pırlanta Yüzük
+# [PASS] Spor / Fitness -> Akıllı Direnç Antrenman Seti
+# [PASS] Sağlık / Diş -> Estetik Zirkonyum Diş & Gülüş Tasarımı
+# [PASS] Emlak / Villa -> Akıllı Lüks Doğa Villası
+# [PASS] Eğitim / Kitap -> İlham Veren Girişimcilik Kitap Seti
+# Subtest: Video Prompt Generator A-Z Industry Variations
+ok 84 - Video Prompt Generator A-Z Industry Variations
+  ---
+  duration_ms: 17.042
+  type: 'test'
+  ...
+1..84
+# tests 114
+# suites 3
+# pass 114
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 16149.619

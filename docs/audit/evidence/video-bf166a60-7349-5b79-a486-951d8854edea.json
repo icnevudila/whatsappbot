@@ -1,0 +1,112 @@
+{
+  "id": "bf166a60-7349-5b79-a486-951d8854edea",
+  "orgId": "2881f690-6853-4064-8768-307463ae6255",
+  "state": "FAILED",
+  "model": "veo-lite",
+  "aspect": "9:16",
+  "errorCode": "EXECUTION_FAILED",
+  "expectedReferences": 2,
+  "actualReferences": 2,
+  "updatedAt": "2026-10-14T19:45:26.830Z",
+  "events": [
+    {
+      "event_type": "JOB_CREATED",
+      "from_state": null,
+      "to_state": "PENDING",
+      "created_at": "2026-10-14T19:42:36.281Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "PENDING",
+      "to_state": "VALIDATING_INPUTS",
+      "created_at": "2026-10-14T19:42:37.042Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "VALIDATING_INPUTS",
+      "to_state": "QUEUED",
+      "created_at": "2026-10-14T19:42:37.642Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "QUEUED",
+      "to_state": "LEASED",
+      "created_at": "2026-10-14T19:42:41.556Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "LEASED",
+      "to_state": "PREPARING_ENV",
+      "created_at": "2026-10-14T19:42:43.482Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "PREPARING_ENV",
+      "to_state": "OPENING_PROJECT",
+      "created_at": "2026-10-14T19:43:48.287Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "OPENING_PROJECT",
+      "to_state": "ATTACHING_INGREDIENTS",
+      "created_at": "2026-10-14T19:44:04.939Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "ATTACHING_INGREDIENTS",
+      "to_state": "INGREDIENTS_VERIFIED",
+      "created_at": "2026-10-14T19:45:01.905Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "INGREDIENTS_VERIFIED",
+      "to_state": "GENERATING",
+      "created_at": "2026-10-14T19:45:02.374Z"
+    },
+    {
+      "event_type": "STATE_TRANSITION",
+      "from_state": "GENERATING",
+      "to_state": "FAILED",
+      "created_at": "2026-10-14T19:45:26.830Z"
+    }
+  ],
+  "submissionReady": true,
+  "requestHash": "55249481d9ddfe7972cc82ee55b8c0383df3ae49971a9804aa705a2c2e45ca7c",
+  "metadataKeys": [
+    "cta",
+    "offer",
+    "outro",
+    "language",
+    "ad_format",
+    "subtitles",
+    "brand_name",
+    "product_id",
+    "brand_kit_id",
+    "motion_style",
+    "generation_id",
+    "promotion_type",
+    "verified_claims",
+    "campaign_snapshot",
+    "catalog_product_id",
+    "created_by_user_id",
+    "environment_preset",
+    "requested_provider",
+    "authoritative_facts",
+    "canonical_asset_sha",
+    "fidelity_rule_count",
+    "generation_revision",
+    "video_submit_intent",
+    "creative_engine_mode",
+    "creative_revision_id",
+    "simple_v5_diagnostics",
+    "user_style_preference",
+    "video_submission_ready",
+    "generation_request_hash",
+    "fidelity_contract_applied",
+    "product_fidelity_contract",
+    "use_creative_orchestrator",
+    "generation_idempotency_key",
+    "video_submission_deadline_at"
+  ],
+  "errorMessage": "[FLOW_EXECUTION_FAILED] Generation failed with return code 1"
+}

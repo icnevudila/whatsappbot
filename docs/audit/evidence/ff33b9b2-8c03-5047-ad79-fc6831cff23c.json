@@ -1,0 +1,62 @@
+{
+  "id": "ff33b9b2-8c03-5047-ad79-fc6831cff23c",
+  "orgId": "2881f690-6853-4064-8768-307463ae6255",
+  "parentId": "2be5532f-1cc9-5d97-aac4-1623b4dbb4bd",
+  "status": "ready",
+  "error": null,
+  "format": "square",
+  "styleMode": "REAL_LIFE_CAMPAIGN",
+  "variationMode": "new_composition",
+  "offeringKind": "software",
+  "savedLogoPath": "2881f690-6853-4064-8768-307463ae6255/original-logo-e383102bc1be7a58.png",
+  "productIds": [
+    "2f047fbe-a90c-4bdc-b472-d969031048e1"
+  ],
+  "jobId": "job_0fb90ac5690c7d95",
+  "expectedReferenceCount": 2,
+  "outputReceipt": {
+    "size": 1884036,
+    "jobId": "job_0fb90ac5690c7d95",
+    "orgId": "2881f690-6853-4064-8768-307463ae6255",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "ecfaddd11d28c27623cb03ba8c9ba6a3be43fe22574b515f9b1588dfde7aec1e",
+    "mimeType": "image/png",
+    "creativeId": "ff33b9b2-8c03-5047-ad79-fc6831cff23c",
+    "storagePath": "2881f690-6853-4064-8768-307463ae6255/ff33b9b2-8c03-5047-ad79-fc6831cff23c/job_0fb90ac5690c7d95.png",
+    "decodedImage": true,
+    "referenceReceipt": {
+      "job_id": "job_0fb90ac5690c7d95",
+      "target_id": "29D889431AFF04DBB52C864E13D4B5CB",
+      "worker_id": "chatgpt-2",
+      "attachments_ready_at": "2026-10-14T19:39:51.019Z",
+      "expected_reference_count": 2,
+      "resolved_reference_count": 2,
+      "uploaded_reference_count": 2,
+      "composer_attachment_count": 2,
+      "conversation_owner_job_id": "job_0fb90ac5690c7d95"
+    }
+  },
+  "outputSha256": "ecfaddd11d28c27623cb03ba8c9ba6a3be43fe22574b515f9b1588dfde7aec1e",
+  "storagePath": "2881f690-6853-4064-8768-307463ae6255/ff33b9b2-8c03-5047-ad79-fc6831cff23c/job_0fb90ac5690c7d95.png",
+  "provider": {
+    "http": 200,
+    "id": "job_0fb90ac5690c7d95",
+    "status": "completed",
+    "expectedReferences": 2,
+    "referenceReceipt": {
+      "job_id": "job_0fb90ac5690c7d95",
+      "worker_id": "chatgpt-2",
+      "target_id": "29D889431AFF04DBB52C864E13D4B5CB",
+      "conversation_owner_job_id": "job_0fb90ac5690c7d95",
+      "expected_reference_count": 2,
+      "resolved_reference_count": 2,
+      "uploaded_reference_count": 2,
+      "composer_attachment_count": 2,
+      "attachments_ready_at": "2026-10-14T19:39:51.019Z"
+    },
+    "outputSha256": "ecfaddd11d28c27623cb03ba8c9ba6a3be43fe22574b515f9b1588dfde7aec1e",
+    "errorCode": null,
+    "reconciliationRequired": false
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "id": "9e9e6c16-6cfe-5dc6-ab5b-c6a461cdfbd1",
+  "orgId": "2881f690-6853-4064-8768-307463ae6255",
+  "parentId": null,
+  "status": "ready",
+  "error": null,
+  "format": "square",
+  "styleMode": "PREMIUM_SHOWCASE",
+  "variationMode": null,
+  "offeringKind": "software",
+  "savedLogoPath": "2881f690-6853-4064-8768-307463ae6255/original-logo-e383102bc1be7a58.png",
+  "productIds": [
+    "2f047fbe-a90c-4bdc-b472-d969031048e1"
+  ],
+  "jobId": "job_6cf4c489094d52d9",
+  "expectedReferenceCount": 2,
+  "outputReceipt": {
+    "size": 1378782,
+    "jobId": "job_6cf4c489094d52d9",
+    "orgId": "2881f690-6853-4064-8768-307463ae6255",
+    "width": 1254,
+    "height": 1254,
+    "sha256": "ba45702bf13bfc61e2921567f533ea8c243442bc9a1f07dbfb90a24cc4de798b",
+    "mimeType": "image/png",
+    "creativeId": "9e9e6c16-6cfe-5dc6-ab5b-c6a461cdfbd1",
+    "storagePath": "2881f690-6853-4064-8768-307463ae6255/9e9e6c16-6cfe-5dc6-ab5b-c6a461cdfbd1/job_6cf4c489094d52d9.png",
+    "decodedImage": true,
+    "referenceReceipt": {
+      "job_id": "job_6cf4c489094d52d9",
+      "target_id": "2E1473EB362F654FE4BDD42E2386C355",
+      "worker_id": "chatgpt-1",
+      "attachments_ready_at": "2026-10-14T19:34:05.973Z",
+      "expected_reference_count": 2,
+      "resolved_reference_count": 2,
+      "uploaded_reference_count": 2,
+      "composer_attachment_count": 2,
+      "conversation_owner_job_id": "job_6cf4c489094d52d9"
+    }
+  },
+  "outputSha256": "ba45702bf13bfc61e2921567f533ea8c243442bc9a1f07dbfb90a24cc4de798b",
+  "storagePath": "2881f690-6853-4064-8768-307463ae6255/9e9e6c16-6cfe-5dc6-ab5b-c6a461cdfbd1/job_6cf4c489094d52d9.png",
+  "provider": {
+    "http": 200,
+    "id": "job_6cf4c489094d52d9",
+    "status": "completed",
+    "expectedReferences": 2,
+    "referenceReceipt": {
+      "job_id": "job_6cf4c489094d52d9",
+      "worker_id": "chatgpt-1",
+      "target_id": "2E1473EB362F654FE4BDD42E2386C355",
+      "conversation_owner_job_id": "job_6cf4c489094d52d9",
+      "expected_reference_count": 2,
+      "resolved_reference_count": 2,
+      "uploaded_reference_count": 2,
+      "composer_attachment_count": 2,
+      "attachments_ready_at": "2026-10-14T19:34:05.973Z"
+    },
+    "outputSha256": "ba45702bf13bfc61e2921567f533ea8c243442bc9a1f07dbfb90a24cc4de798b",
+    "errorCode": null,
+    "reconciliationRequired": false
+  }
+}

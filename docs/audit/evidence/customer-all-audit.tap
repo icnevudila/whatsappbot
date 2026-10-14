@@ -1,0 +1,960 @@
+TAP version 13
+# Subtest: rejects empty provider output for rewrites without prices or a brand
+ok 1 - rejects empty provider output for rewrites without prices or a brand
+  ---
+  duration_ms: 7.074
+  type: 'test'
+  ...
+# Subtest: removes observed AI style labels without changing customer campaign copy
+ok 2 - removes observed AI style labels without changing customer campaign copy
+  ---
+  duration_ms: 1.9791
+  type: 'test'
+  ...
+# Subtest: removes an exact tenant brand campaign heading but preserves customer headlines
+ok 3 - removes an exact tenant brand campaign heading but preserves customer headlines
+  ---
+  duration_ms: 2.2467
+  type: 'test'
+  ...
+# Subtest: requested format rejects a decoded image of a different orientation without rejecting raster rounding
+ok 4 - requested format rejects a decoded image of a different orientation without rejecting raster rounding
+  ---
+  duration_ms: 4.0541
+  type: 'test'
+  ...
+# Subtest: real pixels determine dimensions and format, not requested metadata
+ok 5 - real pixels determine dimensions and format, not requested metadata
+  ---
+  duration_ms: 96.256
+  type: 'test'
+  ...
+# Subtest: empty, text-only and random output cannot qualify as image success
+ok 6 - empty, text-only and random output cannot qualify as image success
+  ---
+  duration_ms: 9.0656
+  type: 'test'
+  ...
+# Subtest: metadata-readable but truncated raster is rejected on pixel decode
+ok 7 - metadata-readable but truncated raster is rejected on pixel decode
+  ---
+  duration_ms: 17.6569
+  type: 'test'
+  ...
+# Subtest: oversized bytes are rejected before pixel work
+ok 8 - oversized bytes are rejected before pixel work
+  ---
+  duration_ms: 1.8387
+  type: 'test'
+  ...
+# Subtest: independent expected references block zero or partial payload before any provider request
+ok 9 - independent expected references block zero or partial payload before any provider request
+  ---
+  duration_ms: 4.0279
+  type: 'test'
+  ...
+# Subtest: storage read-back requires identical decoded pixels and actual byte hash
+ok 10 - storage read-back requires identical decoded pixels and actual byte hash
+  ---
+  duration_ms: 94.0268
+  type: 'test'
+  ...
+# Subtest: missing, truncated or altered stored bytes cannot qualify as durable success
+ok 11 - missing, truncated or altered stored bytes cannot qualify as durable success
+  ---
+  duration_ms: 6.1784
+  type: 'test'
+  ...
+# Subtest: provider receipt and real output contract remain bound to the exact image job
+    # Subtest: submit and polling carry the configured backend credential
+    ok 1 - submit and polling carry the configured backend credential
+      ---
+      duration_ms: 71.3305
+      type: 'test'
+      ...
+    # Subtest: two owned references and exact decoded output pass
+    ok 2 - two owned references and exact decoded output pass
+      ---
+      duration_ms: 67.7353
+      type: 'test'
+      ...
+    # Subtest: missing, mismatched count or foreign receipt fails before downloading artifact
+    ok 3 - missing, mismatched count or foreign receipt fails before downloading artifact
+      ---
+      duration_ms: 5.7236
+      type: 'test'
+      ...
+    # Subtest: foreign output origins cannot receive a backend credential or trigger SSRF
+    ok 4 - foreign output origins cannot receive a backend credential or trigger SSRF
+      ---
+      duration_ms: 9.242
+      type: 'test'
+      ...
+    # Subtest: wrong output SHA or oversized artifact cannot become a ready image
+    ok 5 - wrong output SHA or oversized artifact cannot become a ready image
+      ---
+      duration_ms: 3.9421
+      type: 'test'
+      ...
+    # Subtest: completed provider job without output URL requires reconciliation and never resubmits
+    ok 6 - completed provider job without output URL requires reconciliation and never resubmits
+      ---
+      duration_ms: 1.5682
+      type: 'test'
+      ...
+    # Subtest: malformed independent expected count performs zero provider submits
+    ok 7 - malformed independent expected count performs zero provider submits
+      ---
+      duration_ms: 0.8054
+      type: 'test'
+      ...
+    # Subtest: unknown or corrupted persisted reference count cannot bypass receipt validation
+    ok 8 - unknown or corrupted persisted reference count cannot bypass receipt validation
+      ---
+      duration_ms: 1.614
+      type: 'test'
+      ...
+    # Subtest: 401/403 auth errors throw terminal ImageJobFailedError, never ImageJobPendingError
+    ok 9 - 401/403 auth errors throw terminal ImageJobFailedError, never ImageJobPendingError
+      ---
+      duration_ms: 2.9726
+      type: 'test'
+      ...
+    # Subtest: 404 missing job and 500 server error throw ImageJobReconciliationError, never ImageJobPendingError
+    ok 10 - 404 missing job and 500 server error throw ImageJobReconciliationError, never ImageJobPendingError
+      ---
+      duration_ms: 2.0246
+      type: 'test'
+      ...
+    1..10
+ok 12 - provider receipt and real output contract remain bound to the exact image job
+  ---
+  duration_ms: 207.0039
+  type: 'test'
+  ...
+# Subtest: tenant paid-provider preferences and keys cannot enable an external fallback
+ok 13 - tenant paid-provider preferences and keys cannot enable an external fallback
+  ---
+  duration_ms: 5.1989
+  type: 'test'
+  ...
+# Subtest: mutating a caller provider list cannot alter the global policy
+ok 14 - mutating a caller provider list cannot alter the global policy
+  ---
+  duration_ms: 0.7161
+  type: 'test'
+  ...
+# Subtest: OmniStudio HTTP failure never calls paid endpoints even with valid-looking tenant keys
+ok 15 - OmniStudio HTTP failure never calls paid endpoints even with valid-looking tenant keys
+  ---
+  duration_ms: 70.94
+  type: 'test'
+  ...
+# Subtest: campaign text forwards tenant and creative conversation identity to the gateway
+ok 16 - campaign text forwards tenant and creative conversation identity to the gateway
+  ---
+  duration_ms: 5.4205
+  type: 'test'
+  ...
+# Subtest: validateAbSettings: 0 kapali, >0 B metni ister
+ok 17 - validateAbSettings: 0 kapali, >0 B metni ister
+  ---
+  duration_ms: 2.8306
+  type: 'test'
+  ...
+# Subtest: validateSchedule: now serbest, schedule gelecekte
+ok 18 - validateSchedule: now serbest, schedule gelecekte
+  ---
+  duration_ms: 5.0698
+  type: 'test'
+  ...
+# Subtest: validateCampaignSettings ve media
+ok 19 - validateCampaignSettings ve media
+  ---
+  duration_ms: 0.794
+  type: 'test'
+  ...
+# Subtest: actual pixels, dimensions, MIME and byte hash are required
+ok 20 - actual pixels, dimensions, MIME and byte hash are required
+  ---
+  duration_ms: 145.5539
+  type: 'test'
+  ...
+# Subtest: image MIME cannot make corrupt bytes a valid reference
+ok 21 - image MIME cannot make corrupt bytes a valid reference
+  ---
+  duration_ms: 4.536
+  type: 'test'
+  ...
+# Subtest: foreign storage namespace is rejected before any network request
+ok 22 - foreign storage namespace is rejected before any network request
+  ---
+  duration_ms: 2.3931
+  type: 'test'
+  ...
+# Subtest: unconfigured filesystem paths cannot be read as assets
+ok 23 - unconfigured filesystem paths cannot be read as assets
+  ---
+  duration_ms: 0.5864
+  type: 'test'
+  ...
+# Subtest: canonical source matrix runs offline with decoded byte identity
+    # Subtest: a lookalike Gateway hostname never receives its backend credential
+    ok 1 - a lookalike Gateway hostname never receives its backend credential
+      ---
+      duration_ms: 113.286
+      type: 'test'
+      ...
+    # Subtest: absolute_url https://fixture.invalid/product.png
+    ok 2 - absolute_url https://fixture.invalid/product.png
+      ---
+      duration_ms: 27.0984
+      type: 'test'
+      ...
+    # Subtest: gateway_output /outputs/offline-fixture.png
+    ok 3 - gateway_output /outputs/offline-fixture.png
+      ---
+      duration_ms: 9.708
+      type: 'test'
+      ...
+    # Subtest: public_brand /brand/offline-fixture.png
+    ok 4 - public_brand /brand/offline-fixture.png
+      ---
+      duration_ms: 11.7083
+      type: 'test'
+      ...
+    # Subtest: public_logo /logos/offline-fixture.png
+    ok 5 - public_logo /logos/offline-fixture.png
+      ---
+      duration_ms: 56.5669
+      type: 'test'
+      ...
+    # Subtest: gateway_output /api/media-proxy?file=offline-fixture.png
+    ok 6 - gateway_output /api/media-proxy?file=offline-fixture.png
+      ---
+      duration_ms: 37.8513
+      type: 'test'
+      ...
+    # Subtest: storage brand-assets
+    ok 7 - storage brand-assets
+      ---
+      duration_ms: 19.0255
+      type: 'test'
+      ...
+    # Subtest: storage creatives
+    ok 8 - storage creatives
+      ---
+      duration_ms: 14.7074
+      type: 'test'
+      ...
+    # Subtest: negative inputs and cross-tenant namespace
+    ok 9 - negative inputs and cross-tenant namespace
+      ---
+      duration_ms: 54.2616
+      type: 'test'
+      ...
+    # Subtest: explicit missing bucket cannot silently load another asset
+    ok 10 - explicit missing bucket cannot silently load another asset
+      ---
+      duration_ms: 1.3191
+      type: 'test'
+      ...
+    # Subtest: nested output identity and symlink containment
+    ok 11 - nested output identity and symlink containment
+      ---
+      duration_ms: 77.6268
+      type: 'test'
+      ...
+    # Subtest: approved filesystem source rejects paths outside operator roots
+    ok 12 - approved filesystem source rejects paths outside operator roots
+      ---
+      duration_ms: 34.7367
+      type: 'test'
+      ...
+    1..12
+ok 24 - canonical source matrix runs offline with decoded byte identity
+  ---
+  duration_ms: 510.8341
+  type: 'test'
+  ...
+# Subtest: a variation resolves the current asset of the exact owned kit instead of a stale parent URL
+ok 25 - a variation resolves the current asset of the exact owned kit instead of a stale parent URL
+  ---
+  duration_ms: 5.442
+  type: 'test'
+  ...
+# Subtest: a missing/foreign kit or lookup failure cannot silently become a different logo
+ok 26 - a missing/foreign kit or lookup failure cannot silently become a different logo
+  ---
+  duration_ms: 1.9468
+  type: 'test'
+  ...
+# Subtest: custom logo remains exact; organization fallback is tenant scoped and absence stays missing
+ok 27 - custom logo remains exact; organization fallback is tenant scoped and absence stays missing
+  ---
+  duration_ms: 0.6629
+  type: 'test'
+  ...
+# Subtest: campaign handoff keeps selected SKU facts, offer, dates, tone and every contact
+ok 28 - campaign handoff keeps selected SKU facts, offer, dates, tone and every contact
+  ---
+  duration_ms: 3.2646
+  type: 'test'
+  ...
+# Subtest: missing fields add no fabricated offer, price, date, delivery or contact
+ok 29 - missing fields add no fabricated offer, price, date, delivery or contact
+  ---
+  duration_ms: 0.8601
+  type: 'test'
+  ...
+# Subtest: 1. Template selection: sales hierarchy takes precedence and brand showcase preserves explicit family
+ok 30 - 1. Template selection: sales hierarchy takes precedence and brand showcase preserves explicit family
+  ---
+  duration_ms: 6.938
+  type: 'test'
+  ...
+# Subtest: 2. Campaign data shaping: strips Brand Kit meta labels and shapes verified facts
+ok 31 - 2. Campaign data shaping: strips Brand Kit meta labels and shapes verified facts
+  ---
+  duration_ms: 1.2391
+  type: 'test'
+  ...
+# Subtest: 3. Price hierarchy and discount handling: verified numbers only, no fabrication
+ok 32 - 3. Price hierarchy and discount handling: verified numbers only, no fabrication
+  ---
+  duration_ms: 6.7264
+  type: 'test'
+  ...
+# Subtest: 4. Quantity tiers & packaging: preserves boxContents and tiers
+ok 33 - 4. Quantity tiers & packaging: preserves boxContents and tiers
+  ---
+  duration_ms: 0.7048
+  type: 'test'
+  ...
+# Subtest: 5. No invented facts: strictly omits unprovided delivery, dates, or badges
+ok 34 - 5. No invented facts: strictly omits unprovided delivery, dates, or badges
+  ---
+  duration_ms: 0.9918
+  type: 'test'
+  ...
+# Subtest: 6. Reference Contract: exact attached product and logo fidelity
+ok 35 - 6. Reference Contract: exact attached product and logo fidelity
+  ---
+  duration_ms: 1.1182
+  type: 'test'
+  ...
+# Subtest: 7. No brand-specific runtime hardcodes: works for unseen arbitrary business
+ok 36 - 7. No brand-specific runtime hardcodes: works for unseen arbitrary business
+  ---
+  duration_ms: 1.6183
+  type: 'test'
+  ...
+# Subtest: 8. Separate AI WhatsApp Campaign Message: factual and conversational pairing
+ok 37 - 8. Separate AI WhatsApp Campaign Message: factual and conversational pairing
+  ---
+  duration_ms: 1.5218
+  type: 'test'
+  ...
+# Subtest: 1. Creative Archetypes Library contains exactly 23 curated commercial archetypes with real grammar
+ok 38 - 1. Creative Archetypes Library contains exactly 23 curated commercial archetypes with real grammar
+  ---
+  duration_ms: 3.6055
+  type: 'test'
+  ...
+# Subtest: 2. Sector DNA engine correctly classifies real commercial contexts without hardcoded company names
+ok 39 - 2. Sector DNA engine correctly classifies real commercial contexts without hardcoded company names
+  ---
+  duration_ms: 2.039
+  type: 'test'
+  ...
+# Subtest: 3. Creative Memory prevents consecutive repetitive archetypes and ensures campaign variation
+ok 40 - 3. Creative Memory prevents consecutive repetitive archetypes and ensures campaign variation
+  ---
+  duration_ms: 2.4972
+  type: 'test'
+  ...
+# Subtest: 4. Art Direction Plan contains full designer-grade specifications and rejects generic concepts
+ok 41 - 4. Art Direction Plan contains full designer-grade specifications and rejects generic concepts
+  ---
+  duration_ms: 21.0243
+  type: 'test'
+  ...
+# Subtest: 5. Prompt Enhancer enriches buildCreativePrompt while preserving 100% of working fields
+ok 42 - 5. Prompt Enhancer enriches buildCreativePrompt while preserving 100% of working fields
+  ---
+  duration_ms: 6.1867
+  type: 'test'
+  ...
+# Subtest: 6. Designer Graphic Layer builds appropriate SVG accents per archetype
+ok 43 - 6. Designer Graphic Layer builds appropriate SVG accents per archetype
+  ---
+  duration_ms: 1.2038
+  type: 'test'
+  ...
+# Subtest: 7. High Quality Best-of-2 generates TWO genuinely contrasting archetypes
+ok 44 - 7. High Quality Best-of-2 generates TWO genuinely contrasting archetypes
+  ---
+  duration_ms: 4.5135
+  type: 'test'
+  ...
+# Subtest: 8. Lightweight visual advisory evaluator benchmarks sharpness and contrast in <50ms without GPU
+ok 45 - 8. Lightweight visual advisory evaluator benchmarks sharpness and contrast in <50ms without GPU
+  ---
+  duration_ms: 139.0674
+  type: 'test'
+  ...
+# Subtest: 9. Commercial Poster Grammar V1 contains all 6 layout grammars with generic auto-routing
+ok 46 - 9. Commercial Poster Grammar V1 contains all 6 layout grammars with generic auto-routing
+  ---
+  duration_ms: 1.8491
+  type: 'test'
+  ...
+# Subtest: 10. Commercial Grammar controls layout hierarchy while Brand Kit strictly controls visual identity
+ok 47 - 10. Commercial Grammar controls layout hierarchy while Brand Kit strictly controls visual identity
+  ---
+  duration_ms: 4.5815
+  type: 'test'
+  ...
+# Subtest: 11. Legacy Simple prompt philosophy produces clean, short, factual prompt without micromanaging composition
+ok 48 - 11. Legacy Simple prompt philosophy produces clean, short, factual prompt without micromanaging composition
+  ---
+  duration_ms: 8.0655
+  type: 'test'
+  ...
+# Subtest: matching tenant and catalog product are both required before restoring draft copy
+ok 49 - matching tenant and catalog product are both required before restoring draft copy
+  ---
+  duration_ms: 2.2961
+  type: 'test'
+  ...
+# Subtest: corrupt browser storage cannot become an owned draft
+ok 50 - corrupt browser storage cannot become an owned draft
+  ---
+  duration_ms: 0.5222
+  type: 'test'
+  ...
+# Subtest: real materialization failure does not disclose internal source or tenant to customer
+ok 51 - real materialization failure does not disclose internal source or tenant to customer
+  ---
+  duration_ms: 3.6041
+  type: 'test'
+  ...
+# Subtest: unknown provider exception is never rendered verbatim
+ok 52 - unknown provider exception is never rendered verbatim
+  ---
+  duration_ms: 0.9782
+  type: 'test'
+  ...
+# Subtest: identical product/logo gives actionable Turkish message
+ok 53 - identical product/logo gives actionable Turkish message
+  ---
+  duration_ms: 0.5709
+  type: 'test'
+  ...
+# Subtest: clean library requires owned decoded stored image; status alone cannot publish
+ok 54 - clean library requires owned decoded stored image; status alone cannot publish
+  ---
+  duration_ms: 3.6657
+  type: 'test'
+  ...
+# Subtest: unreviewed V3 bytes remain hidden; review of another SHA cannot release them
+ok 55 - unreviewed V3 bytes remain hidden; review of another SHA cannot release them
+  ---
+  duration_ms: 1.0289
+  type: 'test'
+  ...
+# Subtest: legacy MP4 and missing output state fail closed; approved owned output passes
+ok 56 - legacy MP4 and missing output state fail closed; approved owned output passes
+  ---
+  duration_ms: 0.5713
+  type: 'test'
+  ...
+# Subtest: unknown capacity or queue order cannot claim an authoritative queued ETA
+ok 57 - unknown capacity or queue order cannot claim an authoritative queued ETA
+  ---
+  duration_ms: 3.1615
+  type: 'test'
+  ...
+# Subtest: failed/review terminal states do not display completed; only ready does
+ok 58 - failed/review terminal states do not display completed; only ready does
+  ---
+  duration_ms: 0.585
+  type: 'test'
+  ...
+# Subtest: remaining range uses actual measured duration and elapsed time instead of a stage percentage
+ok 59 - remaining range uses actual measured duration and elapsed time instead of a stage percentage
+  ---
+  duration_ms: 0.5079
+  type: 'test'
+  ...
+# Subtest: fewer than five measured samples cannot produce a numeric estimate
+ok 60 - fewer than five measured samples cannot produce a numeric estimate
+  ---
+  duration_ms: 0.782
+  type: 'test'
+  ...
+# Subtest: logo and product permit generation
+ok 61 - logo and product permit generation
+  ---
+  duration_ms: 3.9892
+  type: 'test'
+  ...
+# Subtest: logo disabled or missing is independently rejected
+ok 62 - logo disabled or missing is independently rejected
+  ---
+  duration_ms: 0.6433
+  type: 'test'
+  ...
+# Subtest: product missing without valid base is independently rejected
+ok 63 - product missing without valid base is independently rejected
+  ---
+  duration_ms: 0.6092
+  type: 'test'
+  ...
+# Subtest: derivative base never replaces a catalog product or bypasses logo
+ok 64 - derivative base never replaces a catalog product or bypasses logo
+  ---
+  duration_ms: 0.5012
+  type: 'test'
+  ...
+# Subtest: brand-only requires its real logo without an invented product
+ok 65 - brand-only requires its real logo without an invented product
+  ---
+  duration_ms: 0.59
+  type: 'test'
+  ...
+# Subtest: defaults to SMART_CAMPAIGN and valid explicit modes normalize accurately
+ok 66 - defaults to SMART_CAMPAIGN and valid explicit modes normalize accurately
+  ---
+  duration_ms: 5.6258
+  type: 'test'
+  ...
+# Subtest: planner fallback honors smart ad mode direction without changing video or inventing an offer
+ok 67 - planner fallback honors smart ad mode direction without changing video or inventing an offer
+  ---
+  duration_ms: 4.5604
+  type: 'test'
+  ...
+# Subtest: each image compiler honors the 4 modes and retains supplied copy and direction
+ok 68 - each image compiler honors the 4 modes and retains supplied copy and direction
+  ---
+  duration_ms: 25.502
+  type: 'test'
+  ...
+# Subtest: user meta scene instruction like bol bol yazı olsun is sanitized and treated as technical guidance
+ok 69 - user meta scene instruction like bol bol yazı olsun is sanitized and treated as technical guidance
+  ---
+  duration_ms: 1.7893
+  type: 'test'
+  ...
+# Subtest: locked-copy V2 also receives the mode without requiring a generated plan
+ok 70 - locked-copy V2 also receives the mode without requiring a generated plan
+  ---
+  duration_ms: 1.2073
+  type: 'test'
+  ...
+# Subtest: variation inherits parent mode or changes it explicitly without inheriting job state
+ok 71 - variation inherits parent mode or changes it explicitly without inheriting job state
+  ---
+  duration_ms: 0.7822
+  type: 'test'
+  ...
+# Subtest: smart variation rotates composition family for new_composition and enhances for enhance
+ok 72 - smart variation rotates composition family for new_composition and enhances for enhance
+  ---
+  duration_ms: 1.5675
+  type: 'test'
+  ...
+# Subtest: lost response and reload reuse identity; changed draft and tenant get a new identity
+ok 73 - lost response and reload reuse identity; changed draft and tenant get a new identity
+  ---
+  duration_ms: 3.5214
+  type: 'test'
+  ...
+# Subtest: blocked storage retains identity in memory and corrupt storage cannot supply a request ID
+ok 74 - blocked storage retains identity in memory and corrupt storage cannot supply a request ID
+  ---
+  duration_ms: 1.138
+  type: 'test'
+  ...
+# Subtest: missing commercial facts never become invented quality, price, scarcity or experience claims
+ok 75 - missing commercial facts never become invented quality, price, scarcity or experience claims
+  ---
+  duration_ms: 4.033
+  type: 'test'
+  ...
+# Subtest: supplied campaign offer and price survive the neutral fallback
+ok 76 - supplied campaign offer and price survive the neutral fallback
+  ---
+  duration_ms: 0.9003
+  type: 'test'
+  ...
+# Subtest: another idea sends previous composition to the provider while retaining tenant and commercial facts
+ok 77 - another idea sends previous composition to the provider while retaining tenant and commercial facts
+  ---
+  duration_ms: 58.8855
+  type: 'test'
+  ...
+# Subtest: 1. Active org logo validation & single hero product invariant
+ok 78 - 1. Active org logo validation & single hero product invariant
+  ---
+  duration_ms: 3.7024
+  type: 'test'
+  ...
+# Subtest: 2. Single hero product invariant: expected_reference_count === 2 for image and video
+ok 79 - 2. Single hero product invariant: expected_reference_count === 2 for image and video
+  ---
+  duration_ms: 0.725
+  type: 'test'
+  ...
+# Subtest: 3. Shared style presets map correctly to image scene grammar and video motion grammar
+ok 80 - 3. Shared style presets map correctly to image scene grammar and video motion grammar
+  ---
+  duration_ms: 2.131
+  type: 'test'
+  ...
+# Subtest: 4. Standard generative image prompt preserves CTA, price, promo, brand identity, and contacts (buildCreativePrompt)
+ok 81 - 4. Standard generative image prompt preserves CTA, price, promo, brand identity, and contacts (buildCreativePrompt)
+  ---
+  duration_ms: 13.94
+  type: 'test'
+  ...
+# Subtest: 4b. Optional locked copy mode excludes promotional typography for deterministic overlay fallback (buildImagePromptV2)
+ok 82 - 4b. Optional locked copy mode excludes promotional typography for deterministic overlay fallback (buildImagePromptV2)
+  ---
+  duration_ms: 1.0447
+  type: 'test'
+  ...
+# Subtest: 5. Prices, dates, CTAs and Turkish characters correctly rendered by deterministic compositor
+ok 83 - 5. Prices, dates, CTAs and Turkish characters correctly rendered by deterministic compositor
+  ---
+  duration_ms: 509.8202
+  type: 'test'
+  ...
+# Subtest: 5b. Compositor routing contract: lockCopyOverlay === false preserves raw provider output, lockCopyOverlay === true triggers compositor
+ok 84 - 5b. Compositor routing contract: lockCopyOverlay === false preserves raw provider output, lockCopyOverlay === true triggers compositor
+  ---
+  duration_ms: 6.8162
+  type: 'test'
+  ...
+# Subtest: 6. Legacy draft loading: multi-product and legacy formats adapt gracefully to V2
+ok 85 - 6. Legacy draft loading: multi-product and legacy formats adapt gracefully to V2
+  ---
+  duration_ms: 1.5802
+  type: 'test'
+  ...
+# Subtest: 7. Video Turkish voiceover P0 contract preserved end-to-end
+ok 86 - 7. Video Turkish voiceover P0 contract preserved end-to-end
+  ---
+  duration_ms: 2.1609
+  type: 'test'
+  ...
+# Subtest: current saved draft restores campaign objective and nested commerce copy
+ok 87 - current saved draft restores campaign objective and nested commerce copy
+  ---
+  duration_ms: 5.3946
+  type: 'test'
+  ...
+# Subtest: explicit cleared copy stays cleared instead of resurrecting legacy product extras
+ok 88 - explicit cleared copy stays cleared instead of resurrecting legacy product extras
+  ---
+  duration_ms: 0.5643
+  type: 'test'
+  ...
+# Subtest: malformed nested copy cannot enter restored commercial values
+ok 89 - malformed nested copy cannot enter restored commercial values
+  ---
+  duration_ms: 0.488
+  type: 'test'
+  ...
+# Subtest: Deterministic UUID generation produces canonical RFC-4122 v5 UUID format for any org+requestKey
+ok 90 - Deterministic UUID generation produces canonical RFC-4122 v5 UUID format for any org+requestKey
+  ---
+  duration_ms: 3.07
+  type: 'test'
+  ...
+# Subtest: PostgreSQL Primary Key Engine Simulation: concurrent simultaneous inserts resolve to single winner and 23505 handler
+ok 91 - PostgreSQL Primary Key Engine Simulation: concurrent simultaneous inserts resolve to single winner and 23505 handler
+  ---
+  duration_ms: 1.1867
+  type: 'test'
+  ...
+# Subtest: DeterministicImageCompositor renders valid target dimensions, hashes, and Turkish text
+ok 92 - DeterministicImageCompositor renders valid target dimensions, hashes, and Turkish text
+  ---
+  duration_ms: 513.7335
+  type: 'test'
+  ...
+# Subtest: DeterministicImageCompositor supports 9:16 and 4:5 ratios without logo
+ok 93 - DeterministicImageCompositor supports 9:16 and 4:5 ratios without logo
+  ---
+  duration_ms: 636.8616
+  type: 'test'
+  ...
+# Subtest: 1. Deterministic local copy generates clean, commercial Turkish text without technical jargon
+ok 94 - 1. Deterministic local copy generates clean, commercial Turkish text without technical jargon
+  ---
+  duration_ms: 3.7667
+  type: 'test'
+  ...
+# Subtest: 2. AI Planner fallback handles missing details gracefully with professional Turkish copy
+ok 95 - 2. AI Planner fallback handles missing details gracefully with professional Turkish copy
+  ---
+  duration_ms: 1.0981
+  type: 'test'
+  ...
+# Subtest: 3. Prompt Compiler integrates Hero Product (60-70%), brand DNA, and commercial hierarchy
+ok 96 - 3. Prompt Compiler integrates Hero Product (60-70%), brand DNA, and commercial hierarchy
+  ---
+  duration_ms: 12.2781
+  type: 'test'
+  ...
+# Subtest: 4. Sector art direction applies automatically based on sector and keywords
+ok 97 - 4. Sector art direction applies automatically based on sector and keywords
+  ---
+  duration_ms: 2.1462
+  type: 'test'
+  ...
+# Subtest: 5. Zero unverified claims: does NOT fabricate unprovided claims or badges
+ok 98 - 5. Zero unverified claims: does NOT fabricate unprovided claims or badges
+  ---
+  duration_ms: 2.3577
+  type: 'test'
+  ...
+# Subtest: 6. Text density modes correctly direct text budget in generated prompts
+ok 99 - 6. Text density modes correctly direct text budget in generated prompts
+  ---
+  duration_ms: 17.2088
+  type: 'test'
+  ...
+# Subtest: 7. Brand palette hex values are translated into rich natural language colors without raw hex leaks
+ok 100 - 7. Brand palette hex values are translated into rich natural language colors without raw hex leaks
+  ---
+  duration_ms: 3.8304
+  type: 'test'
+  ...
+# Subtest: 8. Template family instructions direct commercial layouts without Canva boilerplate
+ok 101 - 8. Template family instructions direct commercial layouts without Canva boilerplate
+  ---
+  duration_ms: 7.4809
+  type: 'test'
+  ...
+# Subtest: 9. Dirty tracking contract: user edits strictly preserve custom text over automated defaults
+ok 102 - 9. Dirty tracking contract: user edits strictly preserve custom text over automated defaults
+  ---
+  duration_ms: 0.9717
+  type: 'test'
+  ...
+# Subtest: 10. 2/2 Reference Contract: Logo and Product reference instructions present simultaneously
+ok 103 - 10. 2/2 Reference Contract: Logo and Product reference instructions present simultaneously
+  ---
+  duration_ms: 2.062
+  type: 'test'
+  ...
+# Subtest: variation preserves commercial context without copying output or submission state
+ok 104 - variation preserves commercial context without copying output or submission state
+  ---
+  duration_ms: 4.2711
+  type: 'test'
+  ...
+# Subtest: explicit empty and null edits override parent facts
+ok 105 - explicit empty and null edits override parent facts
+  ---
+  duration_ms: 0.7606
+  type: 'test'
+  ...
+# Subtest: parent product and brand identity cannot be replaced by same-tenant client choices
+ok 106 - parent product and brand identity cannot be replaced by same-tenant client choices
+  ---
+  duration_ms: 0.8834
+  type: 'test'
+  ...
+# Subtest: Vercel-local static reference becomes an absolute source for the production worker
+ok 107 - Vercel-local static reference becomes an absolute source for the production worker
+  ---
+  duration_ms: 2.7677
+  type: 'test'
+  ...
+# Subtest: tenant storage source remains unchanged
+ok 108 - tenant storage source remains unchanged
+  ---
+  duration_ms: 1.0556
+  type: 'test'
+  ...
+# Subtest: different URLs carrying identical logo/product bytes fail before a job is published
+ok 109 - different URLs carrying identical logo/product bytes fail before a job is published
+  ---
+  duration_ms: 2.257
+  type: 'test'
+  ...
+# Subtest: video snapshot retains canonical SKU, selected kit and supplied commercial fields for campaign reuse
+ok 110 - video snapshot retains canonical SKU, selected kit and supplied commercial fields for campaign reuse
+  ---
+  duration_ms: 3.4962
+  type: 'test'
+  ...
+# Subtest: foreign product cannot be published even when the caller supplies its valid public image URL
+ok 111 - foreign product cannot be published even when the caller supplies its valid public image URL
+  ---
+  duration_ms: 4.9814
+  type: 'test'
+  ...
+# Subtest: a same-tenant product cannot borrow another product or tenant image
+ok 112 - a same-tenant product cannot borrow another product or tenant image
+  ---
+  duration_ms: 1.4898
+  type: 'test'
+  ...
+# Subtest: canonical catalog assets and facts are returned for the selected product
+ok 113 - canonical catalog assets and facts are returned for the selected product
+  ---
+  duration_ms: 1.2302
+  type: 'test'
+  ...
+# Subtest: persisted branding file is not accepted as a product reference
+ok 114 - persisted branding file is not accepted as a product reference
+  ---
+  duration_ms: 0.9331
+  type: 'test'
+  ...
+# Subtest: selected foreign brand kit fails closed instead of falling back to default branding
+ok 115 - selected foreign brand kit fails closed instead of falling back to default branding
+  ---
+  duration_ms: 0.8031
+  type: 'test'
+  ...
+# Subtest: selected tenant kit controls the canonical logo and persisted campaign identity
+ok 116 - selected tenant kit controls the canonical logo and persisted campaign identity
+  ---
+  duration_ms: 0.7226
+  type: 'test'
+  ...
+# Subtest: delivery uses persisted nested final path and rejects traversal or guessed identities
+ok 117 - delivery uses persisted nested final path and rejects traversal or guessed identities
+  ---
+  duration_ms: 3.7581
+  type: 'test'
+  ...
+# Subtest: entire file SHA and byte count required even for a byte-range request
+ok 118 - entire file SHA and byte count required even for a byte-range request
+  ---
+  duration_ms: 114.3544
+  type: 'test'
+  ...
+# [ai-media-jobs] Unexpected error: Error: PRODUCT_REFERENCE_IS_LOGO: Ürün referansı ve işletme logosu aynı dosya. Gerçek ürün veya arayüz görseli ekleyin.
+#     at requireDistinctVideoProduct (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\apps\\customer\\src\\lib\\creative\\video-asset-manifest.ts:15:11)
+#     at createVideoJob (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\apps\\customer\\src\\lib\\creative\\video-job-service.ts:250:7)
+#     at async TestContext.<anonymous> (C:\\Users\\TP2\\Documents\\whatsapp-ai-production-audit\\apps\\customer\\src\\lib\\creative\\video-job-duplicate-reference.test.ts:35:22)
+#     at async Test.run (node:internal/test_runner/test:1054:7)
+#     at async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+# Subtest: real video POST rejects identical logo/product pixels without persisting a revision, job or asset
+ok 119 - real video POST rejects identical logo/product pixels without persisting a revision, job or asset
+  ---
+  duration_ms: 110.8506
+  type: 'test'
+  ...
+# Subtest: library replaces stale ready with owned output approval and actual duration
+ok 120 - library replaces stale ready with owned output approval and actual duration
+  ---
+  duration_ms: 9.8287
+  type: 'test'
+  ...
+# Subtest: legacy approval flag stays strict; final release handles explicit non-severe exceptions
+ok 121 - legacy approval flag stays strict; final release handles explicit non-severe exceptions
+  ---
+  duration_ms: 3.1742
+  type: 'test'
+  ...
+# Subtest: review preview requires an owned validated review output and never grants approval
+ok 122 - review preview requires an owned validated review output and never grants approval
+  ---
+  duration_ms: 1.8744
+  type: 'test'
+  ...
+# Subtest: successful final does not require customer editorial confirmation
+ok 123 - successful final does not require customer editorial confirmation
+  ---
+  duration_ms: 1.5975
+  type: 'test'
+  ...
+# Subtest: confirmed serious failures override even an existing approval
+ok 124 - confirmed serious failures override even an existing approval
+  ---
+  duration_ms: 1.316
+  type: 'test'
+  ...
+# Subtest: software composition rotation preserves screenshot presentation across all families
+ok 125 - software composition rotation preserves screenshot presentation across all families
+  ---
+  duration_ms: 5.643
+  type: 'test'
+  ...
+# Subtest: enhancement and copy revision preserve the chosen scene
+ok 126 - enhancement and copy revision preserve the chosen scene
+  ---
+  duration_ms: 2.6149
+  type: 'test'
+  ...
+# Subtest: unconfigured monitoring never accepts a public fallback PIN or empty cookie
+ok 127 - unconfigured monitoring never accepts a public fallback PIN or empty cookie
+  ---
+  duration_ms: 4.0875
+  type: 'test'
+  ...
+# Subtest: monitoring requires both configured secrets and rejects a wrong cookie or PIN
+ok 128 - monitoring requires both configured secrets and rejects a wrong cookie or PIN
+  ---
+  duration_ms: 3.1734
+  type: 'test'
+  ...
+# Subtest: decorative animation access uses a finite allowlist, not extension or directory bypass
+ok 129 - decorative animation access uses a finite allowlist, not extension or directory bypass
+  ---
+  duration_ms: 2.5014
+  type: 'test'
+  ...
+# Subtest: visual directions never enter generated spoken fallback across formats
+ok 130 - visual directions never enter generated spoken fallback across formats
+  ---
+  duration_ms: 9.0894
+  type: 'test'
+  ...
+# Subtest: verified descriptive claim is spoken without inventing an offer from creative notes
+ok 131 - verified descriptive claim is spoken without inventing an offer from creative notes
+  ---
+  duration_ms: 0.927
+  type: 'test'
+  ...
+# Subtest: safe spoken lines never exceed the SIMPLE_V5 word budget
+ok 132 - safe spoken lines never exceed the SIMPLE_V5 word budget
+  ---
+  duration_ms: 2.0073
+  type: 'test'
+  ...
+# Subtest: Ayvazoglu brick fidelity blocks side perforation and full rotation
+ok 133 - Ayvazoglu brick fidelity blocks side perforation and full rotation
+  ---
+  duration_ms: 0.8504
+  type: 'test'
+  ...
+# Subtest: preflight fails closed on quota, speech length, and unverified offers
+ok 134 - preflight fails closed on quota, speech length, and unverified offers
+  ---
+  duration_ms: 2.5099
+  type: 'test'
+  ...
+# Subtest: fact lines are trimmed and deduplicated
+ok 135 - fact lines are trimmed and deduplicated
+  ---
+  duration_ms: 2.8797
+  type: 'test'
+  ...
+1..135
+# tests 157
+# suites 0
+# pass 157
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8631.6878

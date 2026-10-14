@@ -5,7 +5,7 @@ Baseline verified by `git ls-remote origin`: simulation/v2-and-veo-integration =
 Remote main: 3e7d5bb4085522d13b83335683f71dfdf65d0975;
 Creative Studio branch: b59ebf4d9d5a07b694eba991ef628e82f882fa72;
 Veo quality branch: 1f9bb46b9399512a49f4dfa71cf40a5f8ed295af.
-No remote mutation, deployment, migration or paid provider call is authorized by this audit.
+The user subsequently authorized necessary sequential real AI media acceptance calls. Remote mutation, deployment, migrations and live service intervention remain forbidden.
 
 | Component | Entry / caller | Outputs / provider | Initial risk / verification |
 |---|---|---|---|

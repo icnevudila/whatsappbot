@@ -1,0 +1,902 @@
+TAP version 13
+# Subtest: Acceptance Long: Ayvazoğlu İnşaat (35-40s commercial, >=4 scenes, zero VO repetition, all QA PASS)
+ok 1 - Acceptance Long: Ayvazoğlu İnşaat (35-40s commercial, >=4 scenes, zero VO repetition, all QA PASS)
+  ---
+  duration_ms: 26.9075
+  type: 'test'
+  ...
+# Subtest: Acceptance Long: Bofe Tarım (40s commercial, agriculture preset, identical generic pipeline)
+ok 2 - Acceptance Long: Bofe Tarım (40s commercial, agriculture preset, identical generic pipeline)
+  ---
+  duration_ms: 12.2348
+  type: 'test'
+  ...
+# Subtest: Acceptance Long: 301st Tenant ("Artisan Roastery", zero code changes, all QA PASS)
+ok 3 - Acceptance Long: 301st Tenant ("Artisan Roastery", zero code changes, all QA PASS)
+  ---
+  duration_ms: 8.0793
+  type: 'test'
+  ...
+# Subtest: Acceptance Short: Bofe Tarım (9:16, agricultural sector, QA PASS)
+ok 4 - Acceptance Short: Bofe Tarım (9:16, agricultural sector, QA PASS)
+  ---
+  duration_ms: 246.0154
+  type: 'test'
+  ...
+# Subtest: Acceptance Short: Ayvazoğlu İnşaat (9:16, construction sector, QA PASS)
+ok 5 - Acceptance Short: Ayvazoğlu İnşaat (9:16, construction sector, QA PASS)
+  ---
+  duration_ms: 25.8121
+  type: 'test'
+  ...
+# Subtest: Acceptance Short: Veri Burada (9:16, cloud & B2B software, QA PASS)
+ok 6 - Acceptance Short: Veri Burada (9:16, cloud & B2B software, QA PASS)
+  ---
+  duration_ms: 24.89
+  type: 'test'
+  ...
+# Subtest: Acceptance Short: 301st Generic Tenant ("Artisan Roastery" - food & beverage, zero code changes, QA PASS)
+ok 7 - Acceptance Short: 301st Generic Tenant ("Artisan Roastery" - food & beverage, zero code changes, QA PASS)
+  ---
+  duration_ms: 22.6991
+  type: 'test'
+  ...
+# Subtest: AdFormatRouter - maps all 7 UserStylePreferences accurately with explicit selection reasons
+ok 8 - AdFormatRouter - maps all 7 UserStylePreferences accurately with explicit selection reasons
+  ---
+  duration_ms: 8.0905
+  type: 'test'
+  ...
+# Subtest: AdFormatRouter - AUTO preference intelligently resolves based on objective & business model without hardcoding
+ok 9 - AdFormatRouter - AUTO preference intelligently resolves based on objective & business model without hardcoding
+  ---
+  duration_ms: 0.5404
+  type: 'test'
+  ...
+# Subtest: AdvertisingGrammarRegistry - all supported formats define rich variant families and strict television grammar
+ok 10 - AdvertisingGrammarRegistry - all supported formats define rich variant families and strict television grammar
+  ---
+  duration_ms: 0.9148
+  type: 'test'
+  ...
+# Subtest: FormatVariantSelector - selects contextual variant and rotates to prevent tenant creative fatigue
+ok 11 - FormatVariantSelector - selects contextual variant and rotates to prevent tenant creative fatigue
+  ---
+  duration_ms: 0.9586
+  type: 'test'
+  ...
+# Subtest: CreativeDiversityGuard - rejects identical back-to-back ads and rotates creative framing while preserving authoritative assets
+ok 12 - CreativeDiversityGuard - rejects identical back-to-back ads and rotates creative framing while preserving authoritative assets
+  ---
+  duration_ms: 1.0519
+  type: 'test'
+  ...
+# Subtest: ShortAdCreativeDirector - end-to-end planFromJobManifest with custom user style preference and subtitles mode
+ok 13 - ShortAdCreativeDirector - end-to-end planFromJobManifest with custom user style preference and subtitles mode
+  ---
+  duration_ms: 114.5494
+  type: 'test'
+  ...
+# Subtest: ShortAdFormatRouter - routes physical product promotion/conversion to PERFORMANCE_DEMO (never BRAND_CINEMATIC)
+ok 14 - ShortAdFormatRouter - routes physical product promotion/conversion to PERFORMANCE_DEMO (never BRAND_CINEMATIC)
+  ---
+  duration_ms: 7.3074
+  type: 'test'
+  ...
+# Subtest: ShortAdFormatRouter - routes software / saas to SOFTWARE_DEMO and problem to PROBLEM_SOLUTION
+ok 15 - ShortAdFormatRouter - routes software / saas to SOFTWARE_DEMO and problem to PROBLEM_SOLUTION
+  ---
+  duration_ms: 0.5492
+  type: 'test'
+  ...
+# Subtest: ShortAdCreativeDirector - planFromJobManifest generates complete PERFORMANCE_DEMO grammar without hardcoding
+ok 16 - ShortAdCreativeDirector - planFromJobManifest generates complete PERFORMANCE_DEMO grammar without hardcoding
+  ---
+  duration_ms: 54.7575
+  type: 'test'
+  ...
+# Subtest: Voice-As-Spine Principle - speech carries the commercial across the timeline with natural cadence
+ok 17 - Voice-As-Spine Principle - speech carries the commercial across the timeline with natural cadence
+  ---
+  duration_ms: 0.7263
+  type: 'test'
+  ...
+# Subtest: DeterministicCampaignTextRenderer - builds CapCut kinetic ASS without black boxes and with neon active word
+ok 18 - DeterministicCampaignTextRenderer - builds CapCut kinetic ASS without black boxes and with neon active word
+  ---
+  duration_ms: 41.6189
+  type: 'test'
+  ...
+# Subtest: AssetSufficiencyGate - enforces mandatory authoritative assets per business model
+ok 19 - AssetSufficiencyGate - enforces mandatory authoritative assets per business model
+  ---
+  duration_ms: 3.9586
+  type: 'test'
+  ...
+# Subtest: IndependentPixelVisualQA - FAILS Veri Burada legacy acrylic glass desk plaque
+ok 20 - IndependentPixelVisualQA - FAILS Veri Burada legacy acrylic glass desk plaque
+  ---
+  duration_ms: 76.1185
+  type: 'test'
+  ...
+# Subtest: IndependentPixelVisualQA - FAILS Bofe legacy car wash garage frame
+ok 21 - IndependentPixelVisualQA - FAILS Bofe legacy car wash garage frame
+  ---
+  duration_ms: 46.1764
+  type: 'test'
+  ...
+# Subtest: IndependentPixelVisualQA - FAILS Ayvazoğlu legacy static pallet warehouse yard
+ok 22 - IndependentPixelVisualQA - FAILS Ayvazoğlu legacy static pallet warehouse yard
+  ---
+  duration_ms: 104.9314
+  type: 'test'
+  ...
+# Subtest: IndependentPixelVisualQA - PASSES on 4th Dummy Tenant ("Nordic Ergonomics") with zero hardcoded code
+ok 23 - IndependentPixelVisualQA - PASSES on 4th Dummy Tenant ("Nordic Ergonomics") with zero hardcoded code
+  ---
+  duration_ms: 112.9024
+  type: 'test'
+  ...
+# Subtest: complete timing proves the strict speech window
+ok 24 - complete timing proves the strict speech window
+  ---
+  duration_ms: 10.9708
+  type: 'test'
+  ...
+# Subtest: missing, partial, invalid or overlapping timing cannot pass
+ok 25 - missing, partial, invalid or overlapping timing cannot pass
+  ---
+  duration_ms: 0.8549
+  type: 'test'
+  ...
+# Subtest: speech ending exactly at 5.5 or starting early fails
+ok 26 - speech ending exactly at 5.5 or starting early fails
+  ---
+  duration_ms: 0.8517
+  type: 'test'
+  ...
+# Subtest: raw gate rejects missing evidence and repeated narration
+ok 27 - raw gate rejects missing evidence and repeated narration
+  ---
+  duration_ms: 3.173
+  type: 'test'
+  ...
+# Subtest: BrandContextSnapshot - successfully creates immutable snapshot with SHA-256 version
+ok 28 - BrandContextSnapshot - successfully creates immutable snapshot with SHA-256 version
+  ---
+  duration_ms: 8.543
+  type: 'test'
+  ...
+# Subtest: BrandContextSnapshot - fails validation on missing mandatory fields
+ok 29 - BrandContextSnapshot - fails validation on missing mandatory fields
+  ---
+  duration_ms: 0.8838
+  type: 'test'
+  ...
+# --- [INTEGRATION] 3 GENERATED CONCEPTS ---
+# Concept 1 [concept_A_result_first]: "Bofe Tarım Sonuç Odaklı Hızlı Tanıtım" -> Bofe Şarjlı Sırt Pompası modelinin uygulama anını ve çalışma adımlarını ilk saniyede gösteren dinamik tanıtım.
+#   Format: PERFORMANCE_DEMO (RESULT_FIRST), Hook: instant_result_impact
+# Concept 2 [concept_B_human_action]: "Bofe Tarım Gerçek Kullanıcı & Eylem Akışı" -> Kullanıcının Bofe Şarjlı Sırt Pompası ile sahada hazırlık ve çalışma adımlarını yürüttüğü akış.
+#   Format: PROBLEM_SOLUTION (HUMAN_ACTION_FIRST), Hook: human_action_motion
+# Concept 3 [concept_C_detail_energy]: "Bofe Tarım Malzeme ve Mekanik Detaylar" -> Bofe Şarjlı Sırt Pompası gövde formunu, malzeme dokusunu ve adım adım çalışma adımlarını sergileyen anlatım.
+#   Format: PRODUCT_USAGE (STEP_BY_STEP), Hook: macro_product_detail
+# --- [INTEGRATION] CONCEPT SELECTION ---
+# Selected: concept_A_result_first
+# Reason: Otomatik Seçim: Son üretilen reklamlardan farklı görsel kanca (instant_result_impact) ve varyant (RESULT_FIRST) sağladığı için tercih edildi.
+# --- [INTEGRATION] DETAILED MASTER PLAN ---
+# Creative Idea: Bofe Şarjlı Sırt Pompası modelinin uygulama anını ve çalışma adımlarını ilk saniyede gösteren dinamik tanıtım.
+# Master VO Script: "Bofe Tarım ile Bofe Şarjlı Sırt Pompası modelini yakından tanıyın. 16 litre depo hacmi ile bahçenizde ilaçlama adımlarını planlayın ve detayları keşfedin."
+# Beats Count: 4
+#   Beat 1 [0.0s - 1.0s] (HOOK): Aşırı makro yakın çekim: Bofe Şarjlı Sırt Pompası (sırt tipi sarı tank, siyah as...
+#   Beat 2 [1.0s - 2.5s] (REVEAL): Akıcı geri çekilme ile @HeroProduct bütünüyle ve kullanıcının kontrollü eylemiyl...
+#   Beat 3 [2.5s - 4.8s] (PRODUCT_PROOF): @HeroProduct sahada gerçek bitki yaprakları üzerinde püskürtme uygulamasını serg...
+#   Beat 4 [4.8s - 8.0s] (BRAND_CLOSE): @HeroProduct temiz açıdan merkezde, post-prodüksiyon logo ve CTA için temiz alan...
+# --- [INTEGRATION] CREATIVE CRITIC REPORT ---
+# Critic Decision: PASS
+# Is Real Ad: true
+# Hook Strength: 9/10, Product Visibility: 9/10
+# Failure Codes: []
+# Issues: []
+# --- [INTEGRATION] FINAL COMPILED VEO PROMPT ---
+# [SUBJECT LOCK]: Preserve @HeroProduct, @BrandLogo geometry, colors, and authentic appearance exactly as shown in authoritative reference assets. [ENVIRONMENT]: Authentic Precision agricultural equipment, field performance, natural morning sun and genuine soil. [SEQUENCE (0-8s)]: [Beat 1 (0.0s-1.0s)]: Macro cine lens, sığ alan derinliği, dikkat çekici giriş. Aşırı makro yakın çekim: Bofe Şarjlı Sırt Pompası (sırt tipi sarı tank, siyah askı kayışları, pirinç nozül uzatması, \#FFCC00) gövdesi ve form detayları çalışma ortamında.. [Beat 2 (1.0s-2.5s)]: Akıcı yatay takip ve dengeli odak. Akıcı geri çekilme ile @HeroProduct bütünüyle ve kullanıcının kontrollü eylemiyle görünür. [Beat 3 (2.5s-4.8s)]: Hızlı dinamik pan ve sığ alan derinliği. @HeroProduct sahada gerçek bitki yaprakları üzerinde püskürtme uygulamasını sergilerken. [Beat 4 (4.8s-8.0s)]: Sabit sinematik kilitlenme. @HeroProduct temiz açıdan merkezde, post-prodüksiyon logo ve CTA için temiz alan bırakılır. [PHYSICS]: Natural gravity and motion: yerçekimi ve mekanik temas doğal, akışkan ve mekanik dinamikler gerçekçi, doğal insan postürü. [CANONICAL BRAND IDENTITY PRESERVATION]: Preserve the canonical brand identity from @BrandLogo on @HeroProduct (physical product surface). Faithful proportions, NO INVENTED LOGO, NO FAKE LOGO. [AUDIO]: The spoken language is Turkish (tr-TR). Exact spoken line: "Bofe Tarım ile Bofe Şarjlı Sırt Pompası modelini yakından tanıyın. 16 litre depo hacmi ile bahçenizde ilaçlama adımlarını planlayın ve detayları keşfedin.". Continuous dialogue across entire duration: [0-8s]: "Bofe Tarım ile Bofe Şarjlı Sırt Pompası modelini yakından tanıyın. 16 litre depo hacmi ile bahçenizde ilaçlama adımlarını planlayın ve detayları keşfedin.". Speak this sentence exactly in Turkish. Do not translate it. Do not paraphrase it. All spoken dialogue must be delivered naturally in Turkish. No English speech. No English narration. No translated dialogue. [NEGATIVE DIRECTIVE]: NO generated on-screen text, NO visible subtitles, NO floating logo, NO INVENTED LOGO, NO FAKE LOGO. All graphics composed in post-production.
+# --- [INTEGRATION] NEGATIVE PROMPT ---
+# no generated subtitles, headlines, prices, CTA buttons, phone numbers, website URLs, invented logos, or random typography., no impossible physical deformations, no extra limbs, no phantom tools, no floating water droplets defying gravity., unrealistic fluid physics, floating machinery, synthetic lighting, urban studio backdrop, floating text, impossible pressure physics, NO visible subtitles, NO generated on-screen text, NO generated lower thirds, NO floating logo, NO generated end card, NO watermark, NO generated CTA, NO generated price, NO generated phone number, NO generated website URL, NO campaign typography, NO artificial logo overlays, NO INVENTED LOGO, NO FAKE LOGO, NO ALTERED LOGO, NO EXTRA BRAND MARKS, NO product redesign, NO English speech, NO English voiceover, NO English narration, NO English dialogue, English speech, English voiceover, English narration, English dialogue, invented diegetic branding, hallucinated diegetic logo, invented brand stamp, visible subtitles, on-screen text, lower thirds, floating logo, floating screen logo, synthetic lower thirds, artificial on-screen graphics, deformed product typography, misspelled brand names, synthetic end-card graphics, floating watermark, generated end card, hallucinated logos, blurry hands, disconnected pipes, cartoony 3d, low resolution, deformed fingers, rubber hands, stretching fingers, morphing objects, floating physics, zero gravity, anatomical distortion, missing limbs, backwards facing head, head twisted 180 degrees, reversed torso, anatomically impossible head rotation, unnatural neck twist
+# Subtest: Integration Test: Product + Logo -> Director -> 3 Concepts -> Selection -> MasterPlan -> Critic -> Compiled Veo Prompt
+ok 30 - Integration Test: Product + Logo -> Director -> 3 Concepts -> Selection -> MasterPlan -> Critic -> Compiled Veo Prompt
+  ---
+  duration_ms: 136.0983
+  type: 'test'
+  ...
+# Subtest: Creative Director returns 3 genuinely distinct concepts (different hooks, stories, variants)
+ok 31 - Creative Director returns 3 genuinely distinct concepts (different hooks, stories, variants)
+  ---
+  duration_ms: 62.5701
+  type: 'test'
+  ...
+# Subtest: Creative Director sees real multimodal asset references with provenance
+ok 32 - Creative Director sees real multimodal asset references with provenance
+  ---
+  duration_ms: 2.0221
+  type: 'test'
+  ...
+# Subtest: Missing GPT attachment fails closed with GPT_ASSET_ATTACHMENT_FAILED
+ok 33 - Missing GPT attachment fails closed with GPT_ASSET_ATTACHMENT_FAILED
+  ---
+  duration_ms: 1.9903
+  type: 'test'
+  ...
+# Subtest: Same sector + different style preferences produce different creative concepts
+ok 34 - Same sector + different style preferences produce different creative concepts
+  ---
+  duration_ms: 15.4038
+  type: 'test'
+  ...
+# Subtest: Same style + different sector produces different environmental and physical realization
+ok 35 - Same style + different sector produces different environmental and physical realization
+  ---
+  duration_ms: 29.2858
+  type: 'test'
+  ...
+# Subtest: Recent fingerprint repetition is actively avoided in concept selection
+ok 36 - Recent fingerprint repetition is actively avoided in concept selection
+  ---
+  duration_ms: 6.5598
+  type: 'test'
+  ...
+# Subtest: Critic catches UNSUPPORTED_CLAIM and triggers REVISE
+ok 37 - Critic catches UNSUPPORTED_CLAIM and triggers REVISE
+  ---
+  duration_ms: 24.9009
+  type: 'test'
+  ...
+# Subtest: Critic catches MINI_FILM_NOT_AD when opening is artistic landscape without product
+ok 38 - Critic catches MINI_FILM_NOT_AD when opening is artistic landscape without product
+  ---
+  duration_ms: 20.8057
+  type: 'test'
+  ...
+# Subtest: Critic catches WEAK_HOOK when hook is missing or empty
+ok 39 - Critic catches WEAK_HOOK when hook is missing or empty
+  ---
+  duration_ms: 34.242
+  type: 'test'
+  ...
+# Subtest: Dynamic beat timing adapts to format instead of fixed template
+ok 40 - Dynamic beat timing adapts to format instead of fixed template
+  ---
+  duration_ms: 3.387
+  type: 'test'
+  ...
+# Subtest: AssetEqualityGate verifies creative_asset_sha == flow_asset_sha and fails closed on drift
+ok 41 - AssetEqualityGate verifies creative_asset_sha == flow_asset_sha and fails closed on drift
+  ---
+  duration_ms: 1.1174
+  type: 'test'
+  ...
+# Subtest: Video Reviewer receives actual sampled frames and catches PRODUCT_MORPH_FAIL and WRONG_SECTOR
+ok 42 - Video Reviewer receives actual sampled frames and catches PRODUCT_MORPH_FAIL and WRONG_SECTOR
+  ---
+  duration_ms: 49.0196
+  type: 'test'
+  ...
+# Subtest: Optional Reference Style Analyzer extracts high-level pacing with strict non-copying directive
+ok 43 - Optional Reference Style Analyzer extracts high-level pacing with strict non-copying directive
+  ---
+  duration_ms: 4.3094
+  type: 'test'
+  ...
+# Subtest: Human feedback learning stores approved trends and rejected traits without copying templates
+ok 44 - Human feedback learning stores approved trends and rejected traits without copying templates
+  ---
+  duration_ms: 1.3983
+  type: 'test'
+  ...
+# Subtest: DeterministicLogoCompositor - normalizes logo and avoids occluding product and face
+ok 45 - DeterministicLogoCompositor - normalizes logo and avoids occluding product and face
+  ---
+  duration_ms: 3.9221
+  type: 'test'
+  ...
+# Subtest: DeterministicCampaignTextRenderer - builds lower-third and end-card without AI hallucination
+ok 46 - DeterministicCampaignTextRenderer - builds lower-third and end-card without AI hallucination
+  ---
+  duration_ms: 24.7591
+  type: 'test'
+  ...
+# Subtest: StoryboardDirector - enforces mandatory 3-frame Hook -> Product Proof -> Payoff contract
+ok 47 - StoryboardDirector - enforces mandatory 3-frame Hook -> Product Proof -> Payoff contract
+  ---
+  duration_ms: 2.1464
+  type: 'test'
+  ...
+# Subtest: FinalAdAssembler - builds complete deterministic FFmpeg assembly command
+ok 48 - FinalAdAssembler - builds complete deterministic FFmpeg assembly command
+  ---
+  duration_ms: 1.5447
+  type: 'test'
+  ...
+# Subtest: IndependentPixelVisualQA - Physics & Realism Gate catches impossible mechanics and violations
+ok 49 - IndependentPixelVisualQA - Physics & Realism Gate catches impossible mechanics and violations
+  ---
+  duration_ms: 95.4262
+  type: 'test'
+  ...
+# Subtest: Adversarial Pixel QA - 4 Unseen Adversarial Images evaluated with ZERO filename heuristics
+ok 50 - Adversarial Pixel QA - 4 Unseen Adversarial Images evaluated with ZERO filename heuristics
+  ---
+  duration_ms: 130.6592
+  type: 'test'
+  ...
+# Subtest: ContinuityGraph - manages DAG execution order, blocking continuations until parent approves
+ok 51 - ContinuityGraph - manages DAG execution order, blocking continuations until parent approves
+  ---
+  duration_ms: 8.1133
+  type: 'test'
+  ...
+# Subtest: CreativeQA - evaluateSceneQA passes on valid scene output
+ok 52 - CreativeQA - evaluateSceneQA passes on valid scene output
+  ---
+  duration_ms: 18.301
+  type: 'test'
+  ...
+# Subtest: CreativeQA - evaluateSceneQA fails-closed on tenant breach or foreign brand leakage
+ok 53 - CreativeQA - evaluateSceneQA fails-closed on tenant breach or foreign brand leakage
+  ---
+  duration_ms: 2.2848
+  type: 'test'
+  ...
+# Subtest: CreativeQA - evaluateFinalLongVideoQA catches duration mismatch, VO repetition, or missing logo
+ok 54 - CreativeQA - evaluateFinalLongVideoQA catches duration mismatch, VO repetition, or missing logo
+  ---
+  duration_ms: 8.2668
+  type: 'test'
+  ...
+# Subtest: evaluation harness runs style matrix without provider or Veo calls
+ok 55 - evaluation harness runs style matrix without provider or Veo calls
+  ---
+  duration_ms: 47.0535
+  type: 'test'
+  ...
+# Subtest: evaluation harness runs planning-only cross-sector matrix with fixture proof
+ok 56 - evaluation harness runs planning-only cross-sector matrix with fixture proof
+  ---
+  duration_ms: 10.8057
+  type: 'test'
+  ...
+# Subtest: FactualIntegrityGate - unverified phone inserted only at compositor/end-card stage -> TEST MUST FAIL
+ok 57 - FactualIntegrityGate - unverified phone inserted only at compositor/end-card stage -> TEST MUST FAIL
+  ---
+  duration_ms: 8.66
+  type: 'test'
+  ...
+# Subtest: FactualIntegrityGate - unverified claim inserted only in Veo prompt -> TEST MUST FAIL
+ok 58 - FactualIntegrityGate - unverified claim inserted only in Veo prompt -> TEST MUST FAIL
+  ---
+  duration_ms: 1.4579
+  type: 'test'
+  ...
+# Subtest: IndependentPixelVisualQA - canonical product color disagreement -> TEST MUST FAIL / NEEDS_REVIEW
+ok 59 - IndependentPixelVisualQA - canonical product color disagreement -> TEST MUST FAIL / NEEDS_REVIEW
+  ---
+  duration_ms: 93.1486
+  type: 'test'
+  ...
+# Subtest: JobAssetManifest - USE PROVIDED ASSETS OR FAIL CLOSED (NEEDS_ASSET / NEEDS_FACT)
+ok 60 - JobAssetManifest - USE PROVIDED ASSETS OR FAIL CLOSED (NEEDS_ASSET / NEEDS_FACT)
+  ---
+  duration_ms: 4.2397
+  type: 'test'
+  ...
+# Subtest: CreativeQA - evaluateDiegeticLogoQA handles KEEP_GENERATED_DIEGETIC_LOGO vs DIEGETIC_SURFACE_RESTORE
+ok 61 - CreativeQA - evaluateDiegeticLogoQA handles KEEP_GENERATED_DIEGETIC_LOGO vs DIEGETIC_SURFACE_RESTORE
+  ---
+  duration_ms: 13.8306
+  type: 'test'
+  ...
+# Subtest: FactualIntegrityGate - deliberately injected unverified claims are strictly rejected
+ok 62 - FactualIntegrityGate - deliberately injected unverified claims are strictly rejected
+  ---
+  duration_ms: 1.3993
+  type: 'test'
+  ...
+# Subtest: ShortAdCreativeDirector - dynamically chooses genuinely different timing structures per format and variant
+ok 63 - ShortAdCreativeDirector - dynamically chooses genuinely different timing structures per format and variant
+  ---
+  duration_ms: 1.0817
+  type: 'test'
+  ...
+# Subtest: FactualIntegrityGate.validateMasterPlan - verifies ShortAdCreativeDirector produces 100% verified, claim-free master plan
+ok 64 - FactualIntegrityGate.validateMasterPlan - verifies ShortAdCreativeDirector produces 100% verified, claim-free master plan
+  ---
+  duration_ms: 51.6302
+  type: 'test'
+  ...
+# Subtest: Fail-Closed Gate: Foreign tenant asset is rejected by ReferenceRegistry
+ok 65 - Fail-Closed Gate: Foreign tenant asset is rejected by ReferenceRegistry
+  ---
+  duration_ms: 3.4554
+  type: 'test'
+  ...
+# Subtest: Fail-Closed Gate: Reference gate fails on missing or mismatched asset count
+ok 66 - Fail-Closed Gate: Reference gate fails on missing or mismatched asset count
+  ---
+  duration_ms: 1.0676
+  type: 'test'
+  ...
+# Subtest: Fail-Closed Gate: Reference gate fails on asset ID mismatch
+ok 67 - Fail-Closed Gate: Reference gate fails on asset ID mismatch
+  ---
+  duration_ms: 1.3319
+  type: 'test'
+  ...
+# Subtest: Fail-Closed Gate: Project reuse across different scenes triggers PROJECT_REUSE_VIOLATION
+ok 68 - Fail-Closed Gate: Project reuse across different scenes triggers PROJECT_REUSE_VIOLATION
+  ---
+  duration_ms: 49.9986
+  type: 'test'
+  ...
+# Subtest: historical camera structure enforces three distinct shots with motivated cuts
+ok 69 - historical camera structure enforces three distinct shots with motivated cuts
+  ---
+  duration_ms: 49.3293
+  type: 'test'
+  ...
+# Subtest: historical camera defaults to three_cut across brands without brand-specific bias
+ok 70 - historical camera defaults to three_cut across brands without brand-specific bias
+  ---
+  duration_ms: 48.2793
+  type: 'test'
+  ...
+# Subtest: an unrelated product uses the same historical chain without sprayer or brand-specific geometry
+ok 71 - an unrelated product uses the same historical chain without sprayer or brand-specific geometry
+  ---
+  duration_ms: 10.158
+  type: 'test'
+  ...
+# Subtest: historical director requests one visual prompt with original scene cadence, not three concepts
+ok 72 - historical director requests one visual prompt with original scene cadence, not three concepts
+  ---
+  duration_ms: 0.9629
+  type: 'test'
+  ...
+# Subtest: final prompt preserves historical visual paragraphs while replacing conflicting voice
+ok 73 - final prompt preserves historical visual paragraphs while replacing conflicting voice
+  ---
+  duration_ms: 2.9565
+  type: 'test'
+  ...
+# Subtest: agricultural sprayer derives agricultural orchard environment and backpack affordance without warehouse
+ok 74 - agricultural sprayer derives agricultural orchard environment and backpack affordance without warehouse
+  ---
+  duration_ms: 2.5728
+  type: 'test'
+  ...
+# Subtest: construction brick derives construction jobsite without sprayer keywords or warehouse
+ok 75 - construction brick derives construction jobsite without sprayer keywords or warehouse
+  ---
+  duration_ms: 6.893
+  type: 'test'
+  ...
+# Subtest: real keyframe provider cannot publish a synthetic success on failure, or omit tenant/reference identity
+ok 76 - real keyframe provider cannot publish a synthetic success on failure, or omit tenant/reference identity
+  ---
+  duration_ms: 212.2302
+  type: 'test'
+  ...
+# Subtest: LongVideoPlanner - generates progressive Master Voice-Over with zero repetition
+ok 77 - LongVideoPlanner - generates progressive Master Voice-Over with zero repetition
+  ---
+  duration_ms: 7.8628
+  type: 'test'
+  ...
+# Subtest: StoryboardEngine - enforces strict flow_project_id isolation per scene
+ok 78 - StoryboardEngine - enforces strict flow_project_id isolation per scene
+  ---
+  duration_ms: 1.6118
+  type: 'test'
+  ...
+# Subtest: ProductAffordanceReasoner - Bofe Tarım Sprayer infers orchard/field and strictly forbids factory/warehouse/hardhat
+ok 79 - ProductAffordanceReasoner - Bofe Tarım Sprayer infers orchard/field and strictly forbids factory/warehouse/hardhat
+  ---
+  duration_ms: 82.4864
+  type: 'test'
+  ...
+# Subtest: ProductAffordanceReasoner - Ayvazoğlu Brick infers construction site and forbids farmland/orchard
+ok 80 - ProductAffordanceReasoner - Ayvazoğlu Brick infers construction site and forbids farmland/orchard
+  ---
+  duration_ms: 7.3487
+  type: 'test'
+  ...
+# Subtest: ProductAffordanceReasoner - Veri Burada SaaS infers office/desktop and forbids mud/factory
+ok 81 - ProductAffordanceReasoner - Veri Burada SaaS infers office/desktop and forbids mud/factory
+  ---
+  duration_ms: 8.4174
+  type: 'test'
+  ...
+# Subtest: ShortAdCreativeDirector - embeds dynamic affordance negative constraints into masterPlan
+ok 82 - ShortAdCreativeDirector - embeds dynamic affordance negative constraints into masterPlan
+  ---
+  duration_ms: 17.0139
+  type: 'test'
+  ...
+# Subtest: Product without custom contract -> universal fidelity defaults injected
+ok 83 - Product without custom contract -> universal fidelity defaults injected
+  ---
+  duration_ms: 77.095
+  type: 'test'
+  ...
+# Subtest: Product with custom contract -> defaults + custom rules compiled
+ok 84 - Product with custom contract -> defaults + custom rules compiled
+  ---
+  duration_ms: 438.3671
+  type: 'test'
+  ...
+# Subtest: Ayvazoglu brick -> "side faces contain no holes or cavities" present
+ok 85 - Ayvazoglu brick -> "side faces contain no holes or cavities" present
+  ---
+  duration_ms: 69.61
+  type: 'test'
+  ...
+# Subtest: Both Gemini and Flow prompts -> same fidelity contract included
+ok 86 - Both Gemini and Flow prompts -> same fidelity contract included
+  ---
+  duration_ms: 2.3395
+  type: 'test'
+  ...
+# Subtest: Creative instruction conflicts with fidelity -> fidelity rule preserved
+ok 87 - Creative instruction conflicts with fidelity -> fidelity rule preserved
+  ---
+  duration_ms: 18.944
+  type: 'test'
+  ...
+# Subtest: one execution delivers ordered physical evidence before completion
+ok 88 - one execution delivers ordered physical evidence before completion
+  ---
+  duration_ms: 289.4572
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: CanonicalLogoGate - missing canonical logo fails with NEEDS_ASSET
+ok 89 - QUALITY HARDENING: CanonicalLogoGate - missing canonical logo fails with NEEDS_ASSET
+  ---
+  duration_ms: 21.5465
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: CanonicalLogoGate - valid canonical logo matches SHA256 exactly
+ok 90 - QUALITY HARDENING: CanonicalLogoGate - valid canonical logo matches SHA256 exactly
+  ---
+  duration_ms: 40.7246
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: CanonicalLogoGate - modified bytes trigger CANONICAL_LOGO_MISMATCH
+ok 91 - QUALITY HARDENING: CanonicalLogoGate - modified bytes trigger CANONICAL_LOGO_MISMATCH
+  ---
+  duration_ms: 65.6876
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: VeoPromptCompiler - preserves diegetic brand identity and forbids floating logos
+ok 92 - QUALITY HARDENING: VeoPromptCompiler - preserves diegetic brand identity and forbids floating logos
+  ---
+  duration_ms: 91.0349
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: Raw Video QA - correct diegetic product logo PASSES
+ok 93 - QUALITY HARDENING: Raw Video QA - correct diegetic product logo PASSES
+  ---
+  duration_ms: 29.2066
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: Raw Video QA - warped diegetic product logo triggers DIEGETIC_LOGO_MISMATCH
+ok 94 - QUALITY HARDENING: Raw Video QA - warped diegetic product logo triggers DIEGETIC_LOGO_MISMATCH
+  ---
+  duration_ms: 12.9338
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: Raw Video QA - floating AI-generated overlay triggers NON_DIEGETIC_GENERATED_BRANDING
+ok 95 - QUALITY HARDENING: Raw Video QA - floating AI-generated overlay triggers NON_DIEGETIC_GENERATED_BRANDING
+  ---
+  duration_ms: 13.1334
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: Sector Affordance - agricultural sprayer in construction site fails with WRONG_SECTOR
+ok 96 - QUALITY HARDENING: Sector Affordance - agricultural sprayer in construction site fails with WRONG_SECTOR
+  ---
+  duration_ms: 16.3128
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: SaaS QA - acrylic plaque / corporate wall sign ad triggers SOFTWARE_DEMO_MISSING
+ok 97 - QUALITY HARDENING: SaaS QA - acrylic plaque / corporate wall sign ad triggers SOFTWARE_DEMO_MISSING
+  ---
+  duration_ms: 11.2923
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: SaaS QA - fake invented UI triggers FAKE_UI failure
+ok 98 - QUALITY HARDENING: SaaS QA - fake invented UI triggers FAKE_UI failure
+  ---
+  duration_ms: 11.2087
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: FactualIntegrityGate.auditFinalCopy - unsupported performance claims and foreign brands fail
+ok 99 - QUALITY HARDENING: FactualIntegrityGate.auditFinalCopy - unsupported performance claims and foreign brands fail
+  ---
+  duration_ms: 2.5102
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: DuplicateOutputDetector - identical final video SHA detected and classified as DUPLICATE_OUTPUT
+ok 100 - QUALITY HARDENING: DuplicateOutputDetector - identical final video SHA detected and classified as DUPLICATE_OUTPUT
+  ---
+  duration_ms: 0.8611
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: LogoPresentationGate - opaque rectangular logo fails with OPAQUE_LOGO_BOX
+ok 101 - QUALITY HARDENING: LogoPresentationGate - opaque rectangular logo fails with OPAQUE_LOGO_BOX
+  ---
+  duration_ms: 1.482
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: LogoPresentationGate - transparent canonical logo PASSES
+ok 102 - QUALITY HARDENING: LogoPresentationGate - transparent canonical logo PASSES
+  ---
+  duration_ms: 0.4417
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: LogoPresentationGate - oversized logo fails with OVERSIZED_LOGO
+ok 103 - QUALITY HARDENING: LogoPresentationGate - oversized logo fails with OVERSIZED_LOGO
+  ---
+  duration_ms: 1.0732
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: AudioIntegrityGate - English spoken audio fails with ACTUAL_AUDIO_LANGUAGE_MISMATCH
+ok 104 - QUALITY HARDENING: AudioIntegrityGate - English spoken audio fails with ACTUAL_AUDIO_LANGUAGE_MISMATCH
+  ---
+  duration_ms: 1.4143
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: AudioIntegrityGate - Turkish spoken audio PASSES
+ok 105 - QUALITY HARDENING: AudioIntegrityGate - Turkish spoken audio PASSES
+  ---
+  duration_ms: 0.5536
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: Raw Video QA - invented diegetic branding fails with INVENTED_DIEGETIC_BRANDING
+ok 106 - QUALITY HARDENING: Raw Video QA - invented diegetic branding fails with INVENTED_DIEGETIC_BRANDING
+  ---
+  duration_ms: 29.1848
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: PreMasterAudioGate - raw video with English audio fails before voiceover and mandates REGENERATE
+ok 107 - QUALITY HARDENING: PreMasterAudioGate - raw video with English audio fails before voiceover and mandates REGENERATE
+  ---
+  duration_ms: 1.4801
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: SourceProvenanceGate - rejects post-production mask when raw audio was English
+ok 108 - QUALITY HARDENING: SourceProvenanceGate - rejects post-production mask when raw audio was English
+  ---
+  duration_ms: 0.7602
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: SourceProvenanceGate - rejects post-production overlay when raw video had invented branding
+ok 109 - QUALITY HARDENING: SourceProvenanceGate - rejects post-production overlay when raw video had invented branding
+  ---
+  duration_ms: 0.3957
+  type: 'test'
+  ...
+# Subtest: QUALITY HARDENING: SourceProvenanceGate - authentic raw video + authentic assets PASSES with full chain
+ok 110 - QUALITY HARDENING: SourceProvenanceGate - authentic raw video + authentic assets PASSES with full chain
+  ---
+  duration_ms: 0.4021
+  type: 'test'
+  ...
+# Subtest: RAW VIDEO QA: canonical logo physically printed on product -> PASS
+ok 111 - RAW VIDEO QA: canonical logo physically printed on product -> PASS
+  ---
+  duration_ms: 82.2185
+  type: 'test'
+  ...
+# Subtest: RAW VIDEO QA: floating artificial logo overlay -> FAIL / REGENERATE
+ok 112 - RAW VIDEO QA: floating artificial logo overlay -> FAIL / REGENERATE
+  ---
+  duration_ms: 25.3049
+  type: 'test'
+  ...
+# Subtest: RAW VIDEO QA: AI-generated subtitle/lower-third -> FAIL / REGENERATE
+ok 113 - RAW VIDEO QA: AI-generated subtitle/lower-third -> FAIL / REGENERATE
+  ---
+  duration_ms: 30.7217
+  type: 'test'
+  ...
+# Subtest: RAW VIDEO QA: AI-generated brand end-card -> FAIL / REGENERATE
+ok 114 - RAW VIDEO QA: AI-generated brand end-card -> FAIL / REGENERATE
+  ---
+  duration_ms: 12.9841
+  type: 'test'
+  ...
+# Subtest: RAW VIDEO QA: maximum automatic regeneration = 1 is strictly enforced
+ok 115 - RAW VIDEO QA: maximum automatic regeneration = 1 is strictly enforced
+  ---
+  duration_ms: 34.2684
+  type: 'test'
+  ...
+# Subtest: RAW VIDEO QA: foreign brand detection remains active
+ok 116 - RAW VIDEO QA: foreign brand detection remains active
+  ---
+  duration_ms: 8.764
+  type: 'test'
+  ...
+# Subtest: RAW VIDEO QA: real disk fixture frame analysis (if local fixtures present)
+ok 117 - RAW VIDEO QA: real disk fixture frame analysis (if local fixtures present)
+  ---
+  duration_ms: 1078.2768
+  type: 'test'
+  ...
+# Subtest: duplicate, missing-tenant and wrong-role attachment proof is rejected without regeneration
+ok 118 - duplicate, missing-tenant and wrong-role attachment proof is rejected without regeneration
+  ---
+  duration_ms: 189.3966
+  type: 'test'
+  ...
+# Subtest: RealHttpGFlowProvider fails closed when Flow omits attachment evidence
+ok 119 - RealHttpGFlowProvider fails closed when Flow omits attachment evidence
+  ---
+  duration_ms: 1.9499
+  type: 'test'
+  ...
+# Subtest: transport uncertainty and provider deadlines never execute a second paid attempt
+ok 120 - transport uncertainty and provider deadlines never execute a second paid attempt
+  ---
+  duration_ms: 2.3991
+  type: 'test'
+  ...
+# Subtest: a verified response keeps its sole project and attachment identities
+ok 121 - a verified response keeps its sole project and attachment identities
+  ---
+  duration_ms: 3.3206
+  type: 'test'
+  ...
+# Subtest: RealHttpGFlowProvider rejects a Flow attachment with an asset SHA drift
+ok 122 - RealHttpGFlowProvider rejects a Flow attachment with an asset SHA drift
+  ---
+  duration_ms: 2.1364
+  type: 'test'
+  ...
+# Subtest: ReferenceRegistry - registers and resolves canonical handles correctly
+ok 123 - ReferenceRegistry - registers and resolves canonical handles correctly
+  ---
+  duration_ms: 7.8844
+  type: 'test'
+  ...
+# Subtest: ReferenceRegistry - enforces tenant isolation (throws on foreign org asset)
+ok 124 - ReferenceRegistry - enforces tenant isolation (throws on foreign org asset)
+  ---
+  duration_ms: 1.0825
+  type: 'test'
+  ...
+# Subtest: ShortAdCreativeDirector - generates full ShortAdMasterPlan with 0-8s timed beats, audio plan, and exact VO
+ok 125 - ShortAdCreativeDirector - generates full ShortAdMasterPlan with 0-8s timed beats, audio plan, and exact VO
+  ---
+  duration_ms: 74.6867
+  type: 'test'
+  ...
+# Subtest: CreativeQA - evaluateSpokenDialogueQA enforces exact Turkish speech match
+ok 126 - CreativeQA - evaluateSpokenDialogueQA enforces exact Turkish speech match
+  ---
+  duration_ms: 1.0798
+  type: 'test'
+  ...
+# Subtest: VeoPromptCompiler - embeds exact Turkish spoken dialogue and forbids visible on-screen text/logos
+ok 127 - VeoPromptCompiler - embeds exact Turkish spoken dialogue and forbids visible on-screen text/logos
+  ---
+  duration_ms: 12.2271
+  type: 'test'
+  ...
+# Subtest: ShortVideoPlanner - builds creative plan and expected references within capability limits
+ok 128 - ShortVideoPlanner - builds creative plan and expected references within capability limits
+  ---
+  duration_ms: 10.029
+  type: 'test'
+  ...
+# Subtest: ShortVideoPlanner - verifyReferenceExecutionGate enforces expected vs actual attached references
+ok 129 - ShortVideoPlanner - verifyReferenceExecutionGate enforces expected vs actual attached references
+  ---
+  duration_ms: 0.6385
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5_HYBRID compiles one shared factual plan for Gemini and Flow
+ok 130 - SIMPLE_V5_HYBRID compiles one shared factual plan for Gemini and Flow
+  ---
+  duration_ms: 145.5976
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5_HYBRID overrides a legacy 16:9 request with the vertical contract
+ok 131 - SIMPLE_V5_HYBRID overrides a legacy 16:9 request with the vertical contract
+  ---
+  duration_ms: 58.751
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5_HYBRID neutral fallback invents no performance claim
+ok 132 - SIMPLE_V5_HYBRID neutral fallback invents no performance claim
+  ---
+  duration_ms: 2.2214
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5_HYBRID fails closed instead of truncating overlong approved speech
+ok 133 - SIMPLE_V5_HYBRID fails closed instead of truncating overlong approved speech
+  ---
+  duration_ms: 2.7826
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5_HYBRID rejects unverified legacy marketing formulas
+ok 134 - SIMPLE_V5_HYBRID rejects unverified legacy marketing formulas
+  ---
+  duration_ms: 1.2915
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5_HYBRID requires a locked selected product/service
+ok 135 - SIMPLE_V5_HYBRID requires a locked selected product/service
+  ---
+  duration_ms: 0.8977
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5_HYBRID makes selected creative types materially different without changing timing
+ok 136 - SIMPLE_V5_HYBRID makes selected creative types materially different without changing timing
+  ---
+  duration_ms: 3.1556
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5 production plan is deterministic and captures canonical references
+ok 137 - SIMPLE_V5 production plan is deterministic and captures canonical references
+  ---
+  duration_ms: 217.4543
+  type: 'test'
+  ...
+# Subtest: SIMPLE_V5 production plan follows explicit subtitle selection
+ok 138 - SIMPLE_V5 production plan follows explicit subtitle selection
+  ---
+  duration_ms: 77.6706
+  type: 'test'
+  ...
+# Subtest: VideoStrategyRouter - routes <=15s to SHORT_VIDEO and >15s to LONG_VIDEO
+ok 139 - VideoStrategyRouter - routes <=15s to SHORT_VIDEO and >15s to LONG_VIDEO
+  ---
+  duration_ms: 16.8319
+  type: 'test'
+  ...
+# Subtest: VideoStrategyRouter - dynamic runtime sector preset overrides (no code deploy needed)
+ok 140 - VideoStrategyRouter - dynamic runtime sector preset overrides (no code deploy needed)
+  ---
+  duration_ms: 1.0846
+  type: 'test'
+  ...
+# Subtest: WIZARD AD FORMATS: all 7 ad formats produce distinct visual hooks, proofs, and closes
+ok 141 - WIZARD AD FORMATS: all 7 ad formats produce distinct visual hooks, proofs, and closes
+  ---
+  duration_ms: 265.9739
+  type: 'test'
+  ...
+# Subtest: WIZARD MOTION STYLES: all motion styles produce distinct camera instructions
+ok 142 - WIZARD MOTION STYLES: all motion styles produce distinct camera instructions
+  ---
+  duration_ms: 17.9325
+  type: 'test'
+  ...
+# Subtest: WIZARD ENVIRONMENTS: all environment presets produce distinct location and lighting atmospheres
+ok 143 - WIZARD ENVIRONMENTS: all environment presets produce distinct location and lighting atmospheres
+  ---
+  duration_ms: 9.8471
+  type: 'test'
+  ...
+# Subtest: WIZARD COMPILER SYMMETRY: FlowVeo and GeminiNative compilers are 100% symmetric across all formats
+ok 144 - WIZARD COMPILER SYMMETRY: FlowVeo and GeminiNative compilers are 100% symmetric across all formats
+  ---
+  duration_ms: 6.7933
+  type: 'test'
+  ...
+1..144
+# tests 144
+# suites 0
+# pass 144
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 15687.0241
