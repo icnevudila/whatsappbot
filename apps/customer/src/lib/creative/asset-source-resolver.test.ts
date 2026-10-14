@@ -18,6 +18,27 @@ test('canonical source matrix runs offline with decoded byte identity', async t 
     return new Response(url.includes('corrupt') ? Buffer.alloc(100,65) : bytes,{headers:{'content-type':'image/png'}})
   }
   try {
+    await t.test('a lookalike Gateway hostname never receives its backend credential',async()=>{
+      const priorFetch=globalThis.fetch
+      const oldGateway=process.env.OMNISTUDIO_GATEWAY_URL
+      const oldToken=process.env.OMNISTUDIO_GATEWAY_TOKEN
+      process.env.OMNISTUDIO_GATEWAY_URL='https://fixture.invalid'
+      process.env.OMNISTUDIO_GATEWAY_TOKEN='fixture-backend'
+      try {
+        globalThis.fetch=async(input,init)=>{
+          const trusted=String(input)==='https://fixture.invalid/logo.png'
+          assert.equal(new Headers(init?.headers).get('authorization'),trusted?'Bearer fixture-backend':null)
+          assert.equal(init?.redirect,'error')
+          return new Response(bytes,{headers:{'content-type':'image/png'}})
+        }
+        assert.ok(await resolveAssetSource('https://fixture.invalid/logo.png'))
+        assert.ok(await resolveAssetSource('https://fixture.invalid.attacker.example/logo.png'))
+      } finally {
+        if(oldGateway===undefined)delete process.env.OMNISTUDIO_GATEWAY_URL;else process.env.OMNISTUDIO_GATEWAY_URL=oldGateway
+        if(oldToken===undefined)delete process.env.OMNISTUDIO_GATEWAY_TOKEN;else process.env.OMNISTUDIO_GATEWAY_TOKEN=oldToken
+        globalThis.fetch=priorFetch
+      }
+    })
     for(const [source,kind] of [
       ['https://fixture.invalid/product.png','absolute_url'],
       ['/outputs/offline-fixture.png','gateway_output'],

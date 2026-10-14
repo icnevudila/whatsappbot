@@ -131,9 +131,11 @@ async function resolveRawAssetSource(
   // 2. Tam (Absolute) HTTP / HTTPS URL'leri
   if (source.startsWith('http://') || source.startsWith('https://')) {
     try {
-      const isGatewayRequest = source.startsWith(gw)
+      const sourceUrl = new URL(source)
+      if (sourceUrl.username || sourceUrl.password) return null
+      const isGatewayRequest = sourceUrl.origin === new URL(gw).origin
       const fetchHeaders = isGatewayRequest ? gwHeaders : {}
-      const response = await fetch(source, { headers: fetchHeaders, signal: AbortSignal.timeout(15000) })
+      const response = await fetch(source, { headers: fetchHeaders, redirect: 'error', signal: AbortSignal.timeout(15000) })
       if (!response.ok) return null
       const mime = (response.headers.get('content-type') || '').split(';')[0].trim() || detectMime(source)
       if (!mime.startsWith('image/')) return null
