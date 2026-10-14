@@ -31,7 +31,7 @@ export const V5_STANDARD_NEGATIVES = [
   'identity drift',
   'watermark',
   'graphic overlays, lower thirds, floating banners, text cards',
-  'black placard, acrylic sign, fake painted logo, distorted text, chalky letters, painted text on brick, stickers on product',
+  'black placard, acrylic sign, fake painted logo, distorted text, chalky letters, painted text on product surface, stickers on product',
   'cartoon, 3D animation look, cgi render, uncanny valley',
   'blurry artifacts, low quality, pixelated, amateur video, choppy jumps, abrupt view shifts, jerky camera',
 ].join(', ')
