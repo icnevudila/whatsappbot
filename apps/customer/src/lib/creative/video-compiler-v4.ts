@@ -116,6 +116,11 @@ export const VEO_V4_STANDARD_NEGATIVES = [
   'deformed hands',
   'unsafe product use',
   'watermark',
+  'fake placards',
+  'painted text on product surface',
+  'artificial labels',
+  'signs mounted on raw materials',
+  'rectangular badge on brick',
 ].join(', ')
 
 /**
@@ -186,7 +191,7 @@ export function mapSnapshotToBriefV4(snapshot: CreativeSnapshot): VideoBriefInpu
     },
     text: {
       rawVideoPolicy: 'existing_only',
-      postProductionSubtitles: true,
+      postProductionSubtitles: false,
     },
     delivery: {
       aspectRatio: '9:16',
@@ -298,7 +303,7 @@ export function compileDeterministicV4(brief: VideoBriefInputV4): VeoCompilerOut
     `Fikir: ${brand} ile ${subject} tanıtımı.`,
     `Konu ve Kimlik: ${subject}. Referans ürün formu, marka adı, varsa gerçek logo ve renkler %100 korunur.`,
     brief.brand?.name
-      ? `Marka Görünürlüğü: ${brand} adı ve varsa ekli gerçek logo sahne içinde doğal, büyük ve okunabilir fiziksel marka yüzeylerinde görünür olmalıdır: ürün gövdesi/ambalaj etiketi, iş kıyafeti nakışı, araç etiketi, dükkan/fabrika giriş tabelası veya ana hero üründeki marka plakası. Küçük masa levhası, elde taşınan mini tabela ve rastgele CTA tabelası kullanma. Logo yeniden tasarlanmaz, uydurma amblem eklenmez.`
+      ? `Marka Görünürlüğü: ${brand} adı ve varsa ekli gerçek logo sahne içinde sadece doğal fiziksel marka yüzeylerinde (ürünün kendi orijinal ambalajı/etiketi, iş kıyafeti nakışı veya kurumsal mekan tabelası) yer alabilir. Ham ürün yüzeyine (tuğla, taş, ahşap vb.) sonradan monte edilmiş yapay levha, plaka, metal tabela veya yapay yazı ÇİZDİRİLMEZ. Logo yeniden tasarlanmaz, uydurma amblem eklenmez. Orijinal kurumsal logo post-prodüksiyon 2D temiz outro katmanında sunulur.`
       : null,
     `Tek Lokasyon ve Işık: ${location}. Doğal gün ışığı, sıcak gölgeler ve Arri Alexa sinematik renk derecelendirmesi.`,
     `0.0s - 2.2s (Görsel Kanca): ${act1Visual}. 100mm f/1.8 sığ alan derinliği.`,
@@ -307,7 +312,7 @@ export function compileDeterministicV4(brief: VideoBriefInputV4): VeoCompilerOut
     `Kamera ve Fizik: Tek pürüzsüz kamera hareketi. Gerçek hayat fiziğine tam uyum.`,
     `Süreklilik: Tek lokasyon, tek ana konu, aynı ışık kurulumu ve sıfır sahne sıçraması.`,
     voiceSection,
-    `Ham Video Metin Politikası: Ham videoda fiyat, indirim, telefon, uzun kampanya metni, altyazı veya sonradan eklenmiş grafik kartı OLMAYACAKTIR. Veo'nun bozduğu küçük yazılar yasaktır: küçük masa levhası, elde taşınan küçük tabela, arka plan etiketi, karmaşık ekran metni ve rastgele CTA tabelası kullanma. Gerçek fiziksel marka adı, ürün etiketi, büyük dükkan/fabrika tabelası veya ekli gerçek logo sahne içinde doğal biçimde kullanılabilir. Marka renk paleti ürün, kıyafet, mekan aksanı ve ışıkta kullanılmalıdır. STRICT RULE: NO GIBBERISH WORDS, NO ON-SCREEN TEXT, NO SMALL TEXT, NO RANDOM CTA SIGNS, NO PRICES, NO DISCOUNTS, NO PHONE NUMBERS, NO SUBTITLES, NO GRAPHIC OVERLAYS. ALLOW LARGE CLEAN PHYSICAL BRAND SIGNAGE AND ORIGINAL LOGO ONLY.`,
+    `Ham Video Metin Politikası: Ham videoda fiyat, indirim, telefon, uzun kampanya metni, altyazı veya sonradan eklenmiş grafik kartı OLMAYACAKTIR. Veo'nun bozduğu küçük yazılar ve yapay levhalar yasaktır: ürün üzerine yapıştırılmış sahte etiket/levha, küçük masa levhası, elde taşınan küçük tabela, arka plan etiketi, karmaşık ekran metni ve rastgele CTA tabelası kullanma. Gerçek fiziksel marka adı, ürünün orijinal ambalajı veya büyük kurumsal tabela sahne içinde doğal biçimde bulunabilir. Marka renk paleti ürün, kıyafet, mekan aksanı ve ışıkta kullanılmalıdır. STRICT RULE: NO GIBBERISH WORDS, NO ON-SCREEN TEXT, NO SMALL TEXT, NO RANDOM CTA SIGNS, NO FAKE PLACARDS ON PRODUCT, NO PRICES, NO DISCOUNTS, NO PHONE NUMBERS, NO SUBTITLES, NO GRAPHIC OVERLAYS. ALLOW LARGE CLEAN PHYSICAL BRAND SIGNAGE AND ORIGINAL LOGO ONLY.`,
   ].filter(Boolean).join('\n')
 
   return {
@@ -336,7 +341,7 @@ export function compileDeterministicV4(brief: VideoBriefInputV4): VeoCompilerOut
       cta: brief.campaign.cta || 'Bizimle İletişime Geçin',
       phone: null,
       url: null,
-      subtitles: true,
+      subtitles: false,
       legalLine: brief.campaign.legalLine || null,
     },
     qualityChecks: {
