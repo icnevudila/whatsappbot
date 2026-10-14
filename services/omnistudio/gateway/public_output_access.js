@@ -121,7 +121,7 @@ function verifyMediaAccess({ req, filename, ownerTenant, isInternalWorker = fals
 
   // 2. Gateway Master / Admin Token in Authorization header
   const authHeader = req.headers?.['authorization'] || '';
-  const gatewayToken = (process.env.OMNISTUDIO_GATEWAY_TOKEN || 'U9AIIyyd8DEuSORtTxd3kbtTRHujJvBhRyWLvpXCSjkQnbpgsUl_YaR7TxhqQjSr').trim();
+  const gatewayToken = (process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim();
   let isMasterToken = false;
   if (gatewayToken && authHeader.toLowerCase().startsWith('bearer ')) {
     const suppliedToken = authHeader.slice(7).trim();

@@ -748,7 +748,7 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
   const trimmed = id.trim()
   if (!trimmed) return { error: 'Kayıt yok.' }
   try {
-    const { org, supabase } = await requireActiveOrg()
+    const { userId, org, supabase } = await requireActiveOrg()
     if (!isOrgAdminRole(org.role)) return { error: 'Yetki yok.' }
     const { data } = await supabase
       .from('creatives')
@@ -776,7 +776,7 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
       .maybeSingle()
     if (retryError) return { error: retryError.message }
     if (!retried) return { error: 'İşin durumu değişti; ikinci üretim başlatılmadı.' }
-    const queueError = await kickGeneration(trimmed)
+    const queueError = await kickGeneration(trimmed, { userId, org, supabase })
     if (queueError) return { error: queueError }
     revalidateLibrary(trimmed)
     return { ok: 'Üretim yeniden başlatıldı.' }
