@@ -803,10 +803,13 @@ export async function reconcileCreative(id: string): Promise<CreativeActionState
 
     if (lastJob?.id && lastJob?.gatewayUrl) {
       try {
-        const gwRes = await fetch(`${lastJob.gatewayUrl.replace(/\/$/, '')}/jobs/${lastJob.id}`, {
+        const gwBase = lastJob.gatewayUrl.replace(/\/$/, '')
+        const gwRes = await fetch(`${gwBase}/v1/images/status/${lastJob.id}`, {
           signal: AbortSignal.timeout(6000),
-        })
-        if (gwRes.ok) {
+        }).catch(() => null) || await fetch(`${gwBase}/jobs/${lastJob.id}`, {
+          signal: AbortSignal.timeout(6000),
+        }).catch(() => null)
+        if (gwRes && gwRes.ok) {
           const gwJson = await gwRes.json()
           if (gwJson.status === 'completed' && gwJson.result_url) {
             // Restore active imageJob in payload so processCreativeGeneration can complete authentic reconciliation
