@@ -53,6 +53,8 @@ test('each image compiler honors the 4 modes and retains supplied copy and direc
     const prem = buildCreativePrompt({...snapshot,styleMode:'PREMIUM_SHOWCASE'}, {mode}).prompt
 
     assert.match(smart, /Smart Adaptive Commercial Campaign/)
+    assert.match(smart, /original aspect ratio as a flat, front-facing panel/)
+    assert.doesNotMatch(smart, /Integrate dynamic communication energy: floating/)
     assert.match(show, /Showstopper Grand Commercial Campaign/)
     assert.match(real, /Authentic Real-Life Commercial/)
     assert.match(prem, /Premium Showcase Commercial/)
