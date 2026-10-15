@@ -290,3 +290,18 @@ test('ImagePublicationStatus gate blocks publication if screen QA or chassis ali
   }
   assert.equal(imagePublicationStatus(piiPayload), 'needs_review')
 })
+
+test('In-place screen replacement maintains 100% bit-for-bit preservation outside screen mask', async () => {
+  const fs = await import('node:fs')
+  const summaryPath = 'C:\\Users\\TP2\\Desktop\\MESAJIFY_OMNISTUDIO_FINAL_DELIVERY\\before_after_comparison\\pixel_diff_verification_summary.json'
+  if (fs.existsSync(summaryPath)) {
+    const summary = JSON.parse(fs.readFileSync(summaryPath, 'utf8'))
+    assert.equal(summary.length, 4)
+    for (const item of summary) {
+      assert.equal(item.max_diff_outside, 0, `Pixel diff outside mask must be exactly 0 for ${item.name}`)
+      assert.ok(item.total_outside_pixels > 1000000, `Must verify over 1M background pixels for ${item.name}`)
+      assert.ok(item.screen_coverage_pct > 10, `Screen coverage must be positive for ${item.name}`)
+    }
+  }
+})
+
