@@ -58,6 +58,9 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     `[LIGHTING & DEPTH]: ${lighting}. Realistic material physics, authentic physical shadows, no floating elements.`,
     visualDiversityDirective(options.visualDiversityPlan),
     desc ? `[PRODUCT SPECIFICS]: ${desc}.` : '',
+    /yazılım|saas|platform|panel|mesajify/i.test(`${brand} ${product} ${desc}`)
+      ? `[SOFTWARE / DEVICE STAGING MANDATE]: The advertisement features a professional software platform displayed on a high-end device (modern aluminium laptop, desktop monitor, or smartphone). The device MUST face the camera directly in an eye-level or gentle 0° to 10° frontal view. STRICTLY NO awkward sideways angles, steep diagonal tilts, or unreadable edge-on profiles. The device screen must be rendered as a clean, neutral, blank dark matte display with crisp physical bezels, ready for authentic high-resolution UI screen compositing. DO NOT paint fake dashboards, garbled buttons, or hallucinated software text onto the screen. Focus on realistic premium office atmosphere, natural professional human interaction, and pristine device chassis.`
+      : '',
     options.hasProductRef
       ? `[STRICT PRODUCT FIDELITY]: The physical product photo is provided as canonical reference @HeroProduct. Preserve the exact physical shape, materials, proportions, buttons, nozzle/accessories, and authentic colors of @HeroProduct with 100% fidelity. Do NOT mutate or redesign the product.`
       : `Feature ${product} with authentic physical characteristics.`,
@@ -94,6 +97,14 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     'blurry',
     'low quality',
     'cluttered composition',
+    'fake software ui',
+    'hallucinated dashboard',
+    'unreadable screen text',
+    'garbled buttons',
+    'extreme diagonal laptop angle',
+    'sideways tilted screen',
+    'edge-on device profile',
+    'warped monitor',
     ...(plan?.negative_constraints || []),
   ]
 

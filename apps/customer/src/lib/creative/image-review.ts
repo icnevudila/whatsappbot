@@ -24,6 +24,10 @@ export function imagePublicationStatus(payload?: ImagePublicationGateInput | nul
   if (payload.logoMismatch === true) return 'needs_review'
   if (payload.instructionViolation === true) return 'needs_review'
   if (payload.qaPassed === false) return 'needs_review'
+  if (payload.screenCompositingQA && payload.screenCompositingQA.passed === false) return 'needs_review'
+  if (payload.piiViolation === true) return 'needs_review'
+  if (payload.screenPerspectiveViolation === true) return 'needs_review'
+  if (payload.screenBoundaryViolation === true) return 'needs_review'
 
   // SKU & Reference Integrity Validation
   if (payload.heroProductId && Array.isArray(payload.products) && payload.products.length > 0) {

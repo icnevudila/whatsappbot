@@ -17,6 +17,7 @@ import { submitVideoWithIntent, VideoJobTerminalError, VideoSubmissionUncertainE
 import { resolveAssetSource } from './asset-source-resolver'
 import { resolveOwnedLogoPath } from './brand-logo-source'
 import { compositeCommercialCreative } from './v2/image-compositor'
+import { compositeRealScreenToDevice, resolveSoftwareScreen } from './screen-compositor'
 import { buildImagePromptV2 } from './v2/image-prompt-v2'
 import { mapLegacyStyleToPreset } from './v2/adapter'
 import { imagePublicationStatus } from './image-review'
@@ -1268,6 +1269,57 @@ export async function processCreativeGeneration(
       }
     }
 
+    // Software / B2B SaaS Real Screen Compositing:
+    // If the creative represents a software platform (Mesajify or any B2B SaaS brand),
+    // deterministically composite authentic software UI onto the device chassis.
+    // This strictly prevents AI from generating fake dashboards, garbled buttons, or unreadable screens.
+    const isSoftwareProduct =
+      snapshot.offeringKind === 'software' ||
+      /yazılım|saas|platform|panel|mesajify/i.test(
+        `${customerName} ${snapshot.products?.[0]?.name || ''} ${snapshot.products?.[0]?.description || ''} ${snapshot.sector || ''}`
+      ) ||
+      Boolean((payload as any).screenCompositingEnabled)
+
+    let screenCompositingQA: any = null
+
+    if (isSoftwareProduct) {
+      try {
+        const targetDevice =
+          (payload as any).deviceType ||
+          (snapshot.formatId === 'story' || snapshot.aspect === '9:16' ? 'mobile' : 'laptop')
+
+        const customScreenBuf =
+          refs.find((r) => r.role === 'base')?.data || (payload as any).customScreenBuffer || null
+
+        const resolvedScreen = await resolveSoftwareScreen(
+          customerName,
+          targetDevice,
+          customScreenBuf,
+        )
+
+        const screenResult = await compositeRealScreenToDevice({
+          backgroundBuffer: finalImageBytes,
+          screenshotBuffer: resolvedScreen.buffer,
+          device: targetDevice,
+          customQuad: (payload as any).screenQuad || null,
+          glareIntensity: (payload as any).glareIntensity ?? 0.08,
+          cornerRadius: (payload as any).screenCornerRadius ?? undefined,
+        })
+
+        finalImageBytes = screenResult.compositedBuffer
+        finalWidth = screenResult.width
+        finalHeight = screenResult.height
+        finalMimeType = 'image/png'
+        finalSha256 = screenResult.sha256
+        screenCompositingQA = screenResult.qa
+      } catch (screenErr: any) {
+        console.warn('[CreativeProcess] Software screen compositing QA error:', screenErr?.message || screenErr)
+        screenCompositingQA = {
+          passed: false,
+          violations: [screenErr?.message || String(screenErr)],
+        }
+      }
+    }
 
     const ext = finalMimeType.includes('jpeg') ? 'jpg' : finalMimeType.includes('webp') ? 'webp' : 'png'
     const path = payload.imageDirectIntent?.storagePath || `${creative.org_id}/${crypto.randomUUID()}.${ext}`
@@ -1284,6 +1336,8 @@ export async function processCreativeGeneration(
     const { data: publicUrl } = supabase.storage.from('creatives').getPublicUrl(path)
     const nextPayload: CreativePayload = {
       ...snapshot,
+      screenCompositingQA,
+      ...(screenCompositingQA && !screenCompositingQA.passed ? { qaPassed: false } : {}),
       imageJob: payload.imageJob || null,
       imageOutputReceipt: {
         orgId: creative.org_id, creativeId, jobId: payload.imageJob?.id || null,
@@ -1309,7 +1363,7 @@ export async function processCreativeGeneration(
     const { error, data: finalized } = await supabase
       .from('creatives')
       .update({
-        status: imagePublicationStatus(snapshot),
+        status: imagePublicationStatus(nextPayload),
         error: null,
         storage_path: path,
         public_url: publicUrl.publicUrl,
