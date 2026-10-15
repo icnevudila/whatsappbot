@@ -11,6 +11,13 @@ import { canReviewImage, imagePublicationStatus, isImageReviewApproved } from '.
 test('V3 images require explicit review with tenant-owned decoded receipt; legacy publication unchanged', () => {
   assert.equal(imagePublicationStatus({creativeDirectorVersion:'V3'}),'ready')
   assert.equal(imagePublicationStatus({}),'ready')
+  assert.equal(imagePublicationStatus({skuMismatch: true}), 'needs_review')
+  assert.equal(imagePublicationStatus({logoMismatch: true}), 'needs_review')
+  assert.equal(imagePublicationStatus({referenceMismatch: true}), 'needs_review')
+  assert.equal(imagePublicationStatus({instructionViolation: true}), 'needs_review')
+  assert.equal(imagePublicationStatus({qaPassed: false}), 'needs_review')
+  assert.equal(imagePublicationStatus({heroProductId: 'sku-delta', products: [{id: 'sku-bofe'}]}), 'needs_review')
+  assert.equal(imagePublicationStatus({heroProductId: 'sku-delta', products: [{id: 'sku-delta'}]}), 'ready')
   const receipt = {orgId:'org-a',creativeId:'creative-a',decodedImage:true,sha256:'a'.repeat(64),size:100,storagePath:'org-a/image.png',mimeType:'image/png'}
   const input = {orgId:'org-a',creativeId:'creative-a',receipt,storagePath:receipt.storagePath}
   assert.equal(canReviewImage(input),true)

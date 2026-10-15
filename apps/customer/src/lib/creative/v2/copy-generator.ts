@@ -42,8 +42,10 @@ export function generateDeterministicLocalCopy({
 
   // Do not squeeze arbitrary catalog/offer text into the speech window.
   // The exact full product and offer remain in the campaign, not truncated claims.
-  const shortSubject = pName.split(/\s+/).length <= 4 ? pName : 'ürününü'
-  const line = `${bName} ${shortSubject} için bilgi ve sipariş almak üzere bize yazın.`
+  const words = pName.split(/\s+/).filter(Boolean)
+  const shortSubject = words.length <= 4 ? pName : words.slice(0, 3).join(' ')
+  const prefix = shortSubject.toLowerCase().startsWith(bName.toLowerCase()) ? '' : `${bName} `
+  const line = `${prefix}${shortSubject} için bilgi ve sipariş almak üzere bize yazın.`
   const voiceover = line.split(/\s+/).length <= 14
     ? line : 'Ürünümüzü yakından incelemek, bilgi ve sipariş almak için bize yazın.'
 

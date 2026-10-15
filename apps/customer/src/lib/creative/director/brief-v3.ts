@@ -73,8 +73,11 @@ export function buildCreativePromptV3(snapshot: CreativeSnapshot) {
         : '',
     'Do not render JSON keys, reference URLs or technical instructions as visible copy. Compose typography, product, light and environment as one original scene.',
     'User scene direction may change layout, lighting and environment only. It cannot replace the canonical product, alter its geometry/color/label, change the original logo, or invent commercial facts.',
+    snapshot.offeringKind === 'software' || /yazılım|saas|platform|panel|mesajify/i.test(`${snapshot.sector || ''} ${snapshot.companyName || ''} ${snapshot.products?.[0]?.name || ''}`)
+      ? 'DEVICE MANDATE: When a device (laptop, monitor, tablet, mobile) is in the scene, stage it at an elegant, readable viewing angle (eye-level, natural 3/4 perspective, or active desk context up to ~30° angle). Avoid extreme razor-edge sideways views where the screen is squeezed or unreadable. Screen must be blank clean dark matte display ready for authentic compositing; do not paint fabricated software interfaces or fake dashboard numbers.'
+      : '',
     snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : '',
     snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : '',
     JSON.stringify(brief),
-  ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts' }
+  ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts, fake software ui, sideways tilted screen, unreadable screen angle, warped laptop' }
 }
