@@ -1227,6 +1227,8 @@ export async function processCreativeGeneration(
 
     if (Boolean((payload as any).lockCopyOverlay)) {
       const logoRef = refs.find((r) => r.role === 'logo')
+      const baseRef = refs.find((r) => r.role === 'base')
+      const inputBuffer = (snapshot.generationType === 'revision' && baseRef?.data) ? baseRef.data : image.data
       const headline = (payload as any).customHeadline || (payload as any).creativePlan?.copy?.headline || snapshot.brief || ''
       const supporting = (payload as any).customSupporting || (payload as any).creativePlan?.copy?.supporting_line || ''
       const cta = snapshot.cta || (payload as any).creativePlan?.copy?.cta || 'İnceleyin'
@@ -1236,7 +1238,7 @@ export async function processCreativeGeneration(
 
       try {
         const composited = await compositeCommercialCreative({
-          baseImageBuffer: image.data,
+          baseImageBuffer: inputBuffer,
           logoBuffer: logoRef?.data || null,
           targetFormat: targetFormatV2,
           brandPalette: {
