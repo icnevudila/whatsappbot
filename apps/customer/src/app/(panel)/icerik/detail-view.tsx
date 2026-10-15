@@ -868,6 +868,8 @@ export function CreativeDetail({
                 labels: [],
                 parentId: creative.id,
                 baseCreativeId: keepBaseScene ? creative.id : null,
+                keepBaseScene,
+                lockCopyOverlay: keepBaseScene,
                 generationType: 'revision',
                 instruction: instruction.trim() || 'Yalnız onaylı reklam metinlerini değiştir; mevcut sahne, kadraj, ışık, insan, ürün ve logo aynen korunsun.',
                 ...(revisionCopy.headline.trim() ? {customHeadline: revisionCopy.headline.trim()} : {}),

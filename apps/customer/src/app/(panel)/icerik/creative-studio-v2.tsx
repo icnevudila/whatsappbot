@@ -636,8 +636,12 @@ export function CreativeStudioV2({
           generationType: !brandOnly && initialDerivedCreativeId ? 'derived' : 'new',
           baseCreativeId: brandOnly ? null : initialDerivedCreativeId || null,
           brief: headline
-            ? `${headline}. ${supportingLine}`
-            : brandOnly ? `${data.org.name} marka tanıtımı` : `${data.org.name} için ${selectedProduct!.name} reklam görseli`,
+            ? `${headline}${supportingLine ? `. ${supportingLine}` : ''}`
+            : brandOnly
+              ? `${data.org.name} marka tanıtımı`
+              : selectedProduct!.name.toLowerCase().startsWith(data.org.name.toLowerCase()) || data.org.name.toLowerCase() === selectedProduct!.name.toLowerCase()
+                ? `${selectedProduct!.name} reklam görseli`
+                : `${data.org.name} için ${selectedProduct!.name} reklam görseli`,
           formatId: imageFormat,
           style: stylePreset.toLowerCase(),
           heroProductId: brandOnly ? null : selectedProduct!.id,
@@ -1128,6 +1132,9 @@ export function CreativeStudioV2({
                             <button
                               key={p.id}
                               type="button"
+                              data-testid={`product-card-${p.id}`}
+                              data-product-id={p.id}
+                              data-product-name={p.name}
                               onClick={() => {
                                 if (p.id !== heroProductId) resetProductCopy()
                                 setHeroProductId(p.id)
