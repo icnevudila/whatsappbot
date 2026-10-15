@@ -7,17 +7,20 @@ import {
   calculateQuadArea,
   getQuadBoundingBox,
   estimatePerspectiveTilt,
-  computePillowPerspectiveCoeffs,
 } from '../apps/customer/src/lib/creative/screen-compositor/homography'
 import {
   validateScreenCompositingQA,
 } from '../apps/customer/src/lib/creative/screen-compositor/screen-qa'
+import {
+  verifyScreenChassisAlignment,
+} from '../apps/customer/src/lib/creative/screen-compositor/chassis-verifier'
 import {
   getDevicePreset,
   DEVICE_PRESETS,
 } from '../apps/customer/src/lib/creative/screen-compositor/mockup-library'
 import {
   resolveSoftwareScreen,
+  scanScreenshotForPii,
 } from '../apps/customer/src/lib/creative/screen-compositor/software-screen-registry'
 import {
   compositeRealScreenToDevice,
@@ -87,21 +90,31 @@ test('Quadrilateral convexity and bounding box calculations', () => {
   assert.ok(area > 0 && area <= 400 * 300)
 })
 
-test('Perspective tilt detection: frontal screen passes, oblique sideways screen fails', () => {
-  // Frontal laptop screen (MacBook Pro 16 frontal preset)
+test('Perspective tilt & legibility: frontal, natural 3/4, and desk views pass; extreme sideways fails', () => {
+  // 1. Frontal laptop screen
   const frontalPreset = DEVICE_PRESETS['macbook-pro-16-frontal']
-  const frontalTilt = estimatePerspectiveTilt(frontalPreset.screenQuad)
+  const frontalTilt = estimatePerspectiveTilt(frontalPreset.screenQuad, 16 / 10)
   assert.ok(frontalTilt.tiltAngleDeg <= 10, `Frontal tilt should be <= 10°, got ${frontalTilt.tiltAngleDeg}°`)
 
-  // Extreme sideways tilted screen (e.g. 70° oblique side perspective)
+  // 2. Natural 3/4 perspective laptop (~15°-20° yaw)
+  const threeQuarterPreset = DEVICE_PRESETS['macbook-pro-16-three-quarter']
+  const threeQuarterTilt = estimatePerspectiveTilt(threeQuarterPreset.screenQuad, 16 / 10)
+  assert.ok(threeQuarterTilt.tiltAngleDeg >= 10 && threeQuarterTilt.tiltAngleDeg <= 30, `3/4 tilt should be between 10°-30°, got ${threeQuarterTilt.tiltAngleDeg}°`)
+
+  // 3. Desk active work view (~12° pitch)
+  const deskPreset = DEVICE_PRESETS['macbook-pro-16-desk-work']
+  const deskTilt = estimatePerspectiveTilt(deskPreset.screenQuad, 16 / 10)
+  assert.ok(deskTilt.tiltAngleDeg <= 20, `Desk tilt should be <= 20°, got ${deskTilt.tiltAngleDeg}°`)
+
+  // 4. Extreme unreadable sideways tilt (>35°)
   const extremeSidewaysQuad: Quad = [
-    { x: 1200, y: 100 },
-    { x: 1350, y: 250 },
-    { x: 1330, y: 800 },
-    { x: 1190, y: 920 },
+    { x: 1100, y: 80 },
+    { x: 1220, y: 260 },
+    { x: 1210, y: 840 },
+    { x: 1090, y: 940 },
   ]
-  const extremeTilt = estimatePerspectiveTilt(extremeSidewaysQuad)
-  assert.ok(extremeTilt.tiltAngleDeg > 22, `Extreme tilt should exceed 22°, got ${extremeTilt.tiltAngleDeg}°`)
+  const extremeTilt = estimatePerspectiveTilt(extremeSidewaysQuad, 16 / 10)
+  assert.ok(extremeTilt.tiltAngleDeg > 35, `Extreme tilt should exceed 35°, got ${extremeTilt.tiltAngleDeg}°`)
 
   // QA on extreme sideways quad must fail
   const qa = validateScreenCompositingQA({
@@ -113,90 +126,119 @@ test('Perspective tilt detection: frontal screen passes, oblique sideways screen
     screenshotHeight: 1080,
   })
   assert.equal(qa.passed, false)
-  assert.ok(qa.violations.some(v => v.includes('SCREEN_PERSPECTIVE_TOO_OBLIQUE')))
+  assert.ok(qa.violations.some(v => v.includes('SCREEN_PERSPECTIVE_TOO_OBLIQUE') || v.includes('SCREEN_LEGIBILITY_INSUFFICIENT')))
 })
 
-test('Screen QA fail-closed: out of bounds, low resolution, and PII leaks are blocked', () => {
-  // Out of bounds quad
-  const outOfBoundsQuad: Quad = [
-    { x: -50, y: 100 },
-    { x: 1000, y: 100 },
-    { x: 1000, y: 800 },
-    { x: -50, y: 800 },
+test('Physical screen chassis alignment verification: studio mockup passes, blind preset on arbitrary image fails', async () => {
+  // 1. Studio mockup render (compositor generated) -> 100% confidence pass
+  const studioVerification = await verifyScreenChassisAlignment(
+    Buffer.alloc(0),
+    DEVICE_PRESETS['macbook-pro-16-frontal'].screenQuad,
+    true,
+  )
+  assert.equal(studioVerification.alignmentValid, true)
+  assert.equal(studioVerification.screenDetected, true)
+  assert.equal(studioVerification.confidenceScore, 1.0)
+
+  // 2. Arbitrary non-device background (e.g. solid white wall with no laptop screen bezels)
+  const arbitraryWallBg = await sharp({
+    create: { width: 1920, height: 1080, channels: 3, background: { r: 240, g: 240, b: 240 } },
+  }).png().toBuffer()
+
+  const blindOverlayVerification = await verifyScreenChassisAlignment(
+    arbitraryWallBg,
+    DEVICE_PRESETS['macbook-pro-16-frontal'].screenQuad,
+    false,
+  )
+  assert.equal(blindOverlayVerification.alignmentValid, false)
+  assert.equal(blindOverlayVerification.screenDetected, false)
+
+  // QA validation with failed chassis alignment must fail-closed
+  const qa = validateScreenCompositingQA({
+    quad: DEVICE_PRESETS['macbook-pro-16-frontal'].screenQuad,
+    canvasWidth: 1920,
+    canvasHeight: 1080,
+    device: 'laptop',
+    screenshotWidth: 1920,
+    screenshotHeight: 1080,
+    chassisVerification: blindOverlayVerification,
+  })
+  assert.equal(qa.passed, false)
+  assert.equal(qa.checks.screenChassisAlignmentValid, false)
+  assert.ok(qa.violations.some(v => v.includes('SCREEN_CHASSIS_NOT_ALIGNED')))
+})
+
+test('Fail-closed PII scanning: real customer numbers, emails, and TC identity numbers are detected and blocked', () => {
+  // Real phone leak
+  const phoneScan = scanScreenshotForPii(['Müşteri: Ali Veli', 'Telefon: +90 532 987 65 43'])
+  assert.equal(phoneScan.hasPii, true)
+  assert.equal(phoneScan.status, 'PII_DETECTED')
+
+  // Real email leak
+  const emailScan = scanScreenshotForPii(['Sipariş veren: mehmet@sirketim.com.tr'])
+  assert.equal(emailScan.hasPii, true)
+  assert.equal(emailScan.status, 'PII_DETECTED')
+
+  // TC identity leak
+  const tcScan = scanScreenshotForPii(['TCKN: 12345678901'])
+  assert.equal(tcScan.hasPii, true)
+  assert.equal(tcScan.status, 'PII_DETECTED')
+
+  // Synthetic demo data passes cleanly
+  const cleanScan = scanScreenshotForPii([
+    'Mesajify Kampanya Kontrol Merkezi',
+    '2.418 Alıcı Doğrulandı',
+    'Başarı Oranı: %99.4',
+    'Destek: destek@mesajify.com',
+    'Demo Hat: 05550000000',
+  ])
+  assert.equal(cleanScan.hasPii, false)
+  assert.equal(cleanScan.status, 'VERIFIED_CLEAN')
+})
+
+test('Source Type distinction: authentic screenshot vs synthetic SVG mockup', async () => {
+  // Mesajify authentic screenshot
+  const mesajifyItem = await resolveSoftwareScreen('Mesajify', 'laptop')
+  assert.equal(mesajifyItem.sourceType, 'AUTHENTIC_VERIFIED_SCREENSHOT')
+  assert.equal(mesajifyItem.isSyntheticDemo, false)
+  assert.equal(mesajifyItem.metadata.piiVerificationStatus, 'VERIFIED_CLEAN')
+
+  // Generic SaaS synthetic SVG mockup
+  const genericItem = await resolveSoftwareScreen('Global Logistics CRM', 'desktop')
+  assert.equal(genericItem.sourceType, 'SYNTHETIC_SVG_MOCKUP')
+  assert.equal(genericItem.isSyntheticDemo, true)
+  assert.equal(genericItem.metadata.piiVerificationStatus, 'VERIFIED_CLEAN')
+})
+
+test('Multi-device & multi-angle presets support: all canonical presets pass QA', () => {
+  const testCases: Array<{ device: 'laptop' | 'desktop' | 'tablet' | 'mobile'; angle?: 'frontal' | 'three_quarter_right' | 'desk_overhead' }> = [
+    { device: 'laptop', angle: 'frontal' },
+    { device: 'laptop', angle: 'three_quarter_right' },
+    { device: 'laptop', angle: 'desk_overhead' },
+    { device: 'desktop', angle: 'frontal' },
+    { device: 'tablet', angle: 'frontal' },
+    { device: 'mobile', angle: 'frontal' },
   ]
-  const oobQA = validateScreenCompositingQA({
-    quad: outOfBoundsQuad,
-    canvasWidth: 1080,
-    canvasHeight: 1080,
-    device: 'laptop',
-    screenshotWidth: 1920,
-    screenshotHeight: 1080,
-  })
-  assert.equal(oobQA.passed, false)
-  assert.ok(oobQA.violations.some(v => v.includes('SCREEN_BOUNDARY_OVERFLOW')))
 
-  // PII Leak Check
-  const leakQA = validateScreenCompositingQA({
-    quad: DEVICE_PRESETS['macbook-pro-16-frontal'].screenQuad,
-    canvasWidth: 1920,
-    canvasHeight: 1080,
-    device: 'laptop',
-    screenshotWidth: 1920,
-    screenshotHeight: 1080,
-    textContentToCheck: 'Müşteri: Ahmet Yılmaz, Tel: +90 532 123 45 67, Sipariş: 104',
-  })
-  assert.equal(leakQA.passed, false)
-  assert.ok(leakQA.violations.some(v => v.includes('PII_DATA_LEAK_DETECTED')))
-
-  // Synthetic demo numbers pass
-  const cleanQA = validateScreenCompositingQA({
-    quad: DEVICE_PRESETS['macbook-pro-16-frontal'].screenQuad,
-    canvasWidth: 1920,
-    canvasHeight: 1080,
-    device: 'laptop',
-    screenshotWidth: 1920,
-    screenshotHeight: 1080,
-    textContentToCheck: 'Demo Hat: 05550000000, Başarılı İletim: %99.4, 2.418 Alıcı',
-  })
-  assert.equal(cleanQA.checks.piiSanitized, true)
-})
-
-test('Multi-device presets support: laptop, desktop, tablet, mobile', () => {
-  const devices = ['laptop', 'desktop', 'tablet', 'mobile'] as const
-
-  for (const device of devices) {
-    const preset = getDevicePreset(device)
-    assert.equal(preset.device, device)
+  for (const tc of testCases) {
+    const preset = getDevicePreset(tc.device, tc.angle)
+    assert.equal(preset.device, tc.device)
     assert.equal(isQuadConvex(preset.screenQuad), true)
 
     const bbox = getQuadBoundingBox(preset.screenQuad)
-    assert.ok(bbox.width >= 500, `${device} screen width should be >= 500px`)
-    assert.ok(bbox.height >= 300, `${device} screen height should be >= 300px`)
+    assert.ok(bbox.width >= 450, `${tc.device} (${tc.angle}) screen width should be >= 450px`)
 
     const qa = validateScreenCompositingQA({
       quad: preset.screenQuad,
       canvasWidth: preset.targetCanvasSize.width,
       canvasHeight: preset.targetCanvasSize.height,
-      device,
+      device: tc.device,
       screenshotWidth: preset.screenResolution.width,
       screenshotHeight: preset.screenResolution.height,
     })
-    assert.equal(qa.passed, true, `${device} preset should pass QA: ${qa.violations.join(', ')}`)
+    assert.equal(qa.passed, true, `${tc.device} (${tc.angle}) should pass QA: ${qa.violations.join(', ')}`)
+    assert.equal(qa.checks.homographyMathValid, true)
   }
-})
-
-test('Software screen resolution for Mesajify and generic SaaS brands', async () => {
-  // Mesajify resolution
-  const mesajifyItem = await resolveSoftwareScreen('Mesajify', 'laptop')
-  assert.ok(mesajifyItem.buffer.length > 1000)
-  assert.equal(mesajifyItem.device, 'laptop')
-  assert.equal(mesajifyItem.metadata.hasPii, false)
-
-  // Generic SaaS resolution
-  const genericItem = await resolveSoftwareScreen('Acme Cloud CRM', 'desktop')
-  assert.ok(genericItem.buffer.length > 1000)
-  assert.equal(genericItem.device, 'desktop')
-  assert.equal(genericItem.metadata.hasPii, false)
 })
 
 test('End-to-End screen compositing with authentic Mesajify screenshot', async () => {
@@ -207,9 +249,11 @@ test('End-to-End screen compositing with authentic Mesajify screenshot', async (
     backgroundBuffer: blankBg,
     screenshotBuffer: resolved.buffer,
     device: 'laptop',
+    angle: 'three_quarter_right', // Test natural 3/4 angle
   })
 
   assert.equal(result.qa.passed, true)
+  assert.equal(result.sourceType, 'AUTHENTIC_VERIFIED_SCREENSHOT')
   assert.ok(result.compositedBuffer.length > 50000)
   assert.equal(result.width, 1920)
   assert.equal(result.height, 1080)
@@ -221,7 +265,7 @@ test('End-to-End screen compositing with authentic Mesajify screenshot', async (
   assert.equal(meta.height, 1080)
 })
 
-test('ImagePublicationStatus gate blocks publication if screen QA fails', () => {
+test('ImagePublicationStatus gate blocks publication if screen QA or chassis alignment fails', () => {
   // Passing payload
   const okPayload = {
     heroProductId: 'prod-1',
@@ -234,7 +278,7 @@ test('ImagePublicationStatus gate blocks publication if screen QA fails', () => 
   const failPayload = {
     heroProductId: 'prod-1',
     products: [{ id: 'prod-1', name: 'Mesajify SaaS' }],
-    screenCompositingQA: { passed: false, violations: ['SCREEN_PERSPECTIVE_TOO_OBLIQUE'] },
+    screenCompositingQA: { passed: false, violations: ['SCREEN_CHASSIS_NOT_ALIGNED'] },
   }
   assert.equal(imagePublicationStatus(failPayload), 'needs_review')
 

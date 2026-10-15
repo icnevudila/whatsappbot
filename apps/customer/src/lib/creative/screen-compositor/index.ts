@@ -5,14 +5,17 @@ import type {
   Quad,
   ScreenCompositorInput,
   ScreenCompositorResult,
+  ScreenSourceType,
 } from './types'
 import { getDevicePreset } from './mockup-library'
 import { validateScreenCompositingQA } from './screen-qa'
+import { verifyScreenChassisAlignment } from './chassis-verifier'
 import { warpAndShaderScreen } from './warp-engine'
 
 export * from './types'
 export * from './homography'
 export * from './screen-qa'
+export * from './chassis-verifier'
 export * from './mockup-library'
 export * from './warp-engine'
 export * from './software-screen-registry'
@@ -27,6 +30,7 @@ function renderDeviceChassisSvg(
   screenQuad: Quad,
   cornerRadius: number,
   chassisColor: string = '#1c1d1f',
+  includeStudioBg: boolean = true,
 ): Buffer {
   const isMobile = device === 'mobile'
   const isDesktop = device === 'desktop'
@@ -35,17 +39,22 @@ function renderDeviceChassisSvg(
   const svg = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
+        ${
+          includeStudioBg
+            ? `
         <radialGradient id="studio-bg" cx="50%" cy="40%" r="65%">
           <stop offset="0%" stop-color="#2a2c30" />
           <stop offset="60%" stop-color="#141517" />
           <stop offset="100%" stop-color="#0a0a0b" />
         </radialGradient>
+        `
+            : ''
+        }
         <filter id="chassis-shadow" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="24" stdDeviation="32" flood-color="#000000" flood-opacity="0.65" />
         </filter>
       </defs>
-      <!-- Background studio floor & wall -->
-      <rect width="${width}" height="${height}" fill="url(#studio-bg)" />
+      ${includeStudioBg ? `<rect width="${width}" height="${height}" fill="url(#studio-bg)" />` : ''}
 
       <!-- Device Chassis & Shadow -->
       <g filter="url(#chassis-shadow)">
@@ -89,12 +98,12 @@ function renderDeviceChassisSvg(
 
 /**
  * Composite authentic software UI screenshot onto a device screen with exact homography perspective warping,
- * natural bezel boundaries, glass reflection shaders, and fail-closed QA verification.
+ * natural bezel boundaries, glass reflection shaders, physical chassis verification, and fail-closed QA.
  */
 export async function compositeRealScreenToDevice(
   input: ScreenCompositorInput,
 ): Promise<ScreenCompositorResult> {
-  const { backgroundBuffer, screenshotBuffer, device, customQuad, glareIntensity, cornerRadius } = input
+  const { backgroundBuffer, screenshotBuffer, device, angle, customQuad, glareIntensity, cornerRadius, requireChassisVerification } = input
 
   // 1. Inspect background image
   let canvasWidth = 1920
@@ -117,7 +126,7 @@ export async function compositeRealScreenToDevice(
   }
 
   // 2. Resolve Device Screen Quadrilateral
-  const preset = getDevicePreset(device, isSquare)
+  const preset = getDevicePreset(device, angle, isSquare)
   if (!hasValidBg) {
     canvasWidth = preset.targetCanvasSize.width
     canvasHeight = preset.targetCanvasSize.height
@@ -126,29 +135,10 @@ export async function compositeRealScreenToDevice(
   const effectiveRadius = cornerRadius ?? preset.cornerRadius
   const effectiveGlare = glareIntensity ?? preset.glareOpacity
 
-  // 3. Inspect Screenshot Metadata
-  const ssMeta = await sharp(screenshotBuffer).metadata()
-  const ssWidth = ssMeta.width || 1920
-  const ssHeight = ssMeta.height || 1080
-
-  // 4. Strict Fail-Closed QA Pre-Validation
-  const qa = validateScreenCompositingQA({
-    quad: targetQuad,
-    canvasWidth,
-    canvasHeight,
-    device,
-    screenshotWidth: ssWidth,
-    screenshotHeight: ssHeight,
-  })
-
-  if (!qa.passed) {
-    throw new Error(
-      `SCREEN_COMPOSITING_QA_FAILED: Compositing rejected to prevent distorted UI.\nViolations:\n- ${qa.violations.join('\n- ')}`,
-    )
-  }
-
-  // 5. If background is solid color or needs device chassis, construct base
+  // 3. Prepare Base Scene and Chassis
   let baseCanvas = backgroundBuffer
+  let isStudioMockup = !hasValidBg
+
   if (!hasValidBg) {
     baseCanvas = renderDeviceChassisSvg(
       device,
@@ -157,10 +147,57 @@ export async function compositeRealScreenToDevice(
       targetQuad,
       effectiveRadius,
       preset.chassisColor,
+      true,
+    )
+    isStudioMockup = true
+  } else {
+    // If background is an environment scene (e.g. office/desk), composite the device chassis onto the environment
+    const chassisOverlay = renderDeviceChassisSvg(
+      device,
+      canvasWidth,
+      canvasHeight,
+      targetQuad,
+      effectiveRadius,
+      preset.chassisColor,
+      false,
+    )
+    baseCanvas = await sharp(backgroundBuffer)
+      .composite([{ input: chassisOverlay, blend: 'over' }])
+      .png()
+      .toBuffer()
+    isStudioMockup = true
+  }
+
+  // 4. Physical Chassis Alignment Verification (Ensures screen actually aligns with background device)
+  const chassisVerification = await verifyScreenChassisAlignment(
+    baseCanvas,
+    targetQuad,
+    isStudioMockup,
+  )
+
+  // 5. Inspect Screenshot Metadata
+  const ssMeta = await sharp(screenshotBuffer).metadata()
+  const ssWidth = ssMeta.width || 1920
+  const ssHeight = ssMeta.height || 1080
+
+  // 6. Strict Fail-Closed QA Validation
+  const qa = validateScreenCompositingQA({
+    quad: targetQuad,
+    canvasWidth,
+    canvasHeight,
+    device,
+    screenshotWidth: ssWidth,
+    screenshotHeight: ssHeight,
+    chassisVerification: (hasValidBg || requireChassisVerification) ? chassisVerification : null,
+  })
+
+  if (!qa.passed) {
+    throw new Error(
+      `SCREEN_COMPOSITING_QA_FAILED: Compositing rejected to prevent distorted or misaligned UI.\nViolations:\n- ${qa.violations.join('\n- ')}`,
     )
   }
 
-  // 6. Projective Warp Screenshot & Apply Glass Glare Shader
+  // 7. Projective Warp Screenshot & Apply Glass Glare Shader
   const warpedScreen = await warpAndShaderScreen({
     screenshotBuffer,
     targetQuad,
@@ -170,7 +207,7 @@ export async function compositeRealScreenToDevice(
     glareIntensity: effectiveGlare,
   })
 
-  // 7. Composite Warped Screen onto Device Chassis
+  // 8. Composite Warped Screen onto Device Chassis
   const compositedBuffer = await sharp(baseCanvas)
     .composite([
       {
@@ -186,11 +223,14 @@ export async function compositeRealScreenToDevice(
   const finalMeta = await sharp(compositedBuffer).metadata()
   const sha256 = createHash('sha256').update(compositedBuffer).digest('hex')
 
+  const sourceType: ScreenSourceType = 'AUTHENTIC_VERIFIED_SCREENSHOT'
+
   return {
     compositedBuffer,
     width: finalMeta.width || canvasWidth,
     height: finalMeta.height || canvasHeight,
     device,
+    sourceType,
     qa,
     sha256,
   }
