@@ -622,6 +622,8 @@ export async function startCreativeGeneration(
     customSupporting: (draft.customSupporting as string) || null,
     heroProductId: heroProductId || (products[0]?.id as string) || null,
     generationType,
+    lockCopyOverlay: Boolean(draft.lockCopyOverlay || (generationType === 'revision' && effectiveParentId && draft.keepBaseScene)),
+    keepBaseScene: Boolean(draft.keepBaseScene),
     variationMode: (draft.variationMode as any) || (draft.variationPreset as any) || null,
     visualDiversityPlan: format.format === 'video' ? null : selectVisualDiversityPlan({
       requestKey: requestKey || randomBytes(16).toString('hex'),
