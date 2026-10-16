@@ -37,6 +37,7 @@ import { DEFAULT_INCLUDE, formatFromId, type ProductCard, type SocialOption } fr
 import { LIBRARY_PAGE_SIZE, type LibraryCreativeRow } from './library-shared'
 import { loadVideoLibraryState } from '@/lib/creative/video-library-state'
 import { createSupabaseServiceClient } from '@/lib/supabase/service'
+import { retryVideoJob } from '@/lib/creative/retry-video-job'
 import {
   generateVideoScenarios,
   type VideoScenarioOption,
@@ -762,6 +763,16 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
     if (data.source !== 'ai') return { error: 'Yalnızca AI üretimleri yenilenebilir.' }
     if (data.status !== 'failed') return { error: 'Bu üretim korunuyor. Yeni bir tasarım için ayrı bir üretim oluşturun.' }
     const previousPayload = (data.payload || {}) as Record<string, unknown>
+    if (data.format === 'video') {
+      const jobId = typeof previousPayload.job_id === 'string' ? previousPayload.job_id : trimmed
+      const retryError = await retryVideoJob(createSupabaseServiceClient() || supabase, org.id, jobId)
+      if (retryError) return { error: retryError }
+      // The orchestrator owns generation; polling will reconcile this projection.
+      await supabase.from('creatives').update({ status: 'pending', error: null })
+        .eq('id', trimmed).eq('org_id', org.id).eq('status', 'failed')
+      revalidateLibrary(trimmed)
+      return { ok: 'Video yeniden kuyruğa alındı.' }
+    }
     if (data.format !== 'video' && data.status === 'failed' && isUncertainImageFailure(data.error)) {
       return { error: 'Önceki bağlantı/zaman aşımı üretimin iptal edildiğini kanıtlamıyor. Mevcut iş uzlaştırılmadan ikinci ücretli üretim başlatılmadı.' }
     }
