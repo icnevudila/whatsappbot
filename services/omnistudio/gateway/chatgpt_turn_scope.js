@@ -50,10 +50,12 @@ function readCurrentTurn(prompt, baseline) {
   });
   // Writing-block headers and suggested-followup buttons are provider UI, not
   // generated copy. The content marker is also used by ChatGPT's copy action.
-  const writingContents = Array.from(assistant.querySelectorAll('[data-markdown-copy-content="true"]'));
+  const writingContents = Array.from(assistant.querySelectorAll('[data-markdown-copy-content="true"]'))
+    .filter(node => !node.closest('[hidden], [aria-hidden="true"]'));
   const outerContents = writingContents.filter(node => !writingContents.some(parent => parent !== node && parent.contains(node)));
-  const responseText = outerContents.length
-    ? outerContents.map(node => node.innerText || '').join('\n\n')
+  const contentTexts = [...new Set(outerContents.map(node => (node.innerText || '').trim()).filter(Boolean))];
+  const responseText = contentTexts.length
+    ? contentTexts.join('\n\n')
     : assistant.innerText || '';
   return { ready: !isGenerating && images.length > 0, candidateCount: images.length, hasNewMsg: true, text: responseText.replace(/^(ChatGPT said:|ChatGPT söylüyor:)\s*/i, '').trim(), foundImgSrc: images.at(-1)?.currentSrc || images.at(-1)?.src || null, isGenerating, userKey: userKey(user) };
 }

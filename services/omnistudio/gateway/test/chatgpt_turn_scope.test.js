@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { captureTurnBaseline, readCurrentTurn } = require('../chatgpt_turn_scope.js');
+const { captureTurnBaseline, readCurrentTurn } = require(process.env.CHATGPT_TURN_SCOPE_TEST_MODULE || '../chatgpt_turn_scope.js');
 
 function createMockElement(tag, attrs = {}, children = [], text = '') {
   const el = {
@@ -53,6 +53,8 @@ function createMockElement(tag, attrs = {}, children = [], text = '') {
 
 function matches(el, selector) {
   if (!el) return false;
+  if (selector === '[data-talvt-turn-state]') return 'data-talvt-turn-state' in el.attributes;
+  if (selector === '[hidden], [aria-hidden="true"]') return 'hidden' in el.attributes || el.attributes['aria-hidden'] === 'true';
   if (selector === '[data-markdown-copy-content="true"]') return el.attributes['data-markdown-copy-content'] === 'true';
   const classes = (el.attributes.class || '').split(/\s+/);
   if (selector.startsWith('.')) {
@@ -159,6 +161,7 @@ test('chatgpt_turn_scope: detects stop button as generating', () => {
 });
 
 function mountMessages(children) {
+  global.window = {};
   let order = 0;
   function assign(node) { node._order = order++; node.children.forEach(assign); }
   const root = createMockElement('div', {}, children);
@@ -202,4 +205,35 @@ test('writing-block copy excludes email controls, title and suggested followups'
   const assistant = createMockElement('div', {'data-message-author-role':'assistant'}, [content], 'ChatGPT said:\nEmail\nSend\nRecipients\n'+body+'\nE-postayı daha kısa yap');
   mountMessages([user,assistant]);
   assert.equal(readCurrentTurn('Kurumsal yanıt',{userKeys:[]}).text,body);
+});
+
+test('modern writing-block copy excludes nested wrapper duplicates and followup controls', () => {
+  const body = 'WhatsApp iletişiminizi tek merkezden yönetin.\n\nMesajify ile mesajlarınızı yönetin.\n\nBilgi Al';
+  const user = createMockElement('div', {class:'user-message','data-message-id':'campaign-user'}, [], 'Kampanya mesajı yaz');
+  const content = createMockElement('div', {'data-markdown-copy-content':'true'}, [], body);
+  const nested = createMockElement('div', {class:'nested-block'}, [content], body);
+  const heading = createMockElement('h4', {'data-conversation-role':'assistant'}, [], 'ChatGPT said:');
+  const assistant = createMockElement('div', {class:'block-BQZwFn'}, [heading,nested], 'Mesajı daha özgün ve ikna edici yaz\nMesajify WhatsApp Kampanya Mesajı\n'+body+'\n'+body);
+  const turn = createMockElement('div', {'data-talvt-turn-state':'complete'}, [user,assistant], 'Kampanya mesajı yaz\n'+assistant.innerText);
+  mountMessages([turn]);
+  assert.equal(readCurrentTurn('Kampanya mesajı yaz',{userKeys:[],imageUrls:[]}).text,body);
+});
+
+test('writing-block duplicated copy mirrors are returned once', () => {
+  const body = 'Mesajify ile mesajlarınızı tek panelden yönetin.\n\nBilgi Al';
+  const user = createMockElement('div', {'data-message-author-role':'user','data-message-id':'new'}, [], 'Kampanya mesajı yaz');
+  const copies = [1,2].map(() => createMockElement('div', {'data-markdown-copy-content':'true'}, [], body));
+  const assistant = createMockElement('div', {'data-message-author-role':'assistant'}, copies, body+'\n'+body);
+  mountMessages([user,assistant]);
+  assert.equal(readCurrentTurn('Kampanya mesajı yaz',{userKeys:[],imageUrls:[]}).text,body);
+});
+
+test('writing-block hidden copy mirrors cannot add stale text', () => {
+  const user = createMockElement('div', {'data-message-author-role':'user','data-message-id':'new'}, [], 'Yeni kampanya');
+  const visible = createMockElement('div', {'data-markdown-copy-content':'true'}, [], 'Güncel Mesajify kampanyası');
+  const stale = createMockElement('div', {'data-markdown-copy-content':'true'}, [], 'Eski kampanya metni');
+  const hidden = createMockElement('div', {'aria-hidden':'true'}, [stale], stale.innerText);
+  const assistant = createMockElement('div', {'data-message-author-role':'assistant'}, [visible,hidden], visible.innerText+'\n'+stale.innerText);
+  mountMessages([user,assistant]);
+  assert.equal(readCurrentTurn('Yeni kampanya',{userKeys:[],imageUrls:[]}).text,visible.innerText);
 });
