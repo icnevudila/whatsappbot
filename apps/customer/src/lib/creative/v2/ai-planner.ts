@@ -37,22 +37,54 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
   const detail = input.campaignDetail?.trim() || ''
   const isVideo = input.mediaType === 'VIDEO'
 
-  let headline = `${brand} ile ${product}`
-  let supporting = detail || 'Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.'
+  const brandFirstWord = brand.trim().split(/\s+/)[0] || ''
+  const isMesajify = brand.toLowerCase().includes('mesajify') || product.toLowerCase().includes('mesajify')
+  const isDuplicate = brand.toLowerCase() === product.toLowerCase() ||
+    product.toLowerCase().startsWith(brand.toLowerCase()) ||
+    brand.toLowerCase().startsWith(product.toLowerCase()) ||
+    (brandFirstWord.length >= 3 && product.toLowerCase().startsWith(brandFirstWord.toLowerCase()))
+
+  let headline: string
+  let supporting = detail
   let cta = 'Hemen İnceleyin'
 
-  if (input.objective === 'SALES_OFFER') {
-    headline = `${product} için Bilgi Alın`
-    supporting = detail || 'Fiyat ve sipariş bilgisi için bizimle iletişime geçin.'
-    cta = 'Bilgi Alın'
-  } else if (input.objective === 'NEW_PRODUCT') {
-    headline = `Yeni: ${product}`
-    supporting = detail || 'Ürünle ilgili ayrıntıları keşfedin.'
-    cta = 'Keşfet'
-  } else if (input.objective === 'BRAND_AWARENESS') {
-    headline = `${brand} — ${product}`
-    supporting = detail || 'Markamız ve ürünümüz hakkında bilgi almak için bize ulaşın.'
-    cta = 'Detaylı Bilgi Alın'
+  if (isMesajify) {
+    headline = 'Mesajify WhatsApp Kampanya Platformu'
+    supporting = detail || 'Civarındaki işletmeleri bulun, listeler oluşturun, doğrudan tanıtım yapın.'
+    cta = 'Hemen Başlayın →'
+
+    if (input.objective === 'SALES_OFFER') {
+      headline = 'Mesajify ile Doğrudan Tanıtım'
+      supporting = detail || 'Hedef kitlenize doğrudan ulaşın; performansı anlık takip edin.'
+      cta = 'Hemen Başlayın →'
+    } else if (input.objective === 'NEW_PRODUCT') {
+      headline = 'Mesajify WhatsApp Kampanya Platformu'
+      supporting = detail || 'Kontrollü gönderim ve tek merkezden kampanya yönetimi.'
+      cta = 'Hemen Başlayın →'
+    } else if (input.objective === 'BRAND_AWARENESS') {
+      headline = 'Mesajify — WhatsApp Kampanya Platformu'
+      supporting = detail || 'Kontrollü, görünür ve ölçülebilir kampanya platformu.'
+      cta = 'Hemen Başlayın →'
+    }
+  } else {
+    const subject = isDuplicate ? product : `${brand} ${product}`
+    headline = isDuplicate ? `${product}` : `${brand} ile ${product}`
+    supporting = detail || 'Ürünü inceleyin ve ayrıntılı bilgi almak için bize ulaşın.'
+    cta = 'Hemen İnceleyin'
+
+    if (input.objective === 'SALES_OFFER') {
+      headline = `${subject} için Bilgi Alın`
+      supporting = detail || 'Fiyat ve sipariş bilgisi için bizimle iletişime geçin.'
+      cta = 'Bilgi Alın'
+    } else if (input.objective === 'NEW_PRODUCT') {
+      headline = `Yeni: ${subject}`
+      supporting = detail || 'Ürünle ilgili ayrıntıları keşfedin.'
+      cta = 'Keşfet'
+    } else if (input.objective === 'BRAND_AWARENESS') {
+      headline = isDuplicate ? product : `${brand} — ${product}`
+      supporting = detail || 'Markamız ve ürünümüz hakkında bilgi almak için bize ulaşın.'
+      cta = 'Detaylı Bilgi Alın'
+    }
   }
 
   const mode = input.styleMode ? normalizeStyleMode(input.styleMode) : 'SMART_CAMPAIGN'
@@ -60,8 +92,11 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
   const isRealLife = !isVideo && mode === 'REAL_LIFE_CAMPAIGN'
   const isPremium = !isVideo && mode === 'PREMIUM_SHOWCASE'
 
+  const voSubject = isDuplicate ? product : `${brand} ${product}`
   const voiceover = isVideo
-    ? `${brand} ${product}. Ayrıntılı bilgi almak için bize ulaşın.`
+    ? isMesajify
+      ? 'Mesajify WhatsApp Kampanya Platformu ile müşterilerinize doğrudan ve kontrollü ulaşın.'
+      : `${voSubject}. Ayrıntılı bilgi ve sipariş için bize ulaşın.`
     : undefined
 
   let environment = 'Sade, aydınlık ve modern ticari ortam'

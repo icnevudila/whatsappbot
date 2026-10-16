@@ -212,6 +212,8 @@ export type CreativePayload = CreativeSnapshot & {
   customHeadline?: string | null;
   customSupporting?: string | null;
   heroProductId?: string | null;
+  lockCopyOverlay?: boolean | null;
+  keepBaseScene?: boolean | null;
   styleMode?: import('./style-mode').CreativeStyleMode
   stylePreset?: string | null;
   objective?: string | null;

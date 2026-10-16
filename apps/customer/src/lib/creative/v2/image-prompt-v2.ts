@@ -58,6 +58,9 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     `[LIGHTING & DEPTH]: ${lighting}. Realistic material physics, authentic physical shadows, no floating elements.`,
     visualDiversityDirective(options.visualDiversityPlan),
     desc ? `[PRODUCT SPECIFICS]: ${desc}.` : '',
+    /yazılım|saas|platform|panel|mesajify/i.test(`${brand} ${product} ${desc}`)
+      ? `[NATURAL WORKSPACE & ERGONOMIC POSTURE]: When people or devices (modern laptop, monitor, mobile) are featured in the workspace, ensure natural and anatomically sound human posture. The person's torso and gaze must align comfortably toward their work; hands and fingers should rest naturally on the desk, mouse, or keyboard with realistic anatomy. Laptops must rest flat, stably, and naturally facing the user on the desk surface (avoiding extreme sideways tilts or unnatural levitating angles).`
+      : '',
     options.hasProductRef
       ? `[STRICT PRODUCT FIDELITY]: The physical product photo is provided as canonical reference @HeroProduct. Preserve the exact physical shape, materials, proportions, buttons, nozzle/accessories, and authentic colors of @HeroProduct with 100% fidelity. Do NOT mutate or redesign the product.`
       : `Feature ${product} with authentic physical characteristics.`,
@@ -94,6 +97,18 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     'blurry',
     'low quality',
     'cluttered composition',
+    'fake software ui',
+    'hallucinated dashboard',
+    'unreadable screen text',
+    'garbled buttons',
+    'extreme diagonal laptop angle',
+    'sideways tilted screen',
+    'edge-on device profile',
+    'warped monitor',
+    'awkward body posture',
+    'unnatural gaze',
+    'floating hands',
+    'contorted sitting position',
     ...(plan?.negative_constraints || []),
   ]
 

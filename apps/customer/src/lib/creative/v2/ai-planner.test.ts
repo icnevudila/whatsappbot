@@ -23,6 +23,29 @@ test('supplied campaign offer and price survive the neutral fallback', () => {
   assert.equal(plan.copy.discount_badge,'%10 indirim')
 })
 
+test('brand and product name deduplication prevents repeated words in headlines', () => {
+  const mesajifyPlan = buildDeterministicFallbackPlan({
+    brandName: 'Mesajify',
+    productName: 'mesajify',
+    objective: 'BRAND_AWARENESS',
+    stylePreset: 'AUTO',
+    mediaType: 'IMAGE',
+  })
+  assert.doesNotMatch(mesajifyPlan.copy.headline, /mesajify\s+(ile|—)\s+mesajify/i)
+  assert.equal(mesajifyPlan.copy.headline, 'Mesajify — WhatsApp Kampanya Platformu')
+  assert.equal(mesajifyPlan.copy.cta, 'Hemen Başlayın →')
+
+  const bofePlan = buildDeterministicFallbackPlan({
+    brandName: 'Bofe Tarım',
+    productName: 'Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L',
+    objective: 'PRODUCT_INTRO',
+    stylePreset: 'PRODUCT_HERO',
+    mediaType: 'IMAGE',
+  })
+  assert.doesNotMatch(bofePlan.copy.headline, /bofe\s+tarım\s+ile\s+bofe/i)
+  assert.equal(bofePlan.copy.headline, 'Bofe Otomatik Şarjlı Akülü Sırt İlaçlama Pompası 16L')
+})
+
 test('another idea sends previous composition to the provider while retaining tenant and commercial facts', async () => {
   const originalFetch = globalThis.fetch
   const oldToken = process.env.OMNISTUDIO_GATEWAY_TOKEN
