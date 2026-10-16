@@ -765,7 +765,7 @@ export async function retryCreative(id: string): Promise<CreativeActionState> {
     const previousPayload = (data.payload || {}) as Record<string, unknown>
     if (data.format === 'video') {
       const jobId = typeof previousPayload.job_id === 'string' ? previousPayload.job_id : trimmed
-      const retryError = await retryVideoJob(createSupabaseServiceClient() || supabase, org.id, jobId)
+      const retryError = await retryVideoJob(supabase, org.id, jobId)
       if (retryError) return { error: retryError }
       // The orchestrator owns generation; polling will reconcile this projection.
       await supabase.from('creatives').update({ status: 'pending', error: null })
