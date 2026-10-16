@@ -63,7 +63,7 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     visualDiversityDirective(options.visualDiversityPlan),
     desc ? `[PRODUCT SPECIFICS]: ${desc}.` : '',
     /yazılım|saas|platform|panel|mesajify/i.test(`${brand} ${product} ${desc}`)
-      ? `[NATURAL WORKSPACE & ERGONOMIC POSTURE]: When people or devices (modern laptop, monitor, mobile) are featured in the workspace, ensure natural and anatomically sound human posture. The person's torso and gaze must align comfortably toward their work; hands and fingers should rest naturally on the desk, mouse, or keyboard with realistic anatomy. Laptops must rest flat, stably, and naturally facing the user on the desk surface (avoiding extreme sideways tilts or unnatural levitating angles).`
+      ? `[COLLABORATIVE TECH WORKSPACE & ERGONOMIC POSTURE]: When presenting ${brand} or digital platform software, feature a bright, modern open office where 2-3 young smiling professional colleagues/collaborators are naturally gathered around a modern landscape laptop (16:10 widescreen ratio), reviewing the live platform dashboard together. The torso and gaze align comfortably toward the screen; hands and fingers rest naturally on the desk, mouse, or keyboard with anatomical realism. Laptops must rest flat, stably, and naturally on the desk surface facing the users with a connected hinge (strictly landscape widescreen, avoiding portrait elongation or extreme tilted angles).`
       : '',
     options.hasProductRef
       ? `[STRICT PRODUCT FIDELITY]: The physical product photo is provided as canonical reference @HeroProduct. Preserve the exact physical shape, materials, proportions, buttons, nozzle/accessories, and authentic colors of @HeroProduct with 100% fidelity. Do NOT mutate or redesign the product.`
@@ -110,6 +110,14 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     'sideways tilted screen',
     'edge-on device profile',
     'warped monitor',
+    'portrait aspect laptop screen',
+    'elongated laptop lid',
+    'tall vertical laptop screen',
+    'vertically stretched laptop',
+    'square stretched laptop screen',
+    'tablet masquerading as laptop',
+    'deformed screen hinge',
+    'vertically stretched monitor',
     'awkward body posture',
     'unnatural gaze',
     'floating hands',

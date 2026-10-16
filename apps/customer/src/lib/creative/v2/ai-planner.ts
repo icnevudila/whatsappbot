@@ -106,16 +106,28 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
   let background = 'ürünü öne çıkaran sade, şık ve uyumlu arka plan'
   let lighting = 'doğal ticari aydınlatma, yumuşak gölgeler'
 
+  const isSoftware = isMesajify || /yazılım|software|saas|panel|platform|crm|uygulama/i.test(`${brand} ${product} ${input.productDescription || ''}`)
+  if (isSoftware && !isVideo) {
+    environment = 'Aydınlık, ferah ve modern teknoloji ofisi, şık ahşap çalışma masası'
+    humanPresence = 'actor'
+    productInteraction = 'Ekip arkadaşlarının yatay ekranlı modern dizüstü bilgisayar etrafında doğal ve güleryüzlü etkileşimi, ekrandaki paneli inceleme'
+    composition = 'Yatay oranlı laptop ekranında net arayüz, masada çalışan profesyonel ekip, dengeli ve ferah reklam yerleşimi'
+    lighting = 'Doğal pencere ışığı ve yumuşak modern ofis aydınlatması'
+    background = 'Modern açık ofis, toplantı alanı, arka planda hafif fluluk (bokeh)'
+  }
+
   if (isShowstopper) {
-    environment = 'Ürüne ve marka sektörüne uygun, güçlü kontrastlı ticari afiş ortamı'
-    composition = 'Büyük başlık, güçlü CTA, belirgin ana ürün ve zengin kampanya vurgu alanları'
+    environment = isSoftware ? 'Modern, prestijli teknoloji ofisi ve kampanya sahnesi' : 'Ürüne ve marka sektörüne uygun, güçlü kontrastlı ticari afiş ortamı'
+    composition = isSoftware
+      ? 'Büyük başlık, güçlü CTA, yatay oranlı laptop ekranında net arayüz ve enerjik modern ofis ekibi'
+      : 'Büyük başlık, güçlü CTA, belirgin ana ürün ve zengin kampanya vurgu alanları'
     background = 'Marka renklerine uygun katmanlı ve düzenli kampanya sahnesi'
   } else if (isRealLife) {
-    environment = 'Doğal işletme veya sahada gerçek kullanım ortamı'
+    environment = isSoftware ? 'Aydınlık, ferah teknoloji şirketi çalışma alanı' : 'Doğal işletme veya sahada gerçek kullanım ortamı'
     humanPresence = 'actor'
-    productInteraction = 'doğal profesyonel kullanım ve kullanıcı etkileşimi'
-    composition = 'İşletme sahibi veya saha uzmanı ile ürünün dengeli birlikteliği'
-    background = 'Gerçekçi, inandırıcı ve sektöre uygun mekan'
+    productInteraction = isSoftware ? 'Ekip arkadaşlarının yatay ekranlı laptop başında canlı paneli incelemesi' : 'doğal profesyonel kullanım ve kullanıcı etkileşimi'
+    composition = isSoftware ? 'Yatay oranlı laptop ekranı ve birlikte çalışan profesyonel ekip' : 'İşletme sahibi veya saha uzmanı ile ürünün dengeli birlikteliği'
+    background = isSoftware ? 'Açık plan teknoloji ofisi, şık çalışma masası' : 'Gerçekçi, inandırıcı ve sektöre uygun mekan'
   } else if (isPremium) {
     environment = 'Sinematik ve lüks stüdyo ortamı, prestijli taş podyum veya mimari yüzey'
     composition = 'Merkezde podyum üstünde parlayan ürün, heykelsi derinlik ve kontrollü gölgeler'
@@ -155,6 +167,13 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
       'no gibberish typography',
       'no deformed product',
       'no unreadable micro-text',
+      'portrait aspect laptop screen',
+      'elongated laptop lid',
+      'tall vertical laptop screen',
+      'vertically stretched laptop',
+      'square stretched laptop screen',
+      'tablet masquerading as laptop',
+      'deformed screen hinge',
     ],
     voiceover_text: voiceover,
   }
@@ -174,6 +193,7 @@ DİL VE KALİTE KURALI:
 - Klişe ve bayat reklam sözleri ("kaliteyle tanışın", "siz de gelin", "hemen alın", "${input.brandName} ile ${input.productName}") KESİNLİKLE KULLANMA.
 - Reklam başlığı ürünün somut avantajına, kullanım rahatlığına veya teklifine odaklanmalı; sıradan şirket ismi tekrarı olmamalıdır.
 - Fiyat, indirim veya süre bilgisi verilmişse alt metinde bunu harfiyen koru; verilmemişse asılsız rakam uydurma.
+- YAZILIM / SAAS / MESAJIFY KURALI: Yazılım, SaaS veya dijital platform tanıtımlarında (örn. Mesajify), sahneyi aydınlık ve modern bir teknoloji ofisinde kurgula. Yatay ekranlı (16:10 widescreen) şık bir dizüstü bilgisayara birlikte bakan, güleryüzlü 2-3 genç profesyonel ekip sahnesi oluştur. Ekran asla dikey tablet veya uzatılmış kare ekrana dönüşmemelidir. Laptop yatay ve masada düzgün durmalıdır.
 
 JSON ŞEMASI:
 {
