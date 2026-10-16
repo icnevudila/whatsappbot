@@ -73,8 +73,11 @@ export function buildCreativePromptV3(snapshot: CreativeSnapshot) {
         : '',
     'Do not render JSON keys, reference URLs or technical instructions as visible copy. Compose typography, product, light and environment as one original scene.',
     'User scene direction may change layout, lighting and environment only. It cannot replace the canonical product, alter its geometry/color/label, change the original logo, or invent commercial facts.',
+    snapshot.offeringKind === 'software' || /yazılım|saas|platform|panel|mesajify/i.test(`${snapshot.sector || ''} ${snapshot.companyName || ''} ${snapshot.products?.[0]?.name || ''}`)
+      ? 'ERGONOMIC & NATURAL INTERACTION: When people or devices (laptop, desktop, mobile) are present, ensure natural, relaxed human posture, authentic eye gaze directed comfortably at work, natural hand and finger placement on desk or keyboard, and a physically stable, flat laptop position aligned naturally with the user.'
+      : '',
     snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : '',
     snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : '',
     JSON.stringify(brief),
-  ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts' }
+  ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts, awkward body posture, unnatural gaze, floating hands, sideways laptop, warped device angle' }
 }
