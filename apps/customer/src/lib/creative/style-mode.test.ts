@@ -8,6 +8,7 @@ import { buildDeterministicFallbackPlan } from './v2/ai-planner'
 import { inheritVariationContext } from './variation-context'
 import { selectVisualDiversityPlan } from './visual-diversity'
 import type { CreativeSnapshot, CreativePayload } from './types'
+import { softwarePresentationDirective } from './software-presentation'
 
 const snapshot: CreativeSnapshot = {
   brief: '16L Akülü Sırt Tipi İlaçlama Pompası', style: 'auto', formatId: 'wa', aspect: '1:1',
@@ -19,6 +20,32 @@ const snapshot: CreativeSnapshot = {
     boxContents:null,imageUrl:'https://example.com/product.png',price:null,oldPrice:null,
     promo:null,extra:null,include:{name:true,description:true,price:true,promo:true,image:true,boxContents:false}}],
 }
+
+test('software screenshot geometry is enforced without a diversity plan or custom instruction in every compiler', () => {
+  const software = { ...snapshot, offeringKind: 'software' as const, instruction: null,
+    sector: null, generationType: 'revision' as const, visualDiversityPlan: null }
+  for (const mode of ['LEGACY_SIMPLE', 'OVER_DIRECTED_DESIGNER', 'V3'] as const) {
+    const prompt = buildCreativePrompt(software, { mode }).prompt
+    assert.match(prompt, /Without an explicit device request/)
+    assert.match(prompt, /original aspect ratio/)
+    assert.match(prompt, /Never elongate the lid/)
+    assert.match(prompt, /neutral padding/)
+  }
+  const raw = buildImagePromptV2({ brandName: 'Example', productName: 'Portal',
+    offeringKind: 'software', stylePreset: 'AUTO', format: 'STORY_9_16' }).prompt
+  assert.match(raw, /Never elongate the lid/)
+  assert.match(raw, /canvas aspect ratio must not change/)
+})
+
+test('software presentation respects explicit subject identity and does not turn physical products into interfaces', () => {
+  const revision = softwarePresentationDirective({ offeringKind: 'software', preserveScene: true })
+  assert.match(revision, /preserve the parent scene/)
+  assert.doesNotMatch(revision, /Without an explicit device request/)
+  assert.equal(softwarePresentationDirective({ offeringKind: 'physical', context: 'software compatible laptop' }), '')
+  assert.equal(softwarePresentationDirective({ offeringKind: 'service', context: 'software consultancy' }), '')
+  assert.equal(softwarePresentationDirective({ offeringKind: 'software', promotionMode: 'brand' }), '')
+  assert.equal(softwarePresentationDirective({ context: '16L garden sprayer' }), '')
+})
 
 test('defaults to SMART_CAMPAIGN and valid explicit modes normalize accurately', () => {
   for (const value of [undefined, null, '', 'unknown']) assert.equal(normalizeStyleMode(value), 'SMART_CAMPAIGN')

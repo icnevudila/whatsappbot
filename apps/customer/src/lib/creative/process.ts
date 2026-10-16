@@ -803,6 +803,8 @@ export async function processCreativeGeneration(
         ? payload.quickSendPrompt
         : useLockedCopy
           ? buildImagePromptV2({
+              offeringKind: snapshot.offeringKind,
+              preserveScene: snapshot.generationType === 'revision' && !!snapshot.baseCreativeId,
               visualDiversityPlan: snapshot.generationType === 'revision' ? null : snapshot.visualDiversityPlan,
               styleMode: snapshot.styleMode,
               brandName: customerName,

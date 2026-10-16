@@ -1,5 +1,6 @@
 import { styleModeDirective } from './style-mode'
 import { visualDiversityDirective } from './visual-diversity'
+import { softwarePresentationDirective } from './software-presentation'
 import type { CreativeSnapshot, TemplateFamily } from './types'
 import { buildCreativePromptV3 } from './director/brief-v3'
 import { CREATIVE_FORMATS, CREATIVE_STYLES, TEMPLATE_FAMILIES, VARIATION_PRESETS } from './types'
@@ -984,7 +985,10 @@ export function buildCreativePrompt(
     ? buildOverDirectedCreativePrompt(snapshot, options)
     : buildLegacySimpleCreativePrompt(snapshot, options)
   const direction = [snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : '',
-    snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : ''].filter(Boolean).join('\n')
+    snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : '',
+    softwarePresentationDirective({ offeringKind: snapshot.offeringKind, promotionMode: snapshot.promotionMode,
+      preserveScene: snapshot.generationType === 'revision' && !!snapshot.baseCreativeId,
+      context: `${snapshot.sector || ''} ${snapshot.products[0]?.name || ''} ${snapshot.products[0]?.description || ''}` })].filter(Boolean).join('\n')
   return direction ? { ...compiled, prompt: `${compiled.prompt}\n${direction}` } : compiled
 }
 

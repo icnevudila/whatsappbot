@@ -2,6 +2,7 @@ import { styleModeDirective, normalizeStyleMode } from '../style-mode'
 import { visualDiversityDirective } from '../visual-diversity'
 import type { CreativeSnapshot } from '../types'
 import { campaignFactsError } from '../campaign-facts'
+import { softwarePresentationDirective } from '../software-presentation'
 
 export function compileCreativeBriefV3(snapshot: CreativeSnapshot) {
   const product = snapshot.products[0]
@@ -78,6 +79,9 @@ export function buildCreativePromptV3(snapshot: CreativeSnapshot) {
       : '',
     snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : '',
     snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : '',
+    softwarePresentationDirective({ offeringKind: snapshot.offeringKind, promotionMode: snapshot.promotionMode,
+      preserveScene: snapshot.generationType === 'revision' && !!snapshot.baseCreativeId,
+      context: `${snapshot.sector || ''} ${snapshot.products[0]?.name || ''} ${snapshot.products[0]?.description || ''}` }),
     JSON.stringify(brief),
   ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts, awkward body posture, unnatural gaze, floating hands, sideways laptop, warped device angle' }
 }

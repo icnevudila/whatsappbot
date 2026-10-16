@@ -1,6 +1,8 @@
 import { styleModeDirective, type CreativeStyleMode } from '../style-mode'
 import { visualDiversityDirective, type VisualDiversityPlan } from '../visual-diversity'
 import { type CreativePlanV2, type CreativeStylePreset, type ImageFormatV2 } from './types'
+import { softwarePresentationDirective } from '../software-presentation'
+import type { OfferingKind } from '../promotion-policy'
 
 export type ImagePromptV2Options = {
   brandName: string
@@ -13,6 +15,8 @@ export type ImagePromptV2Options = {
   hasLogoRef?: boolean
   hasProductRef?: boolean
   visualDiversityPlan?: VisualDiversityPlan | null
+  offeringKind?: OfferingKind
+  preserveScene?: boolean
 }
 
 export function buildImagePromptV2(options: ImagePromptV2Options): {
@@ -68,6 +72,7 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
       ? `[BRAND IDENTITY]: Brand identity is verified from reference @BrandLogo. Do NOT invent fictional logos or foreign corporate emblems.`
       : `Do not invent fake logos.`,
     `[RAW IMAGE TYPOGRAPHY POLICY]: Strictly NO newly generated promotional text, NO invented headlines, NO fake prices, NO fake discounts, NO artificial badges, NO painted sticker graphics, NO fake buttons, NO watermarks. Preserve only authentic text already naturally printed or stamped on the physical body of the canonical product reference. Clean commercial background photography only.`,
+    softwarePresentationDirective({ offeringKind: options.offeringKind, preserveScene: options.preserveScene, context: `${product} ${desc}` }),
   ].filter(Boolean)
 
   const negativeTerms = [
