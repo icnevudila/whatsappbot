@@ -1695,6 +1695,17 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    if (method === 'POST' && pathname === '/v1/browser-workers/lease/validate') {
+      if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
+      const body = await parseJsonBody(req);
+      const accountId = body.accountId || body.account_id;
+      const jobId = body.jobId || body.job_id;
+      const leaseToken = body.leaseToken || body.lease_token;
+      if (!accountId || !jobId || !leaseToken) return sendJson(res, 400, { ok: false, error: { code: 'LEASE_IDENTITY_REQUIRED' } });
+      const ok = await browserSupervisor.validateExternalLease({ provider: body.provider || 'flow', accountId, jobId, leaseToken });
+      return sendJson(res, ok ? 200 : 409, ok ? { ok: true } : { ok: false, error: { code: 'LEASE_LOST' } });
+    }
+
     if (method === 'POST' && pathname === '/v1/browser-workers/lease/release') {
       if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'forbidden' });
       const body = await parseJsonBody(req);

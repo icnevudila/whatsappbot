@@ -974,3 +974,30 @@ test('24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing sam
   await lease2.release();
 });
 
+
+test('external execution validation requires exact job/account/token and authoritative renewal', async () => {
+  const h=harness();
+  const worker=h.add('validated-flow',9238,{aliases:['account-validation']},'flow');
+  const lease=await h.supervisor.acquireExternalLease({provider:'flow',accountId:'account-validation',jobId:'owned'});
+  const request={provider:'flow',accountId:'account-validation',jobId:'owned',leaseToken:lease.leaseToken};
+  assert.equal(await h.supervisor.validateExternalLease(request),true);
+  for(const invalid of [{jobId:'other'},{accountId:'unknown'},{leaseToken:'stale'},{jobId:null}]) {
+    assert.equal(await h.supervisor.validateExternalLease({...request,...invalid}),false);
+    assert.equal(worker.leaseLost,undefined);
+  }
+  h.supervisor.leaseStore.heartbeatLease=async()=>false;
+  assert.equal(await h.supervisor.validateExternalLease(request),false);
+  assert.equal(worker.leaseLost,true);
+  h.supervisor.leaseStore.heartbeatLease=async()=>true;
+  assert.equal(await h.supervisor.validateExternalLease(request),false);
+  await h.supervisor.releaseExternalLease(request);
+});
+
+test('validation cannot approve a token released during the database round trip', async () => {
+  const h=harness();
+  const worker=h.add('validation-race',9239,{},'flow');
+  const lease=await h.supervisor.acquireExternalLease({provider:'flow',accountId:worker.accountId,jobId:'old'});
+  h.supervisor.leaseStore.heartbeatLease=async()=>{worker.currentJobId='new';worker.leaseToken='replacement';return true};
+  assert.equal(await h.supervisor.validateExternalLease({provider:'flow',accountId:worker.accountId,jobId:'old',leaseToken:lease.leaseToken}),false);
+  await h.supervisor.releaseExternalLease({provider:'flow',accountId:worker.accountId,leaseToken:lease.leaseToken});
+});

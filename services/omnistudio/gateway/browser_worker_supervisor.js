@@ -771,6 +771,19 @@ class BrowserWorkerSupervisor extends EventEmitter {
     return renewed && !worker.leaseLost;
   }
 
+  async validateExternalLease({ provider, accountId, jobId, leaseToken }) {
+    if (!provider || !accountId || !jobId || !leaseToken) return false;
+    provider = String(provider).toLowerCase();
+    const worker = this.resolveWorker({ provider, accountId });
+    if (!worker || worker.leaseLost || worker.currentJobId !== jobId || worker.leaseToken !== leaseToken) return false;
+    const renewed = await this._heartbeatAccountLease(worker, {
+      provider: provider.toUpperCase(), accountId: this.getCanonicalAccountId(worker),
+      leaseToken, ttlSeconds: 60,
+    });
+    // Check again after the store round trip: release/reassignment may race it.
+    return renewed && worker.currentJobId === jobId && worker.leaseToken === leaseToken && !worker.leaseLost;
+  }
+
   async releaseExternalLease({ provider, accountId, leaseToken, outcome = {} }) {
     provider = String(provider).toLowerCase();
     const worker = this.resolveWorker({ provider, accountId });
