@@ -81,6 +81,7 @@ export function buildCreativePromptV3(snapshot: CreativeSnapshot) {
     snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : '',
     softwarePresentationDirective({ offeringKind: snapshot.offeringKind, promotionMode: snapshot.promotionMode,
       preserveScene: snapshot.generationType === 'revision' && !!snapshot.baseCreativeId,
+      styleMode: snapshot.styleMode,
       context: `${snapshot.sector || ''} ${snapshot.products[0]?.name || ''} ${snapshot.products[0]?.description || ''}` }),
     JSON.stringify(brief),
   ].join('\n'), negative: 'wrong product identity, altered logo, illegible Turkish, invented commercial facts, awkward body posture, unnatural gaze, floating hands, sideways laptop, warped device angle' }

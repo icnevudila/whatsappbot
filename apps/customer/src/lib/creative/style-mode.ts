@@ -4,21 +4,12 @@ export type CreativeStyleMode =
   | 'REAL_LIFE_CAMPAIGN'
   | 'PREMIUM_SHOWCASE'
 
-export interface StyleModeExample {
-  sector: string
-  company: string
-  image: string
-  highlight: string
-}
-
 export interface StyleModeItem {
   id: CreativeStyleMode
   label: string
   description: string
   badge?: string
-  heroPreview: string
-  characteristics: string[]
-  examples: StyleModeExample[]
+  previewUrl: string
 }
 
 export const STYLE_MODES: readonly StyleModeItem[] = [
@@ -27,125 +18,25 @@ export const STYLE_MODES: readonly StyleModeItem[] = [
     label: 'Akıllı Kampanya',
     description: 'AI marka ve sektöre en uygun reklam hiyerarşisini otomatik seçer.',
     badge: 'Varsayılan',
-    heroPreview: '/style-previews/mesajify_smart.png',
-    characteristics: [
-      'Dengeli ticari reklam hiyerarşisi',
-      'Net okunabilir başlık, alt metin ve CTA butonu',
-      'Marka kimlik renkleri ve ürün odaklı kompozisyon',
-    ],
-    examples: [
-      {
-        sector: 'Yazılım & SaaS',
-        company: 'Mesajify',
-        image: '/style-previews/mesajify_smart.png',
-        highlight: 'MacBook Pro, sol menülü web paneli ve net yeşil CTA',
-      },
-      {
-        sector: 'Tarım & Ekipman',
-        company: 'Bofe Tarım',
-        image: '/style-previews/bofe_smart.png',
-        highlight: 'Bahçe koruma vaadi, 16L şarjlı pompa ve marka paleti',
-      },
-      {
-        sector: 'İnşaat & Yapı',
-        company: 'Ayvazoğlu İnşaat',
-        image: '/style-previews/ayvazoglu_smart.png',
-        highlight: '3 günde teslimat garantisi, klinker tuğla ve toptan teklif',
-      },
-    ],
+    previewUrl: 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/public-assets/style-previews/chatgpt_ref_01_akilli_kampanya.png',
   },
   {
     id: 'SHOWSTOPPER_CAMPAIGN',
     label: 'Gösterişli Kampanya',
     description: 'Büyük kabartmalı başlık, zengin katmanlar, ürün odağı ve dikkat çekici CTA.',
-    heroPreview: '/style-previews/mesajify_showstopper.png',
-    characteristics: [
-      'Geniş açılı ve yüksek kontrastlı ticari lansman afişi',
-      'Büyük ve çarpıcı reklam tipografisi',
-      'Yüksek dönüşüm odaklı teklif ve kampanya vurgusu',
-    ],
-    examples: [
-      {
-        sector: 'Yazılım & SaaS',
-        company: 'Mesajify',
-        image: '/style-previews/mesajify_showstopper.png',
-        highlight: 'Büyük ve cesur tipografi, güçlü yeşil CTA ve ofis enerjisi',
-      },
-      {
-        sector: 'Tarım & Ekipman',
-        company: 'Bofe Tarım',
-        image: '/style-previews/bofe_showstopper.png',
-        highlight: 'Sezon indirimi afişi, yüksek basınç ve sağlam gövde vurgusu',
-      },
-      {
-        sector: 'İnşaat & Yapı',
-        company: 'Ayvazoğlu İnşaat',
-        image: '/style-previews/ayvazoglu_showstopper.png',
-        highlight: 'Fabrikadan doğrudan şantiyeye teslimat ve güçlü tuğla afişi',
-      },
-    ],
+    previewUrl: 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/public-assets/style-previews/chatgpt_ref_02_gosterisli_vitrin.png',
   },
   {
     id: 'REAL_LIFE_CAMPAIGN',
     label: 'Gerçek Kullanım',
     description: 'İşletme sahibi veya saha uzmanı ile ürünün gerçek kullanım anı.',
-    heroPreview: '/style-previews/mesajify_real_life.png',
-    characteristics: [
-      'Doğal çalışma ortamında gerçek profesyonel kullanım',
-      'Ürünü ve paneli kullanan güler yüzlü ekip veya saha uzmanı',
-      'Yapaylıktan uzak, güven veren gerçekçi ortam aydınlatması',
-    ],
-    examples: [
-      {
-        sector: 'Yazılım & SaaS',
-        company: 'Mesajify',
-        image: '/style-previews/mesajify_real_life.png',
-        highlight: 'Masada birlikte paneli inceleyen profesyonel iş ortakları',
-      },
-      {
-        sector: 'Tarım & Ekipman',
-        company: 'Bofe Tarım',
-        image: '/style-previews/bofe_real_life.png',
-        highlight: 'Tarlada ve bahçede doğal çiftçi kullanımı ve ergonomik duruş',
-      },
-      {
-        sector: 'İnşaat & Yapı',
-        company: 'Ayvazoğlu İnşaat',
-        image: '/style-previews/ayvazoglu_real_life.png',
-        highlight: 'Şantiyede mimar ve mühendis kontrolünde kaliteli tuğla uygulaması',
-      },
-    ],
+    previewUrl: 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/public-assets/style-previews/chatgpt_ref_03_gercek_kullanim.png',
   },
   {
     id: 'PREMIUM_SHOWCASE',
     label: 'Premium Vitrin',
     description: 'Sinematik ışık, derinlik ve prestijli yüzeylerde minimalist ürün sunumu.',
-    heroPreview: '/style-previews/mesajify_premium.png',
-    characteristics: [
-      'Sinematik stüdyo veya zarif ofis ışığı',
-      'Minimalist, ferah ve prestijli kurumsal B2B estetiği',
-      'Gereksiz rozet veya çıkartmalardan arındırılmış temiz odak',
-    ],
-    examples: [
-      {
-        sector: 'Yazılım & SaaS',
-        company: 'Mesajify',
-        image: '/style-previews/mesajify_premium.png',
-        highlight: 'Zarif Space Gray MacBook Pro, doğal ışık ve minimalist çalışma masası',
-      },
-      {
-        sector: 'Tarım & Ekipman',
-        company: 'Bofe Tarım',
-        image: '/style-previews/bofe_premium.png',
-        highlight: 'Stüdyo aydınlatması altında prestijli podyumda Bofe 16L vitrini',
-      },
-      {
-        sector: 'İnşaat & Yapı',
-        company: 'Ayvazoğlu İnşaat',
-        image: '/style-previews/ayvazoglu_premium.png',
-        highlight: 'Sıcak mimari gün batımı, dokusal tuğla bloğu ve kurumsal logo tabelası',
-      },
-    ],
+    previewUrl: 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/public-assets/style-previews/chatgpt_ref_04_premium_vitrin.png',
   },
 ] as const
 
@@ -168,7 +59,7 @@ export function styleModeDirective(value: unknown): string {
   let direction = ''
 
   if (mode === 'SHOWSTOPPER_CAMPAIGN') {
-    direction = 'Showstopper Grand Commercial Campaign: Commanding readable advertising typography, a strong asymmetric hierarchy and purposeful high-contrast poster composition. Dimensional treatment is optional and must serve the offering and explicit user direction. If verified pricing or an offer is supplied, make it legible without inventing extra badges. Use the canonical logo once as brand identification, not as a repeated oversized background prop. Do not add floating glass badges, neon beams, decorative icon ribbons or device perspectives by default. Impact comes from a clear message, disciplined spacing and confident composition.'
+    direction = 'Showstopper Grand Commercial Campaign: Powerful advertising idea, bold composition, and dramatic, sector-tailored product storytelling. Impact stems from confident typographic hierarchy, authentic material realism, and purposeful contrast—NOT from repetitive neon glow, excessive lens flare, dark floating cards, or plastic 3D clichés. Depending on the product and sector, employ compelling creative treatments: Cinematic Product Hero (monumental scale, dramatic commercial studio lighting), Bold Editorial (commanding headlines, asymmetric high-impact layout), Premium Material Depth (tangible textures, natural studio shadows, realistic surfaces), or Dynamic Commercial Energy. The primary CTA must remain prominent, visible, and high-converting. Up to 1-2 authentic supporting action chips or benefit indicators may be layered if supported by the product context, but must never clutter or overshadow the hero offering. Logo and product identity remain strictly faithful to references.'
   } else if (mode === 'REAL_LIFE_CAMPAIGN') {
     direction = 'Authentic Real-Life Commercial: A natural, authentic human subject interacting realistically with the product or software service in an authentic real-world environment (e.g. female or male business owner managing customer orders on mobile/laptop in a cafe or store for SaaS; agronomist or farmer using the agricultural equipment in an orchard or greenhouse; architect or contractor reviewing plans on a modern build site). The person must look natural, credible, and professionally engaged. The authentic product or software interface must remain distinct and physically accurate, not obscured. Balanced advertising composition with clean mobile-readable headline and CTA.'
   } else if (mode === 'PREMIUM_SHOWCASE') {

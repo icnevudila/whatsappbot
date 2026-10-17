@@ -988,6 +988,7 @@ export function buildCreativePrompt(
     snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : '',
     softwarePresentationDirective({ offeringKind: snapshot.offeringKind, promotionMode: snapshot.promotionMode,
       preserveScene: snapshot.generationType === 'revision' && !!snapshot.baseCreativeId,
+      styleMode: snapshot.styleMode,
       context: `${snapshot.sector || ''} ${snapshot.products[0]?.name || ''} ${snapshot.products[0]?.description || ''}` })].filter(Boolean).join('\n')
   return direction ? { ...compiled, prompt: `${compiled.prompt}\n${direction}` } : compiled
 }
