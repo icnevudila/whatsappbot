@@ -352,7 +352,9 @@ def create_new_flow_project(profile_dir: Path, title: str) -> str:
 
     async def _async_create():
         async with FlowApiClient(profile_dir=profile_dir) as client:
-            p_info = await client.create_project(title=title)
+            # Do not pass cosmetic title: Google Flow's o8DA4 rename RPC sporadically times out (30s)
+            # or drops the Enter key, which aborts already-created projects. Real project UUID is all that matters.
+            p_info = await client.create_project(title=None)
             return p_info.project_id
 
     loop = asyncio.new_event_loop()
