@@ -180,6 +180,10 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
       'oversized screen blocking people',
       'wedge laptop',
       'kiosk monitor',
+      'mobile layout on laptop',
+      'bottom mobile tabs on laptop',
+      'tall screen lid',
+      'square screen lid',
     ],
     voiceover_text: voiceover,
   }

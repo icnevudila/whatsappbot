@@ -63,7 +63,7 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     visualDiversityDirective(options.visualDiversityPlan),
     desc ? `[PRODUCT SPECIFICS]: ${desc}.` : '',
     /yazılım|saas|platform|panel|mesajify/i.test(`${brand} ${product} ${desc}`)
-      ? `[COLLABORATIVE TECH WORKSPACE & ERGONOMIC POSTURE]: When presenting ${brand} or digital platform software, feature a bright, modern open office where 1-2 young smiling professional colleagues are gathered naturally at a wooden desk with an authentic Apple MacBook Pro 16-inch in Space Gray unibody finish (viewed from a natural 30-35 degree 3/4 commercial perspective). The torso and gaze align comfortably toward the screen; hands rest naturally on the desk or keyboard with anatomical realism. The laptop has authentic physical unibody proportions, cylindrical hinge, and a standard 16:10 Liquid Retina widescreen display (strictly avoiding square screens, upright frontal boxes, or towering vertical lids).`
+      ? `[COLLABORATIVE TECH WORKSPACE & ERGONOMIC POSTURE]: When presenting ${brand} or digital platform software, feature a bright, modern open office where 1-2 young smiling professional colleagues are gathered naturally at a wooden desk with an authentic Apple MacBook Pro 16-inch in Space Gray unibody finish (viewed from a natural 30-35 degree 3/4 commercial perspective). The laptop display is strictly a low-profile compact widescreen (16:10 / 16:9 ratio, lid height only ~50-55% of width, tilted 115-120 degrees backward) showing an authentic horizontal desktop SaaS layout with left navigation sidebar and wide dashboard canvas. The torso and gaze align comfortably toward the screen; hands rest naturally on the desk or keyboard with anatomical realism (strictly avoiding square screens, tall towering lids, upright frontal boxes, or bottom mobile tabs).`
       : '',
     options.hasProductRef
       ? `[STRICT PRODUCT FIDELITY]: The physical product photo is provided as canonical reference @HeroProduct. Preserve the exact physical shape, materials, proportions, buttons, nozzle/accessories, and authentic colors of @HeroProduct with 100% fidelity. Do NOT mutate or redesign the product.`
@@ -124,6 +124,10 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     'oversized screen blocking people',
     'wedge laptop',
     'kiosk monitor',
+    'mobile layout on laptop',
+    'bottom mobile tabs on laptop',
+    'tall screen lid',
+    'square screen lid',
     'awkward body posture',
     'unnatural gaze',
     'floating hands',
