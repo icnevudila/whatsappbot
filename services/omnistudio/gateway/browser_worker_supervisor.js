@@ -305,6 +305,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
   async createTab(workerId, url = null, options = {}) {
     const worker = typeof workerId === 'string' ? this.workers.get(workerId) : workerId;
     if (!worker) throw workerError('NO_ELIGIBLE_WORKER', 'Unknown worker');
+    if (worker.leaseLost) throw workerError('LEASE_LOST', 'Account requires reconciliation after heartbeat loss', worker);
     let tabs = await this._listTabs(worker);
     if (tabs.length >= this.absoluteTabCap) {
       await this.cleanupOrphans(worker, { forceCap: true });
@@ -466,7 +467,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
     return [...this.workers.values()]
       .filter(worker => worker.provider === provider)
       .filter(worker => !preferred || preferred.has(worker.id) || preferred.has(worker.accountId) || preferred.has(this.getCanonicalAccountId(worker)))
-      .filter(worker => !worker.currentJobId && ELIGIBLE_STATES.has(worker.state))
+      .filter(worker => !worker.leaseLost && !worker.currentJobId && ELIGIBLE_STATES.has(worker.state))
       .sort((a, b) => {
         if (a.readiness === READINESS_STATES.READY && b.readiness !== READINESS_STATES.READY) return -1;
         if (b.readiness === READINESS_STATES.READY && a.readiness !== READINESS_STATES.READY) return 1;
@@ -513,11 +514,11 @@ class BrowserWorkerSupervisor extends EventEmitter {
         }
 
         const hbTimer = setInterval(() => {
-          this.leaseStore.heartbeatLease({
+          this._heartbeatAccountLease(worker, {
             provider: worker.provider.toUpperCase(),
             accountId: canonicalAccount,
             leaseToken,
-          }).catch(() => {});
+          });
         }, this.leaseHeartbeatInterval);
         hbTimer.unref?.();
         this.activeLeaseHeartbeats.set(leaseToken, hbTimer);
@@ -598,7 +599,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
       cdpPort: worker.cdpPort,
       profileDir: worker.profileDir,
       markExecutionStarted: () => {
-        if (released || worker.leaseToken !== leaseToken) throw workerError('LEASE_LOST', `Lease lost for ${jobId}`, worker);
+        if (released || worker.leaseLost || worker.leaseToken !== leaseToken) throw workerError('LEASE_LOST', `Lease lost for ${jobId}`, worker);
         if (worker.executionStarted) throw workerError('DUPLICATE_JOB_EXECUTION', `Provider execution already started for ${jobId}`, worker);
         worker.executionStarted = true;
       },
@@ -614,7 +615,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
 
   setPhase(workerId, jobId, leaseToken, phase) {
     const worker = this.workers.get(workerId);
-    if (!worker || worker.currentJobId !== jobId || worker.leaseToken !== leaseToken) return false;
+    if (!worker || worker.leaseLost || worker.currentJobId !== jobId || worker.leaseToken !== leaseToken) return false;
     worker.phase = String(phase || 'BUSY').toUpperCase();
     worker.state = WORKER_STATES.BUSY;
     worker.lastActivityAt = this.clock();
@@ -682,6 +683,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
     provider = String(provider).toLowerCase();
     const worker = this.resolveWorker({ provider, accountId, workerId });
     if (!worker) throw workerError('WORKER_NOT_FOUND', `No ${provider} worker is registered for ${accountId}`);
+    if (worker.leaseLost) throw workerError('LEASE_LOST', 'Account requires reconciliation after heartbeat loss', worker);
     const canonicalAccount = this.getCanonicalAccountId(worker);
     const targetWorkerId = worker.id;
     const leaseToken = crypto.randomUUID();
@@ -709,12 +711,12 @@ class BrowserWorkerSupervisor extends EventEmitter {
     }
 
     const hbTimer = setInterval(() => {
-      this.leaseStore.heartbeatLease({
+      this._heartbeatAccountLease(worker, {
         provider: provider.toUpperCase(),
         accountId: canonicalAccount,
         leaseToken,
         ttlSeconds,
-      }).catch(() => {});
+      });
     }, Math.min(20_000, ttlSeconds * 500));
     hbTimer.unref?.();
     this.activeLeaseHeartbeats.set(leaseToken, hbTimer);
@@ -728,6 +730,24 @@ class BrowserWorkerSupervisor extends EventEmitter {
       workerId: targetWorkerId,
       expiresAt: leaseRes.expiresAt,
     };
+  }
+
+  async _heartbeatAccountLease(worker, request) {
+    let renewed = false;
+    try { renewed = await this.leaseStore.heartbeatLease(request) === true; } catch (_) {}
+    // An old response must not invalidate a newer reservation. Once lost, a
+    // late successful heartbeat must not silently restore execution authority.
+    if (worker.leaseToken !== request.leaseToken) return false;
+    if (!renewed) {
+      worker.leaseLost = true;
+      worker.state = WORKER_STATES.UNHEALTHY;
+      worker.readiness = READINESS_STATES.NOT_READY;
+      const timer = this.activeLeaseHeartbeats.get(request.leaseToken);
+      clearInterval(timer);
+      this.activeLeaseHeartbeats.delete(request.leaseToken);
+      this.emit('lease_lost', { workerId: worker.id, jobId: worker.currentJobId, leaseToken: request.leaseToken });
+    }
+    return renewed && !worker.leaseLost;
   }
 
   async releaseExternalLease({ provider, accountId, leaseToken, outcome = {} }) {

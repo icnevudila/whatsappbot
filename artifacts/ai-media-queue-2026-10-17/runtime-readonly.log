@@ -1,0 +1,22 @@
+SOURCE
+5556310def2d851158668f4b71bdf635fc6d1fae
+364
+200bb21106c5bb37b47b5814146134e566908ebb6e7f766e07fca79e4225bfb6  /opt/whatsappbot/services/omnistudio/gateway/server.js
+210632cf1c855eb23c3d41c9e7c21da26d98749fc105ac39883f3af5a20fc163  /opt/whatsappbot/services/omnistudio/gateway/distributed_lease_store.js
+RESOURCES
+               total        used        free      shared  buff/cache   available
+Mem:            3809        2431         407         119        1381        1378
+Swap:           6143        4478        1665
+omnistudio-engine cpu=31.75% memory=1.798GiB / 3.72GiB
+wa-service cpu=0.11% memory=20.75MiB / 3.72GiB
+ai-media-control cpu=0.21% memory=19.31MiB / 1GiB
+gflow-engine cpu=100.72% memory=358.5MiB / 3.72GiB
+hetzner-caddy cpu=0.00% memory=9.406MiB / 3.72GiB
+GATEWAY
+{"service":"OmniStudio AI Visual Gateway","status":"online","ai_ready":true,"alert":null,"canary":{"ok":true},"port":3456,"memory":{"freeMb":1281,"totalMb":3809},"pending":0,"activeCount":0,"queued_jobs":0,"active_jobs":0,"total":77,"retainedCompletedJobs":9,"retainedFailedJobs":0,"retained_result_bytes":8290514,"cleanupCount":2667,"workersStatus":{"chatgpt-2":{"status":"idle"},"chatgpt-1":{"status":"idle"}}}
+DATABASE
+{"name":"states","rows":[{"state":"ATTACHING_INGREDIENTS","count":1},{"state":"FAILED","count":111},{"state":"NEEDS_REVIEW","count":38},{"state":"COMPLETED","count":65}]}
+{"name":"active","rows":[{"id":"2c443840-ea5f-47d5-bbc6-52a20fdbf8b5","org_id":"4a58b0dd-0931-4901-880a-686457d15010","state":"ATTACHING_INGREDIENTS","lease_account_id":"account-03","lease_worker_id":"control-worker-account-03","lease_timeout_at":"2026-10-07T10:29:26.471Z","created_at":"2026-10-07T10:19:21.373Z","updated_at":"2026-10-07T10:21:20.432Z"}]}
+{"name":"credit_events","rows":[{"event_type":"CREDIT_BALANCE_SYNCED","count":4,"before_recorded":4,"after_recorded":4}]}
+{"name":"functions","rows":[{"proname":"heartbeat_browser_account_lease","definition":"CREATE OR REPLACE FUNCTION public.heartbeat_browser_account_lease(p_provider text, p_account_id text, p_lease_token text, p_ttl_seconds integer DEFAULT 60)\n RETURNS boolean\n LANGUAGE plpgsql\nAS $function$\ndeclare\n  v_now timestamptz := now();\n  v_expires timestamptz := v_now + (p_ttl_seconds || ' seconds')::interval;\n  v_updated int;\nbegin\n  update public.browser_account_leases\n  set heartbeat_at = v_now,\n      expires_at = v_expires\n  where provider = p_provider\n    and account_id = p_account_id\n    and lease_token = p_lease_token\n    and released_at is null;\n\n  get diagnostics v_updated = row_count;\n  return v_updated > 0;\nend;\n$function$\n"},{"proname":"studio_lease_job","definition":"CREATE OR REPLACE FUNCTION public.studio_lease_job(p_job_id uuid, p_worker_id text, p_account_id text)\n RETURNS boolean\n LANGUAGE plpgsql\n SET search_path TO 'public'\nAS $function$\nDECLARE owned_org uuid;\nBEGIN\n  IF nullif(trim(p_worker_id), '') IS NULL OR nullif(trim(p_account_id), '') IS NULL THEN\n    RAISE EXCEPTION 'Missing lease identity';\n  END IF;\n  UPDATE public.ai_media_jobs SET state = 'LEASED', lease_worker_id = p_worker_id,\n    lease_account_id = p_account_id, lease_timeout_at = now() + interval '10 minutes', updated_at = now()\n    WHERE id = p_job_id AND state = 'QUEUED' RETURNING org_id INTO owned_org;\n  IF NOT FOUND THEN RETURN false; END IF;\n  INSERT INTO public.ai_media_events(job_id, org_id, event_type, from_state, to_state, message, payload)\n    VALUES(p_job_id, owned_org, 'STATE_TRANSITION', 'QUEUED', 'LEASED', 'Worker acquired job lease',\n      jsonb_build_object('worker_id', p_worker_id, 'account_id', p_account_id));\n  RETURN true;\nEND $function$\n"}]}
+{"name":"prior_uncertain","rows":[{"id":"bf166a60-7349-5b79-a486-951d8854edea","state":"FAILED","error_code":"EXECUTION_FAILED","updated_at":"2026-10-14T19:45:26.830Z"}]}

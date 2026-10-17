@@ -1,6 +1,34 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+test('failed account renewal fences execution and quarantines subsequent acquisitions', async () => {
+  const h = harness();
+  const worker = h.add('flow-renewal', 9234, {}, 'flow');
+  const lease = await h.supervisor.acquire({ provider: 'flow', jobId: 'renewal-job' });
+  h.supervisor.leaseStore.heartbeatLease = async () => false;
+  assert.equal(await h.supervisor._heartbeatAccountLease(worker, {
+    provider: 'FLOW', accountId: worker.accountId, leaseToken: lease.leaseToken,
+  }), false);
+  assert.throws(() => lease.markExecutionStarted(), error => error.code === 'LEASE_LOST');
+  assert.equal(lease.setPhase('GENERATING'),false);
+  await assert.rejects(lease.createTab('https://flow.google.com/'),error => error.code === 'LEASE_LOST');
+  await lease.release();
+  await assert.rejects(h.supervisor.acquireExternalLease({ provider: 'flow', accountId: worker.accountId,
+    jobId: 'second' }), error => error.code === 'LEASE_LOST');
+  assert.equal(h.supervisor._candidates('flow').length, 0);
+});
+
+test('late heartbeat failure for an old token cannot quarantine a newer reservation', async () => {
+  const h = harness();
+  const worker = h.add('flow-newer', 9235, {}, 'flow');
+  const lease = await h.supervisor.acquire({ provider: 'flow', jobId: 'new-job' });
+  h.supervisor.leaseStore.heartbeatLease = async () => { throw new Error('offline'); };
+  await h.supervisor._heartbeatAccountLease(worker, { provider: 'FLOW', accountId: worker.accountId, leaseToken: 'old' });
+  assert.equal(worker.leaseLost, undefined);
+  lease.markExecutionStarted();
+  await lease.release();
+});
+
 test('external aliases share canonical leases and never fall back to another account', async () => {
   const h = harness();
   const primary = h.add('flow-primary', 9224, { canonicalAccountId: 'first@example.com', aliases: ['account-01', 'account-03'] }, 'flow');

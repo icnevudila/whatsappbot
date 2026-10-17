@@ -852,7 +852,9 @@ class AdvancedJobQueue {
 
   releaseLock(jobId, error = null) {
     const job = this.jobs.get(jobId);
-    if (!job) return;
+    // Delayed error callbacks must never mutate a terminal receipt or release
+    // the same worker's subsequent job.
+    if (!job || job.status !== 'processing') return;
 
     if (job.assignedTo) {
       this.activeWorkers.delete(job.assignedTo);
@@ -889,7 +891,10 @@ class AdvancedJobQueue {
       total_ms: Date.now() - job.createdAt,
     };
 
-    if (job.type === 'image' && error && String(error).includes('SUBMISSION_UNCERTAIN')) {
+    // Claiming gives the browser permission to submit. A timeout, disconnect or
+    // generic worker failure is not proof that paid generation never started.
+    // Keep the original job identity for observation/reconciliation, not retry.
+    if (job.type === 'image') {
       job.reconciliationRequired = true;
     }
     const canRetry = error && isRetryableError(error) && (job.attemptCount || 0) < (job.maxAttempts || 2);
@@ -1303,12 +1308,12 @@ class VideoJobQueue {
     let position = 0;
     if (job.status === 'queued') {
       const idx = this.queue.findIndex(item => item.jobId === id);
-      position = idx >= 0 ? idx + 1 : 1;
+      position = idx >= 0 ? idx + 1 : null;
     }
     return {
       ...job,
       queue_position: position,
-      estimated_wait_seconds: position * 110,
+      estimated_wait_seconds: null,
       elapsed_seconds: Math.round((Date.now() - job.enqueuedAt) / 1000),
     };
   }
