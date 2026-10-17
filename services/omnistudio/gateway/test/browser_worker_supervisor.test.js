@@ -1,6 +1,56 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+test('navigation context loss rechecks readiness once without a browser restart', async () => {
+  const h = harness(); let probes=0;
+  const worker=h.add('flow-navigation',9236,{sessionValidator:async()=>++probes===1
+    ? {ok:false,code:'SESSION_VALIDATION_FAILED',message:'Cannot find default execution context'} : {ok:true}},'flow');
+  await h.supervisor.ensureReady(worker);
+  assert.equal(probes,2); assert.equal(h.launches.length,1);
+  assert.equal(worker.readiness,READINESS_STATES.READY);
+});
+
+test('readiness context recovery is bounded and never retries paid execution or auth failures', async () => {
+  const h=harness(); let probes=0;
+  const worker=h.add('flow-context-bound',9237,{sessionValidator:async()=>{probes++;return {ok:false,code:'SESSION_VALIDATION_FAILED',message:'Cannot find default execution context'}}},'flow');
+  worker.autoRestoreOnAuth=false;
+  await assert.rejects(h.supervisor.ensureReady(worker),e=>e.code==='SESSION_VALIDATION_FAILED');
+  assert.equal(probes,2); assert.equal(h.launches.length,1);
+  probes=0;worker.executionStarted=true;
+  await h.supervisor._validatePersistentSession(worker);assert.equal(probes,1);
+  probes=0;worker.executionStarted=false;
+  worker.sessionValidator=async()=>{probes++;return {ok:false,code:'AUTH_REQUIRED',message:'session expired'}};
+  await h.supervisor._validatePersistentSession(worker);assert.equal(probes,1);
+});
+
+test('failed account renewal fences execution and quarantines subsequent acquisitions', async () => {
+  const h = harness();
+  const worker = h.add('flow-renewal', 9234, {}, 'flow');
+  const lease = await h.supervisor.acquire({ provider: 'flow', jobId: 'renewal-job' });
+  h.supervisor.leaseStore.heartbeatLease = async () => false;
+  assert.equal(await h.supervisor._heartbeatAccountLease(worker, {
+    provider: 'FLOW', accountId: worker.accountId, leaseToken: lease.leaseToken,
+  }), false);
+  assert.throws(() => lease.markExecutionStarted(), error => error.code === 'LEASE_LOST');
+  assert.equal(lease.setPhase('GENERATING'),false);
+  await assert.rejects(lease.createTab('https://flow.google.com/'),error => error.code === 'LEASE_LOST');
+  await lease.release();
+  await assert.rejects(h.supervisor.acquireExternalLease({ provider: 'flow', accountId: worker.accountId,
+    jobId: 'second' }), error => error.code === 'LEASE_LOST');
+  assert.equal(h.supervisor._candidates('flow').length, 0);
+});
+
+test('late heartbeat failure for an old token cannot quarantine a newer reservation', async () => {
+  const h = harness();
+  const worker = h.add('flow-newer', 9235, {}, 'flow');
+  const lease = await h.supervisor.acquire({ provider: 'flow', jobId: 'new-job' });
+  h.supervisor.leaseStore.heartbeatLease = async () => { throw new Error('offline'); };
+  await h.supervisor._heartbeatAccountLease(worker, { provider: 'FLOW', accountId: worker.accountId, leaseToken: 'old' });
+  assert.equal(worker.leaseLost, undefined);
+  lease.markExecutionStarted();
+  await lease.release();
+});
+
 test('external aliases share canonical leases and never fall back to another account', async () => {
   const h = harness();
   const primary = h.add('flow-primary', 9224, { canonicalAccountId: 'first@example.com', aliases: ['account-01', 'account-03'] }, 'flow');
@@ -924,3 +974,30 @@ test('24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing sam
   await lease2.release();
 });
 
+
+test('external execution validation requires exact job/account/token and authoritative renewal', async () => {
+  const h=harness();
+  const worker=h.add('validated-flow',9238,{aliases:['account-validation']},'flow');
+  const lease=await h.supervisor.acquireExternalLease({provider:'flow',accountId:'account-validation',jobId:'owned'});
+  const request={provider:'flow',accountId:'account-validation',jobId:'owned',leaseToken:lease.leaseToken};
+  assert.equal(await h.supervisor.validateExternalLease(request),true);
+  for(const invalid of [{jobId:'other'},{accountId:'unknown'},{leaseToken:'stale'},{jobId:null}]) {
+    assert.equal(await h.supervisor.validateExternalLease({...request,...invalid}),false);
+    assert.equal(worker.leaseLost,undefined);
+  }
+  h.supervisor.leaseStore.heartbeatLease=async()=>false;
+  assert.equal(await h.supervisor.validateExternalLease(request),false);
+  assert.equal(worker.leaseLost,true);
+  h.supervisor.leaseStore.heartbeatLease=async()=>true;
+  assert.equal(await h.supervisor.validateExternalLease(request),false);
+  await h.supervisor.releaseExternalLease(request);
+});
+
+test('validation cannot approve a token released during the database round trip', async () => {
+  const h=harness();
+  const worker=h.add('validation-race',9239,{},'flow');
+  const lease=await h.supervisor.acquireExternalLease({provider:'flow',accountId:worker.accountId,jobId:'old'});
+  h.supervisor.leaseStore.heartbeatLease=async()=>{worker.currentJobId='new';worker.leaseToken='replacement';return true};
+  assert.equal(await h.supervisor.validateExternalLease({provider:'flow',accountId:worker.accountId,jobId:'old',leaseToken:lease.leaseToken}),false);
+  await h.supervisor.releaseExternalLease({provider:'flow',accountId:worker.accountId,leaseToken:lease.leaseToken});
+});

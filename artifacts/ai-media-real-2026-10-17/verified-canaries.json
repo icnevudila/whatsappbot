@@ -1,0 +1,97 @@
+{
+  "scope": "three real image canaries, not the 3/5/10 concurrent matrix",
+  "images": [
+    {
+      "creative_id": "a80011b8-4d01-5b96-af3a-ed8fb14be7e8",
+      "org_id": "2881f690-6853-4064-8768-307463ae6255",
+      "job_id": "job_2979a0b1c3edc513",
+      "sha256": "c085fc584ce9b373e3d5397a56e125cbd69a805938dea75d79eaba7e04bf2f32",
+      "bytes": 1786337,
+      "width": 1254,
+      "height": 1254,
+      "created_to_last_update_seconds": 117.869,
+      "render_records": 1,
+      "reference_count": 2,
+      "technical_receipt_result": "PASS",
+      "visual_quality": "NEEDS_REVIEW",
+      "actual_provider_cost": null
+    },
+    {
+      "creative_id": "ea575cb5-6300-59c4-a695-2315815bcb11",
+      "org_id": "b359ccd3-3ec8-40fd-928e-bc6dbbd489c0",
+      "job_id": "job_2495cad3414a08f6",
+      "sha256": "421a00ba10127638f232e64ac47d355951c9398f810249950b29d45cc80b0e00",
+      "bytes": 2457844,
+      "width": 1254,
+      "height": 1254,
+      "created_to_last_update_seconds": 266.756,
+      "render_records": 1,
+      "reference_count": 2,
+      "technical_receipt_result": "PASS",
+      "visual_quality": "NEEDS_REVIEW",
+      "actual_provider_cost": null
+    },
+    {
+      "creative_id": "696e94a6-59b7-5024-a768-09b0808d45ba",
+      "org_id": "4a58b0dd-0931-4901-880a-686457d15010",
+      "job_id": "job_c2091a0811573185",
+      "sha256": "f9d9a435044e5897ecb55f3e032ba1a51d488b840ff91cf77712a7ad031a831f",
+      "bytes": 2162906,
+      "width": 1254,
+      "height": 1254,
+      "created_to_last_update_seconds": 394.704,
+      "render_records": 1,
+      "reference_count": 2,
+      "technical_receipt_result": "PASS",
+      "visual_quality": "NEEDS_REVIEW",
+      "actual_provider_cost": null
+    }
+  ],
+  "video": {
+    "id": "3d34e3ab-23c3-5695-a26b-596e2d92748b",
+    "state": "FAILED",
+    "error_code": "EXECUTION_FAILED",
+    "error_message": "Cannot find default execution context",
+    "created_at": "2026-10-17T08:31:34.314Z",
+    "updated_at": "2026-10-17T08:33:16.530Z"
+  },
+  "production_acceptance": "NO-GO",
+  "per_job_credit_settlement": "UNRECONCILED",
+  "postdeploy_video": {
+    "id": "32e6bfc8-a1ad-5eb1-a45e-2337acc02386",
+    "org_id": "2881f690-6853-4064-8768-307463ae6255",
+    "state": "FAILED",
+    "lease_account_id": null,
+    "lease_timeout_at": null,
+    "error_code": "EXECUTION_FAILED",
+    "error_message": "[FLOW_EXECUTION_FAILED] Generation failed with return code 1",
+    "created_at": "2026-10-17T09:01:26.069Z",
+    "updated_at": "2026-10-17T09:04:14.293Z"
+  },
+  "deployed_sql_checks": {
+    "contention": {
+      "scope": "isolated schema, deployed function, independent PostgreSQL backends",
+      "sameAccountWaitObserved": true,
+      "competingClaimRejected": true,
+      "differentAccountClaimed": true,
+      "auditFailureRolledBackJobAndAccount": true,
+      "publicCustomerRowsWritten": 0
+    },
+    "heartbeat": {
+      "transactionRolledBack": true,
+      "expired": {
+        "renewed": false
+      },
+      "valid": {
+        "renewed": true
+      },
+      "wrong": {
+        "renewed": false
+      },
+      "zero": {
+        "renewed": false
+      },
+      "pass": true
+    }
+  }
+}

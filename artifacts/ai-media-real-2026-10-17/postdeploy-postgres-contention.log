@@ -1,0 +1,1 @@
+{"scope":"isolated schema, deployed function, independent PostgreSQL backends","sameAccountWaitObserved":true,"competingClaimRejected":true,"differentAccountClaimed":true,"auditFailureRolledBackJobAndAccount":true,"publicCustomerRowsWritten":0}
