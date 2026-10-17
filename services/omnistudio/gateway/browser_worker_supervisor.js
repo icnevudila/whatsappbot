@@ -374,7 +374,7 @@ class BrowserWorkerSupervisor extends EventEmitter {
 
       if (worker.sessionValidator) {
         const session = await Promise.race([
-          Promise.resolve(worker.sessionValidator(worker)),
+          this._validatePersistentSession(worker),
           sleep(this.providerReadyTimeout).then(() => ({ ok: false, code: 'SESSION_VALIDATION_TIMEOUT' })),
         ]);
         if (!session || session.ok !== true) {
@@ -418,6 +418,27 @@ class BrowserWorkerSupervisor extends EventEmitter {
   _isAuthRecoveryError(error) {
     const code = String(error?.code || '').toUpperCase();
     return code.includes('AUTH') || code.includes('SESSION_EXPIRED');
+  }
+
+  async _validatePersistentSession(worker) {
+    // Navigation briefly removes Chromium's default JS context. Re-probe only
+    // session readiness; never replay provider submission or restart a browser.
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let session;
+      try { session = await worker.sessionValidator(worker); }
+      catch (error) {
+        if (attempt || worker.executionStarted || !this._isNavigationContextError(error.message)) throw error;
+        await this.sleep(Math.min(250, Math.max(1, this.providerReadyTimeout / 10)));
+        continue;
+      }
+      if (session?.ok === true || attempt || worker.executionStarted ||
+          session?.code !== 'SESSION_VALIDATION_FAILED' || !this._isNavigationContextError(session?.message)) return session;
+      await this.sleep(Math.min(250, Math.max(1, this.providerReadyTimeout / 10)));
+    }
+  }
+
+  _isNavigationContextError(message) {
+    return /Cannot find default execution context|Execution context was destroyed|Cannot find context with specified id/i.test(String(message || ''));
   }
 
   async ensureReady(worker) {

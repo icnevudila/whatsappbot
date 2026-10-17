@@ -1,6 +1,28 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+test('navigation context loss rechecks readiness once without a browser restart', async () => {
+  const h = harness(); let probes=0;
+  const worker=h.add('flow-navigation',9236,{sessionValidator:async()=>++probes===1
+    ? {ok:false,code:'SESSION_VALIDATION_FAILED',message:'Cannot find default execution context'} : {ok:true}},'flow');
+  await h.supervisor.ensureReady(worker);
+  assert.equal(probes,2); assert.equal(h.launches.length,1);
+  assert.equal(worker.readiness,READINESS_STATES.READY);
+});
+
+test('readiness context recovery is bounded and never retries paid execution or auth failures', async () => {
+  const h=harness(); let probes=0;
+  const worker=h.add('flow-context-bound',9237,{sessionValidator:async()=>{probes++;return {ok:false,code:'SESSION_VALIDATION_FAILED',message:'Cannot find default execution context'}}},'flow');
+  worker.autoRestoreOnAuth=false;
+  await assert.rejects(h.supervisor.ensureReady(worker),e=>e.code==='SESSION_VALIDATION_FAILED');
+  assert.equal(probes,2); assert.equal(h.launches.length,1);
+  probes=0;worker.executionStarted=true;
+  await h.supervisor._validatePersistentSession(worker);assert.equal(probes,1);
+  probes=0;worker.executionStarted=false;
+  worker.sessionValidator=async()=>{probes++;return {ok:false,code:'AUTH_REQUIRED',message:'session expired'}};
+  await h.supervisor._validatePersistentSession(worker);assert.equal(probes,1);
+});
+
 test('failed account renewal fences execution and quarantines subsequent acquisitions', async () => {
   const h = harness();
   const worker = h.add('flow-renewal', 9234, {}, 'flow');

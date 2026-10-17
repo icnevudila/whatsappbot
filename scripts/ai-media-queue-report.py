@@ -24,7 +24,7 @@ common = """
 Date: 17 October 2026 (Europe/Istanbul). Evidence: `../../artifacts/ai-media-queue-2026-10-17/`.
 Local baseline/origin main: `35ceff0097f365acb6660fd07681a273f07d6910`.
 Live checkout: `5556310def2d851158668f4b71bdf635fc6d1fae`, with 364 dirty entries when sampled.
-Live Git SHA does not identify all deployed code. No production deploy, migration, restart or paid generation was performed.
+Live Git SHA does not identify all deployed code. The initial simulation phase performed no production deploy, migration, restart or paid generation.
 PASS below always names its local/mock scope; it never implies real-provider or customer acceptance.
 """
 write('AI_MEDIA_QUEUE_ARCHITECTURE.md', '# AI media queue architecture\n' + common + """
@@ -202,6 +202,19 @@ The only measured admission capacity is ten logical tenants / twenty mixed image
 
 The requested infrastructure production acceptance is incomplete. This report is a concrete NO-GO review package, not a claim that every requested scenario was executed.
 """)
+
+followup = REPORTS / 'REAL_PROVIDER_ACCEPTANCE.md'
+if followup.exists():
+    for report in REPORTS.glob('*.md'):
+        if report == followup:
+            continue
+        with report.open('a', encoding='utf-8') as stream:
+            stream.write('\n## Authorized real-provider follow-up\n\n'
+                'The results above describe the initial simulation audit. '
+                'Subsequent authorized real Wizard canaries, downloads, observed Flow balances and the failed video '
+                'are documented in [REAL_PROVIDER_ACCEPTANCE.md](REAL_PROVIDER_ACCEPTANCE.md). '
+                'That follow-up supersedes NOT TESTED statements only for the exact scenarios it verified. '
+                'Its Gateway suite passes 169/169 locally; production acceptance remains NO-GO.\n')
 
 manifest = {'algorithm':'SHA-256','normalization':'CRLF to LF for portable text verification',
     'scope':'reports, evidence and changed runtime/migration source', 'files':{}}

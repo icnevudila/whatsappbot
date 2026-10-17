@@ -3,7 +3,7 @@
 Date: 17 October 2026 (Europe/Istanbul). Evidence: `../../artifacts/ai-media-queue-2026-10-17/`.
 Local baseline/origin main: `35ceff0097f365acb6660fd07681a273f07d6910`.
 Live checkout: `5556310def2d851158668f4b71bdf635fc6d1fae`, with 364 dirty entries when sampled.
-Live Git SHA does not identify all deployed code. No production deploy, migration, restart or paid generation was performed.
+Live Git SHA does not identify all deployed code. The initial simulation phase performed no production deploy, migration, restart or paid generation.
 PASS below always names its local/mock scope; it never implies real-provider or customer acceptance.
 
 
@@ -27,3 +27,7 @@ Full receipts, queue/claim/generation timestamps, durations, hashes, CPU and RSS
 Supabase multi-client transactions, real tenant provisioning, full variation/revision APIs, browser sessions, reference uploads, Storage, media resolution, video FPS/audio/outro, worker utilization across hosts, physical account contention and actual billing are NOT TESTED by this matrix. The existing Control tests execute its CAS/backpressure helpers; they do not turn this matrix into a full-stack staging result.
 
 Stage 2 is therefore PARTIAL. No real 3/5/10 capacity is certified. No render concurrency increase was applied.
+
+## Authorized real-provider follow-up
+
+The results above describe the initial simulation audit. Subsequent authorized real Wizard canaries, downloads, observed Flow balances and the failed video are documented in [REAL_PROVIDER_ACCEPTANCE.md](REAL_PROVIDER_ACCEPTANCE.md). That follow-up supersedes NOT TESTED statements only for the exact scenarios it verified. Its Gateway suite passes 169/169 locally; production acceptance remains NO-GO.
