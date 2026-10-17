@@ -22,7 +22,7 @@ PASS below always names its local/mock scope; it never implies real-provider or 
 | Download / Storage upload outage | Workspace and output gates covered by existing helpers; no network outage injected | NOT TESTED end to end |
 | Customer refresh/navigation / cancellation | No real customer browser scenario | NOT TESTED |
 | Server/container restart | Only isolated child-process exit, never live service restart | NOT TESTED live |
-| In-flight operation during DB partition or hung renewal | Quarantine is local and cannot prove external browser stopped before account takeover | NOT TESTED; release blocker |
+| In-flight operation during DB partition or hung renewal | `ExecutionLeaseMonitor` in `driver.py` continuously checks lease; failure sends SIGKILL to browser process group and marks SUBMISSION_UNCERTAIN | PASS local integration and unit tests (`test_execution_fencing.py`) |
 
 ## Live unresolved work: FAIL production recovery acceptance
 

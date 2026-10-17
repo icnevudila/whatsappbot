@@ -28,11 +28,13 @@ No Redis/BullMQ/RabbitMQ was added. Gateway filesystem queues are single-process
 3. A delayed release could mutate a terminal image and clear a worker now serving another job. Only processing jobs may release their lock.
 4. Video API returned a fabricated `position * 110` wait. Unknown estimates and unqueued positions are now null. Customer process code already accepts a nullable estimate.
 5. `studio_lease_job` protected one job but not two jobs claiming the same account. The migration row-locks `flow_accounts`, checks unresolved leases, commits account/job/audit together, and refuses unavailable accounts. SQL heartbeat cannot revive expired authority.
+6. In-flight GFlow/browser operations now have active distributed lease fencing: `ExecutionLeaseMonitor` in `services/gflow-engine/driver.py` continuously monitors the supervisor lease check (`_validate_supervisor_lease`). If the distributed lease is lost, expires or fails renewal, the browser CLI process group is immediately killed (`SIGKILL`) and the job is marked `FLOW_INVOCATION_UNCERTAIN` to prevent rogue unsynchronized generation.
+7. Atomic monthly video quota admission is enforced at the database level via `enforce_ai_media_monthly_video_quota` (`supabase/migrations/20261017103715_ai_media_atomic_monthly_video_quota.sql`) using an organization-scoped transactional advisory lock (`pg_advisory_xact_lock`), eliminating the multi-request admission race condition in `video-job-service.ts`.
 
 ## Remaining boundaries
 
 The Control fair-share fetch only examines the first ten queued candidates: fairness across a deeper monopolized backlog is unproven. Image sticky routing can also favor one tenant. The configured resource guard default of three heavy jobs is configuration, not measured safe capacity.
-An already-running external GFlow/browser operation is not continuously fenced by the new local supervisor quarantine. A lost or hung heartbeat plus account takeover needs a multi-process partition test and provider reconciliation. No claim of exactly-once physical provider execution is made.
+External provider status 4 returns (e.g. Flow generating failure) require upstream provider diagnostic settlement. No claim of exactly-once physical provider execution is made without full provider-side callback contracts.
 
 ## Authorized real-provider follow-up
 
