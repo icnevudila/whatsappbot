@@ -26,7 +26,7 @@ test('software screenshot geometry is enforced without a diversity plan or custo
     sector: null, generationType: 'revision' as const, visualDiversityPlan: null }
   for (const mode of ['LEGACY_SIMPLE', 'OVER_DIRECTED_DESIGNER', 'V3'] as const) {
     const prompt = buildCreativePrompt(software, { mode }).prompt
-    assert.match(prompt, /Without an explicit device request/)
+    assert.match(prompt, /SCENE & COLLABORATION/)
     assert.match(prompt, /original aspect ratio/)
     assert.match(prompt, /Never elongate the lid/)
     assert.match(prompt, /neutral padding/)
@@ -40,7 +40,7 @@ test('software screenshot geometry is enforced without a diversity plan or custo
 test('software presentation respects explicit subject identity and does not turn physical products into interfaces', () => {
   const revision = softwarePresentationDirective({ offeringKind: 'software', preserveScene: true })
   assert.match(revision, /preserve the parent scene/)
-  assert.doesNotMatch(revision, /Without an explicit device request/)
+  assert.doesNotMatch(revision, /SCENE & COLLABORATION/)
   assert.equal(softwarePresentationDirective({ offeringKind: 'physical', context: 'software compatible laptop' }), '')
   assert.equal(softwarePresentationDirective({ offeringKind: 'service', context: 'software consultancy' }), '')
   assert.equal(softwarePresentationDirective({ offeringKind: 'software', promotionMode: 'brand' }), '')
