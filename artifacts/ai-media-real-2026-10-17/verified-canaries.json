@@ -56,5 +56,42 @@
     "updated_at": "2026-10-17T08:33:16.530Z"
   },
   "production_acceptance": "NO-GO",
-  "per_job_credit_settlement": "UNRECONCILED"
+  "per_job_credit_settlement": "UNRECONCILED",
+  "postdeploy_video": {
+    "id": "32e6bfc8-a1ad-5eb1-a45e-2337acc02386",
+    "org_id": "2881f690-6853-4064-8768-307463ae6255",
+    "state": "FAILED",
+    "lease_account_id": null,
+    "lease_timeout_at": null,
+    "error_code": "EXECUTION_FAILED",
+    "error_message": "[FLOW_EXECUTION_FAILED] Generation failed with return code 1",
+    "created_at": "2026-10-17T09:01:26.069Z",
+    "updated_at": "2026-10-17T09:04:14.293Z"
+  },
+  "deployed_sql_checks": {
+    "contention": {
+      "scope": "isolated schema, deployed function, independent PostgreSQL backends",
+      "sameAccountWaitObserved": true,
+      "competingClaimRejected": true,
+      "differentAccountClaimed": true,
+      "auditFailureRolledBackJobAndAccount": true,
+      "publicCustomerRowsWritten": 0
+    },
+    "heartbeat": {
+      "transactionRolledBack": true,
+      "expired": {
+        "renewed": false
+      },
+      "valid": {
+        "renewed": true
+      },
+      "wrong": {
+        "renewed": false
+      },
+      "zero": {
+        "renewed": false
+      },
+      "pass": true
+    }
+  }
 }

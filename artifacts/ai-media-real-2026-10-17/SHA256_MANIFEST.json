@@ -41,6 +41,10 @@
       "sha256": "bca2e914fa7d538a01f5d74378a88564ed716c90d9341e18f17046fdb403b9e3",
       "normalization": "CRLF to LF"
     },
+    "artifacts/ai-media-real-2026-10-17/deployed-source-hashes.json": {
+      "sha256": "a1735313200452caf778b8bea59815bf5805ef434abf1a59cecf78fa45d74d97",
+      "normalization": "CRLF to LF"
+    },
     "artifacts/ai-media-real-2026-10-17/final-db-receipts.log": {
       "sha256": "21db9b723c033bf511ea260ce25333f216aaa770bcac4bd88079e4a73e7086af",
       "normalization": "CRLF to LF"
@@ -89,12 +93,48 @@
       "sha256": "acb758be4eba5d4739a9df498ea384c30c71cc219fb4ecc7b98dd532ffeeb044",
       "normalization": "CRLF to LF"
     },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-generation.log": {
+      "sha256": "ea6054f1272e4c89afaf793cb09d2e32c15156602a18489a3c38d08c4dc5dae3",
+      "normalization": "CRLF to LF"
+    },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-lease-sql.log": {
+      "sha256": "7b1fe44704f206153f83e4210a4209f6854d8b672e7d6d85225ea097226fd1f7",
+      "normalization": "CRLF to LF"
+    },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-postgres-contention.log": {
+      "sha256": "80391efc3f10742ce52b9be4de96630c2078cb2da1054e2fd1d318d2a825e38d",
+      "normalization": "CRLF to LF"
+    },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-provider-project.log": {
+      "sha256": "75e24b9bb035109e6da38e0388b4e5084b235c24e3986aab0785b4154394d6a4",
+      "normalization": "CRLF to LF"
+    },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-provider-wire.log": {
+      "sha256": "200a0ccb1996f9d8d898d82ca8714b9a340609fc187b272fcb53b52747993153",
+      "normalization": "CRLF to LF"
+    },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-runtime.log": {
+      "sha256": "89420d4cb49f05e5cc3255344905d45b4d8ac8eab4b5a9170a5b3fa89b06453a",
+      "normalization": "CRLF to LF"
+    },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-video-events.log": {
+      "sha256": "d9e1a5558b868e02f3e1e11ac4710120876fa061cd5d91565ca4d2a0b3bfb2a6",
+      "normalization": "CRLF to LF"
+    },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-video-failed-refresh.png": {
+      "sha256": "e8f37df469835dbce93088a56a4e380e9cba8bccf5c7e951499ded1212d71cb5",
+      "normalization": "raw"
+    },
+    "artifacts/ai-media-real-2026-10-17/postdeploy-video-summary.png": {
+      "sha256": "ea33723d5c184e6092b563458531fe5797dbf820875b028c924c6ef212140349",
+      "normalization": "raw"
+    },
     "artifacts/ai-media-real-2026-10-17/three-tenant-receipts.log": {
       "sha256": "59d9ce4c3223c3a44738ab81f9c54d41de0759dfa2f1cc54fad621f64dac8031",
       "normalization": "CRLF to LF"
     },
     "artifacts/ai-media-real-2026-10-17/verified-canaries.json": {
-      "sha256": "22cadd748592f1021ca27d43a86220e30d7026eddf3c82be1cf00dab25fdc3b6",
+      "sha256": "dfbe23b50b2e5759c7b9509170a5bcfc2e1f869b294d316b00cdda8a174d8d4f",
       "normalization": "CRLF to LF"
     },
     "artifacts/ai-media-real-2026-10-17/video-before-submit.png": {

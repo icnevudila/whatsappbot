@@ -1,6 +1,6 @@
 # Real provider / Wizard follow-up — 17 October 2026
 
-This phase follows the user's explicit authorization to run paid tests. It uses the actual locally served customer application, real authenticated Wizard choices, production Gateway/Control, real references and returned media. It is separate from the initial 36-job mock matrix. No production deployment, migration, service restart, main merge or bulk paid matrix was performed.
+This phase follows the user's explicit authorization to run paid tests. It uses the actual locally served customer application, real authenticated Wizard choices, production Gateway/Control, real references and returned media. It is separate from the initial 36-job mock matrix. This first canary phase preceded deployment. The later explicitly authorized deployment and second video canary are documented in [DEPLOYMENT_VERIFICATION.md](DEPLOYMENT_VERIFICATION.md). No main merge or paid bulk matrix was performed.
 
 ## Measured results
 
@@ -31,8 +31,8 @@ Direct Flow account-details UI showed account-03 **688 credits** and account-04 
 
 ## Additional local hardening
 
-Added one bounded readiness re-probe for Chromium navigation-context loss, inside the existing readiness timeout. It does not replay generation, change accounts or restart the browser. Regression tests cover successful recovery, bounded persistent failure, and no retry after execution begins or for AUTH_REQUIRED. Gateway suite: **169/169 PASS locally**. This is a tested mitigation of the observed readiness symptom, not a production-verified root-cause resolution; live code was not changed.
+Added one bounded readiness re-probe for Chromium navigation-context loss, inside the existing readiness timeout. It does not replay generation, change accounts or restart the browser. Regression tests cover successful recovery, bounded persistent failure, and no retry after execution begins or for AUTH_REQUIRED. Gateway suite: **169/169 PASS locally**. This is a tested mitigation of the observed readiness symptom, not proof of complete provider recovery. It was subsequently deployed with the other scoped queue changes; the next canary passed readiness and reached GENERATING, then failed in Flow.
 
 ## Release decision
 
-**NO-GO remains.** The video canary fails, old uncertain submissions and historical credit settlement remain unresolved, and the hardening migration/code have not been deployed. The 3/5/10 paid bulk matrix was not started after the video gate failed. The original instruction explicitly prohibited production deployment and live worker restart; paid-test authorization was accepted, and a separate concrete approval question for deploying PR #4 was sent. Until that permission arrives, no production change is authorized.
+**NO-GO remains.** The user explicitly authorized the controlled production deploy/restart after this phase. The three scoped Gateway changes and SQL migration are now applied; see [DEPLOYMENT_VERIFICATION.md](DEPLOYMENT_VERIFICATION.md). The second video canary reached real Flow generation but returned provider status 4 and no output. Historical per-job credits remain unreconciled. The paid 3/5/10 matrix remains gated by this failed video acceptance, not by missing user permission.

@@ -42,6 +42,25 @@ video = snapshot['video'][0]
 assert video['state'] == 'FAILED' and video['error_message'] == 'Cannot find default execution context'
 result = {'scope': 'three real image canaries, not the 3/5/10 concurrent matrix',
     'images': summary, 'video': video, 'production_acceptance': 'NO-GO', 'per_job_credit_settlement': 'UNRECONCILED'}
+postdeploy = evidence / 'postdeploy-video-events.log'
+if postdeploy.exists():
+    observed = json.loads(postdeploy.read_text(encoding='utf-8-sig').strip())
+    current = observed['job'][0]
+    assert current['id'] == '32e6bfc8-a1ad-5eb1-a45e-2337acc02386'
+    assert current['org_id'] == '2881f690-6853-4064-8768-307463ae6255'
+    assert current['state'] == 'FAILED' and observed['outputs'] == []
+    transitions = [event['to_state'] for event in observed['events']]
+    assert all(state in transitions for state in ['LEASED', 'OPENING_PROJECT', 'INGREDIENTS_VERIFIED', 'GENERATING', 'FAILED'])
+    generation = (evidence / 'postdeploy-generation.log').read_text(encoding='utf-8')
+    assert '"migrated.submit_observed"' in generation and '"status": 4' in generation
+    contention = json.loads((evidence / 'postdeploy-postgres-contention.log').read_text(encoding='utf-8-sig').strip())
+    assert all(contention[key] is True for key in ['sameAccountWaitObserved', 'competingClaimRejected',
+        'differentAccountClaimed', 'auditFailureRolledBackJobAndAccount'])
+    assert contention['publicCustomerRowsWritten'] == 0
+    heartbeat = json.loads((evidence / 'postdeploy-lease-sql.log').read_text(encoding='utf-8-sig').strip())
+    assert heartbeat['pass'] and heartbeat['transactionRolledBack']
+    result['postdeploy_video'] = current
+    result['deployed_sql_checks'] = {'contention': contention, 'heartbeat': heartbeat}
 (evidence / 'verified-canaries.json').write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
 for tap in evidence.glob('*.tap'):
     tap.write_text('\n'.join(line if line.strip() else '' for line in tap.read_text(encoding='utf-8').splitlines()) + '\n', encoding='utf-8')
