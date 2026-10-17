@@ -110,8 +110,8 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
   if (isSoftware && !isVideo) {
     environment = 'Aydınlık, ferah ve modern teknoloji ofisi, şık ahşap çalışma masası'
     humanPresence = 'actor'
-    productInteraction = 'Ekip arkadaşlarının yatay ekranlı modern dizüstü bilgisayar etrafında doğal ve güleryüzlü etkileşimi, ekrandaki paneli inceleme'
-    composition = 'Yatay oranlı laptop ekranında net arayüz, masada çalışan profesyonel ekip, dengeli ve ferah reklam yerleşimi'
+    productInteraction = 'Ekip arkadaşlarının masadaki şık Space Gray metalik laptop (MacBook Pro) başında doğal etkileşimi, ekrandaki paneli inceleme'
+    composition = 'Doğal 35 derece 3/4 açılı zarif laptop ekranında net arayüz, masada çalışan profesyonel ekip, dengeli ve ferah reklam yerleşimi'
     lighting = 'Doğal pencere ışığı ve yumuşak modern ofis aydınlatması'
     background = 'Modern açık ofis, toplantı alanı, arka planda hafif fluluk (bokeh)'
   }
@@ -119,14 +119,14 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
   if (isShowstopper) {
     environment = isSoftware ? 'Modern, prestijli teknoloji ofisi ve kampanya sahnesi' : 'Ürüne ve marka sektörüne uygun, güçlü kontrastlı ticari afiş ortamı'
     composition = isSoftware
-      ? 'Büyük başlık, güçlü CTA, yatay oranlı laptop ekranında net arayüz ve enerjik modern ofis ekibi'
+      ? 'Büyük başlık, güçlü CTA, 35 derece açılı şık metalik laptop ekranında net arayüz ve enerjik modern ofis ekibi'
       : 'Büyük başlık, güçlü CTA, belirgin ana ürün ve zengin kampanya vurgu alanları'
     background = 'Marka renklerine uygun katmanlı ve düzenli kampanya sahnesi'
   } else if (isRealLife) {
     environment = isSoftware ? 'Aydınlık, ferah teknoloji şirketi çalışma alanı' : 'Doğal işletme veya sahada gerçek kullanım ortamı'
     humanPresence = 'actor'
-    productInteraction = isSoftware ? 'Ekip arkadaşlarının yatay ekranlı laptop başında canlı paneli incelemesi' : 'doğal profesyonel kullanım ve kullanıcı etkileşimi'
-    composition = isSoftware ? 'Yatay oranlı laptop ekranı ve birlikte çalışan profesyonel ekip' : 'İşletme sahibi veya saha uzmanı ile ürünün dengeli birlikteliği'
+    productInteraction = isSoftware ? 'Ekip arkadaşlarının 3/4 açılı şık laptop başında canlı paneli incelemesi' : 'doğal profesyonel kullanım ve kullanıcı etkileşimi'
+    composition = isSoftware ? 'Doğal açılı laptop ekranı ve birlikte çalışan profesyonel ekip' : 'İşletme sahibi veya saha uzmanı ile ürünün dengeli birlikteliği'
     background = isSoftware ? 'Açık plan teknoloji ofisi, şık çalışma masası' : 'Gerçekçi, inandırıcı ve sektöre uygun mekan'
   } else if (isPremium) {
     environment = 'Sinematik ve lüks stüdyo ortamı, prestijli taş podyum veya mimari yüzey'
@@ -174,6 +174,12 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
       'square stretched laptop screen',
       'tablet masquerading as laptop',
       'deformed screen hinge',
+      'frontal flat-on laptop',
+      'giant square laptop screen',
+      'towering screen lid',
+      'oversized screen blocking people',
+      'wedge laptop',
+      'kiosk monitor',
     ],
     voiceover_text: voiceover,
   }

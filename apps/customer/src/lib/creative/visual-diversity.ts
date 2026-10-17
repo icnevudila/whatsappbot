@@ -155,7 +155,7 @@ export function selectVisualDiversityPlan(input: {
     camera: input.subject === 'software'
       ? direction.family === 'human_centric'
         ? '50mm eye-level portrait lens with natural depth of field.'
-        : 'Front-facing interface presentation at its original aspect ratio. Natural eye-level perspective for any surrounding scene.'
+        : 'Natural 30-35 degree three-quarter commercial perspective with realistic optical depth of field. The device rests naturally on the desk surface.'
       : direction.camera,
     lighting: input.subject === 'software'
       ? direction.family === 'commercial_spectacle'
@@ -178,7 +178,7 @@ export function visualDiversityDirective(plan: VisualDiversityPlan | null | unde
     'Create meaningful differences in composition, framing and depth, not merely another color tint or a changed headline. Existing advertisements are identity references, not a layout to duplicate.',
     ...(plan.subject === 'software' ? [
       'SOFTWARE REALISM: Use the authentic supplied screenshot/interface. Device scale must remain physically plausible. If a person appears, show a candid believable working posture and a physically plausible grip. Keep interface details faithful to the supplied reference; do not fabricate alternate screens.',
-      'SCREEN PRESENTATION: Do not stretch a portrait screenshot into a widescreen laptop. Prefer the original flat screenshot panel over a device mockup. If hardware is explicitly requested, keep it secondary, nearly front-facing and physically plausible. Avoid steep screen perspective, oversized laptops, nested screens and invented interface overlays.',
+      'SCREEN PRESENTATION: The hardware must be an authentic slim widescreen laptop (MacBook Pro aesthetic) viewed at a natural 30-35 degree 3/4 commercial angle. Avoid oversized screen lids, square screens, towering vertical displays, or dead-center flat-on placement.',
       'Attention comes from clear hierarchy, cropping and contrast. Keep one primary CTA and restrained readable copy; do not fill every area with repeated buttons, text stickers or decorative interface cards.',
     ] : []),
     'The explicit user design request takes precedence. Preserve the exact canonical logo/product/interface, approved literal copy and verified facts. Do not invent UI, metrics, conversations, features, prices or badges. Do not print this plan, its ID or instructions.',

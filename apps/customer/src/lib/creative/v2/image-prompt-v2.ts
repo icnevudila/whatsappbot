@@ -63,7 +63,7 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     visualDiversityDirective(options.visualDiversityPlan),
     desc ? `[PRODUCT SPECIFICS]: ${desc}.` : '',
     /yazılım|saas|platform|panel|mesajify/i.test(`${brand} ${product} ${desc}`)
-      ? `[COLLABORATIVE TECH WORKSPACE & ERGONOMIC POSTURE]: When presenting ${brand} or digital platform software, feature a bright, modern open office where 2-3 young smiling professional colleagues/collaborators are naturally gathered around a modern landscape laptop (16:10 widescreen ratio), reviewing the live platform dashboard together. The torso and gaze align comfortably toward the screen; hands and fingers rest naturally on the desk, mouse, or keyboard with anatomical realism. Laptops must rest flat, stably, and naturally on the desk surface facing the users with a connected hinge (strictly landscape widescreen, avoiding portrait elongation or extreme tilted angles).`
+      ? `[COLLABORATIVE TECH WORKSPACE & ERGONOMIC POSTURE]: When presenting ${brand} or digital platform software, feature a bright, modern open office where 1-2 young smiling professional colleagues are gathered naturally at a wooden desk with an authentic Apple MacBook Pro 16-inch in Space Gray unibody finish (viewed from a natural 30-35 degree 3/4 commercial perspective). The torso and gaze align comfortably toward the screen; hands rest naturally on the desk or keyboard with anatomical realism. The laptop has authentic physical unibody proportions, cylindrical hinge, and a standard 16:10 Liquid Retina widescreen display (strictly avoiding square screens, upright frontal boxes, or towering vertical lids).`
       : '',
     options.hasProductRef
       ? `[STRICT PRODUCT FIDELITY]: The physical product photo is provided as canonical reference @HeroProduct. Preserve the exact physical shape, materials, proportions, buttons, nozzle/accessories, and authentic colors of @HeroProduct with 100% fidelity. Do NOT mutate or redesign the product.`
@@ -118,6 +118,12 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     'tablet masquerading as laptop',
     'deformed screen hinge',
     'vertically stretched monitor',
+    'frontal flat-on laptop',
+    'giant square laptop screen',
+    'towering screen lid',
+    'oversized screen blocking people',
+    'wedge laptop',
+    'kiosk monitor',
     'awkward body posture',
     'unnatural gaze',
     'floating hands',
