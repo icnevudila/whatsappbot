@@ -4,27 +4,148 @@ export type CreativeStyleMode =
   | 'REAL_LIFE_CAMPAIGN'
   | 'PREMIUM_SHOWCASE'
 
-export const STYLE_MODES = [
+export interface StyleModeExample {
+  sector: string
+  company: string
+  image: string
+  highlight: string
+}
+
+export interface StyleModeItem {
+  id: CreativeStyleMode
+  label: string
+  description: string
+  badge?: string
+  heroPreview: string
+  characteristics: string[]
+  examples: StyleModeExample[]
+}
+
+export const STYLE_MODES: readonly StyleModeItem[] = [
   {
     id: 'SMART_CAMPAIGN',
     label: 'Akıllı Kampanya',
     description: 'AI marka ve sektöre en uygun reklam hiyerarşisini otomatik seçer.',
     badge: 'Varsayılan',
+    heroPreview: '/style-previews/mesajify_smart.png',
+    characteristics: [
+      'Dengeli ticari reklam hiyerarşisi',
+      'Net okunabilir başlık, alt metin ve CTA butonu',
+      'Marka kimlik renkleri ve ürün odaklı kompozisyon',
+    ],
+    examples: [
+      {
+        sector: 'Yazılım & SaaS',
+        company: 'Mesajify',
+        image: '/style-previews/mesajify_smart.png',
+        highlight: 'MacBook Pro, sol menülü web paneli ve net yeşil CTA',
+      },
+      {
+        sector: 'Tarım & Ekipman',
+        company: 'Bofe Tarım',
+        image: '/style-previews/bofe_smart.png',
+        highlight: 'Bahçe koruma vaadi, 16L şarjlı pompa ve marka paleti',
+      },
+      {
+        sector: 'İnşaat & Yapı',
+        company: 'Ayvazoğlu İnşaat',
+        image: '/style-previews/ayvazoglu_smart.png',
+        highlight: '3 günde teslimat garantisi, klinker tuğla ve toptan teklif',
+      },
+    ],
   },
   {
     id: 'SHOWSTOPPER_CAMPAIGN',
     label: 'Gösterişli Kampanya',
-    description: 'Büyük 3D/kabartmalı başlık, zengin katmanlar, ürün odağı ve dikkat çekici CTA.',
+    description: 'Büyük kabartmalı başlık, zengin katmanlar, ürün odağı ve dikkat çekici CTA.',
+    heroPreview: '/style-previews/mesajify_showstopper.png',
+    characteristics: [
+      'Geniş açılı ve yüksek kontrastlı ticari lansman afişi',
+      'Büyük ve çarpıcı reklam tipografisi',
+      'Yüksek dönüşüm odaklı teklif ve kampanya vurgusu',
+    ],
+    examples: [
+      {
+        sector: 'Yazılım & SaaS',
+        company: 'Mesajify',
+        image: '/style-previews/mesajify_showstopper.png',
+        highlight: 'Büyük ve cesur tipografi, güçlü yeşil CTA ve ofis enerjisi',
+      },
+      {
+        sector: 'Tarım & Ekipman',
+        company: 'Bofe Tarım',
+        image: '/style-previews/bofe_showstopper.png',
+        highlight: 'Sezon indirimi afişi, yüksek basınç ve sağlam gövde vurgusu',
+      },
+      {
+        sector: 'İnşaat & Yapı',
+        company: 'Ayvazoğlu İnşaat',
+        image: '/style-previews/ayvazoglu_showstopper.png',
+        highlight: 'Fabrikadan doğrudan şantiyeye teslimat ve güçlü tuğla afişi',
+      },
+    ],
   },
   {
     id: 'REAL_LIFE_CAMPAIGN',
     label: 'Gerçek Kullanım',
     description: 'İşletme sahibi veya saha uzmanı ile ürünün gerçek kullanım anı.',
+    heroPreview: '/style-previews/mesajify_real_life.png',
+    characteristics: [
+      'Doğal çalışma ortamında gerçek profesyonel kullanım',
+      'Ürünü ve paneli kullanan güler yüzlü ekip veya saha uzmanı',
+      'Yapaylıktan uzak, güven veren gerçekçi ortam aydınlatması',
+    ],
+    examples: [
+      {
+        sector: 'Yazılım & SaaS',
+        company: 'Mesajify',
+        image: '/style-previews/mesajify_real_life.png',
+        highlight: 'Masada birlikte paneli inceleyen profesyonel iş ortakları',
+      },
+      {
+        sector: 'Tarım & Ekipman',
+        company: 'Bofe Tarım',
+        image: '/style-previews/bofe_real_life.png',
+        highlight: 'Tarlada ve bahçede doğal çiftçi kullanımı ve ergonomik duruş',
+      },
+      {
+        sector: 'İnşaat & Yapı',
+        company: 'Ayvazoğlu İnşaat',
+        image: '/style-previews/ayvazoglu_real_life.png',
+        highlight: 'Şantiyede mimar ve mühendis kontrolünde kaliteli tuğla uygulaması',
+      },
+    ],
   },
   {
     id: 'PREMIUM_SHOWCASE',
     label: 'Premium Vitrin',
     description: 'Sinematik ışık, derinlik ve prestijli yüzeylerde minimalist ürün sunumu.',
+    heroPreview: '/style-previews/mesajify_premium.png',
+    characteristics: [
+      'Sinematik stüdyo veya zarif ofis ışığı',
+      'Minimalist, ferah ve prestijli kurumsal B2B estetiği',
+      'Gereksiz rozet veya çıkartmalardan arındırılmış temiz odak',
+    ],
+    examples: [
+      {
+        sector: 'Yazılım & SaaS',
+        company: 'Mesajify',
+        image: '/style-previews/mesajify_premium.png',
+        highlight: 'Zarif Space Gray MacBook Pro, doğal ışık ve minimalist çalışma masası',
+      },
+      {
+        sector: 'Tarım & Ekipman',
+        company: 'Bofe Tarım',
+        image: '/style-previews/bofe_premium.png',
+        highlight: 'Stüdyo aydınlatması altında prestijli podyumda Bofe 16L vitrini',
+      },
+      {
+        sector: 'İnşaat & Yapı',
+        company: 'Ayvazoğlu İnşaat',
+        image: '/style-previews/ayvazoglu_premium.png',
+        highlight: 'Sıcak mimari gün batımı, dokusal tuğla bloğu ve kurumsal logo tabelası',
+      },
+    ],
   },
 ] as const
 
