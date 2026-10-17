@@ -7,6 +7,9 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const WebSocketClass = (() => {
+  try { return require('ws'); } catch { return globalThis.WebSocket; }
+})();
 const { captureTurnBaseline, readCurrentTurn } = require('./chatgpt_turn_scope.js');
 const { readComposerAttachments } = require('./image_reference_gate.js');
 const { findImageUploadInput } = require('./image_upload_input.js');
@@ -142,7 +145,10 @@ function createCdpSession(wsUrl, connectTimeoutMs = 8000) {
       reject(new Error(`[CDP Timeout] WebSocket connection to ${wsUrl} timed out after ${connectTimeoutMs}ms`));
     }, connectTimeoutMs);
 
-    const ws = new WebSocket(wsUrl);
+    const isNodeWs = Boolean(WebSocketClass && WebSocketClass !== globalThis.WebSocket);
+    const ws = isNodeWs
+      ? new WebSocketClass(wsUrl, { perMessageDeflate: false, maxPayload: 128 * 1024 * 1024 })
+      : new WebSocketClass(wsUrl, [], { headers: { 'Sec-WebSocket-Extensions': '' } });
     let msgId = 1;
     const callbacks = new Map();
 
@@ -328,6 +334,14 @@ async function dismissAnyModals(cdp) {
           dismissed = true;
         }
 
+        // Auto-heal German Voices and promotion banners
+        for (const el of Array.from(document.querySelectorAll('div, section, aside'))) {
+          if ((el.innerText || '').includes('German Voices') || (el.innerText || '').includes('pronunciation')) {
+            const b = el.querySelector('button');
+            if (b) b.click(); else el.remove();
+            dismissed = true;
+          }
+        }
         // Auto-heal floating usage/notification toasts
         const toastCloses = Array.from(document.querySelectorAll('button[aria-label="Close"], button[aria-label*="close" i], button[aria-label*="kapat" i]'));
         for (const b of toastCloses) {
@@ -469,6 +483,7 @@ async function injectPromptAndSend(cdp, promptText) {
     
     // 4. Gönder butonunun aktifleşmesini bekle ve gönderimi doğrula
     let submitted = false;
+    let clickedOnce = false; // PATCH: submission guard
     const submitDeadline = Date.now() + 45000;
     while (Date.now() < submitDeadline) {
       if (await checkRateLimitModal(cdp)) {
@@ -510,6 +525,7 @@ async function injectPromptAndSend(cdp, promptText) {
       }
 
       if (res?.clicked) {
+        clickedOnce = true;
         // sendBtn.click() above already activated the control. A second native
         // click can hit the same control after it changes to Stop and abort the reply.
         await sleep(1000);
@@ -895,9 +911,17 @@ async function executeChatGPTJob(tab, job) {
     
     console.log(`[CDP Worker: ${WORKER_ID}] Firma: "${customer}" [${channel}] oturumu hazırlanıyor...`);
     await navigateToChat(cdp, 'https://chatgpt.com/');
-    const ownedPage = await cdp.send('Runtime.evaluate', {
-      expression: `window.__mesajifyImageOwnerJobId = ${JSON.stringify(job.id)}; (${readImageScope.toString()})()`, returnByValue: true,
-    });
+    let ownedPage = null;
+    for (let r = 0; r < 6; r++) {
+      try {
+        ownedPage = await cdp.send('Runtime.evaluate', {
+          expression: `window.__mesajifyImageOwnerJobId = ${JSON.stringify(job.id)}; (${readImageScope.toString()})()`, returnByValue: true,
+        });
+        if (ownedPage?.result?.value) break;
+      } catch (err) {
+        await sleep(600);
+      }
+    }
     const scope = { jobId: job.id, targetId: tab.id, href: ownedPage.result?.value?.href };
     assertImageScope(scope, { ...ownedPage.result?.value, targetId: tab.id });
     workerTiming.mark('tab_ready_ms');
