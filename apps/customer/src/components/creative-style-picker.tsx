@@ -149,18 +149,21 @@ export function CreativeStylePicker({
             </div>
 
             {/* Minimal Footer */}
-            <div className="px-4 py-3 bg-[#fbfcfc] border-t border-hairline flex items-center justify-between gap-3">
-              <span className="text-[12px] text-[#667781] truncate">
-                {activePreviewMode.description}
-              </span>
-
+            <div className="px-4 py-2.5 bg-[#fbfcfc] border-t border-hairline flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleClosePreview}
+                className="px-3.5 py-1.5 rounded-lg text-[12px] font-semibold text-[#667781] hover:text-[#111b21] hover:bg-black/5 transition-colors"
+              >
+                Kapat
+              </button>
               <button
                 type="button"
                 onClick={() => {
                   onChange(activePreviewMode.id)
                   handleClosePreview()
                 }}
-                className="shrink-0 bg-[#008069] hover:bg-[#00705a] text-white text-[12px] font-bold px-4 py-2 rounded-xl transition-colors shadow-xs flex items-center gap-1.5"
+                className="bg-[#008069] hover:bg-[#00705a] text-white text-[12px] font-bold px-4 py-1.5 rounded-lg transition-colors shadow-xs flex items-center gap-1.5"
               >
                 Bu Modu Seç
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">

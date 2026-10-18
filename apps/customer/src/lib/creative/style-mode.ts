@@ -18,25 +18,25 @@ export const STYLE_MODES: readonly StyleModeItem[] = [
     label: 'Akıllı Kampanya',
     description: 'AI marka ve sektöre en uygun reklam hiyerarşisini otomatik seçer.',
     badge: 'Varsayılan',
-    previewUrl: 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/public-assets/style-previews/chatgpt_ref_01_akilli_kampanya.png',
+    previewUrl: '/style-previews/mesajify_akilli_kampanya.png',
   },
   {
     id: 'SHOWSTOPPER_CAMPAIGN',
     label: 'Gösterişli Kampanya',
     description: 'Büyük kabartmalı başlık, zengin katmanlar, ürün odağı ve dikkat çekici CTA.',
-    previewUrl: 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/public-assets/style-previews/chatgpt_ref_02_gosterisli_vitrin.png',
+    previewUrl: '/style-previews/mesajify_gosterisli_kampanya.png',
   },
   {
     id: 'REAL_LIFE_CAMPAIGN',
     label: 'Gerçek Kullanım',
     description: 'İşletme sahibi veya saha uzmanı ile ürünün gerçek kullanım anı.',
-    previewUrl: 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/public-assets/style-previews/chatgpt_ref_03_gercek_kullanim.png',
+    previewUrl: '/style-previews/mesajify_gercek_kullanim.png',
   },
   {
     id: 'PREMIUM_SHOWCASE',
     label: 'Premium Vitrin',
     description: 'Sinematik ışık, derinlik ve prestijli yüzeylerde minimalist ürün sunumu.',
-    previewUrl: 'https://rnkrjmblgcdqlyslbhob.supabase.co/storage/v1/object/public/creatives/public-assets/style-previews/chatgpt_ref_04_premium_vitrin.png',
+    previewUrl: '/style-previews/mesajify_premium_vitrin.png',
   },
 ] as const
 
