@@ -110,12 +110,12 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
 
   if (isSoftware) {
     if (isShowstopper) {
-      environment = 'Monumental dijital iletişim sahnesi, derinlikli grafik mimari ve etkileyici görsel atmosfer'
+      environment = 'Monumental SaaS keynote sahnesi, derinlikli zümrüt/gece grafik mimarisi ve yüksek enerjili lansman atmosferi'
       humanPresence = 'none'
       productInteraction = 'Dinamik mesaj gönderimi ve müşteri etkileşim gücünün anıtsal sunumu'
-      composition = 'Büyük başlık, güçlü CTA, belirgin arayüz kartları ve derinlikli kampanya akışı'
-      background = 'Marka renklerine uygun derin kontrastlı kurumsal sahne'
-      lighting = 'Dramatik yönlü ticari aydınlatma'
+      composition = 'Dev reklam başlığı, büyük okunabilir aksiyon kartları ([Excel Yükle], [Hedef Kitle Seç], [Kampanya Oluştur], [Hemen Gönder]), cesur asimetrik yerleşim ve dev ana CTA'
+      background = 'Marka renklerine uygun derin kontrastlı zümrüt/siyah kurumsal keynote sahnesi'
+      lighting = 'Dramatik yönlü sinematik ticari aydınlatma'
     } else if (isRealLife) {
       environment = 'Aydınlık butik kafe, mağaza veya modern çalışma ortamı'
       humanPresence = 'actor'
@@ -142,9 +142,9 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
   } else {
     // Physical product (Bofe, Ayvazoglu, etc.)
     if (isShowstopper) {
-      environment = 'Dramatik ticari reklam filmi sahnesi, güçlü derinlik ve sinematik atmosfer'
-      composition = 'Büyük başlık, anıtsal ürün kahramanı (Cinematic Hero), cesur tipografi, güçlü perspektif ve net CTA'
-      background = 'Ürünün gücünü vurgulayan derin kontrastlı doğal veya endüstriyel arka plan'
+      environment = 'Dramatik ticari lansman sahnesi, anıtsal ürün perspektifi ve sinematik reklam atmosferi'
+      composition = 'Büyük başlık, anıtsal ürün kahramanı (Cinematic Launch Hero), cesur asimetrik yerleşim, 2-3 büyük okunabilir aksiyon kartı ve dev ana CTA'
+      background = 'Ürünün gücünü ve endüstriyel/tarımsal ölçeğini vurgulayan derin kontrastlı sinematik arka plan'
       lighting = 'Düşük açılı dramatik gün doğumu/batımı veya güçlü stüdyo anahtar ışığı'
     } else if (isRealLife) {
       environment = 'Doğal işletme, şantiye veya sahada gerçek çalışma ortamı'

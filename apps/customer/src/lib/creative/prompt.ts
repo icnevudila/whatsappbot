@@ -391,15 +391,27 @@ function getSectorArtDirectionHint(
   const text = `${sector || ''} ${brief || ''}`.toLowerCase()
   const userText = `${instruction || ''} ${brief || ''}`.toLowerCase()
   const isStudioOrPodium = /stüdyo|studio|podyum|podium|kaide|plinth|koyu|dark|antrasit|anthracite|heykelsi|sculpted|sinematik|cinematic/i.test(userText)
+  const isShowstopper = styleMode === 'SHOWSTOPPER_CAMPAIGN'
 
   if (/tarım|bahçe|çiftlik|ilaçlama|gübre|tohum|sprayer|tarim/i.test(text)) {
+    if (isShowstopper) {
+      return 'Sector art direction (Tarım Showstopper Launch Hero): Monumental agricultural equipment launch poster. Present the authentic Bofe 16L sprayer as a giant, powerful product hero dominating the composition with dramatic cinematic lighting, dynamic mist streams, bold asymmetric layout, high-energy agricultural atmosphere, 2-3 large readable action/benefit cards ([16L Geniş Depo], [Şarjlı Lityum Akü], [Ayarlanabilir Pirinç Nozül]), and a massive primary CTA. Do NOT produce a quiet everyday garden photo.'
+    }
     if (styleMode === 'PREMIUM_SHOWCASE' || isStudioOrPodium) {
       return 'Sector art direction (Premium Vitrin & Endüstriyel Tarım): Showcase the equipment as a feat of precision engineering. Place on the requested dark anthracite stone podium / sculpted plinth with dramatic cinematic studio lighting, deep architectural shadows, and refined material reflections. Do NOT force an outdoor orchard, farm field, or foliage background when a premium studio showcase is explicitly requested.'
     }
     return 'Sector art direction (Tarım & Bahçe): The product is physically integrated into a real orchard, field, or foliage setting with natural morning daylight and realistic ground shadows. High-contrast agricultural campaign energy. Avoid generic neon supermarket flyer modules or repetitive badge strips.'
   }
   if (/inşaat|yapı|tuğla|klinker|çimento|şantiye|mimari|insaat/i.test(text)) {
+    if (isShowstopper) {
+      return 'Sector art direction (İnşaat & Mimari Showstopper): First-class architectural commercial launch billboard. The authentic standard clay brick is featured with PERFECT PHYSICAL REALISM & ACCURATE PROPORTIONS (strict standard rectangular proportions matching reference, exact hole grid, zero elongation, zero vertical stretching, never a surreal giant tower). Presented heroically against a prestigious modern architectural construction project with dramatic golden-hour sunlight and clean architectural shadows. High-impact commercial typography, 3 large readable action areas ([Toptan Fiyat Teklifi], [Mimari Katalog İste], [Şantiye Adrese Tedarik]), and a dominant conversion CTA.'
+    }
     return 'Sector art direction (İnşaat & Yapı Malzemeleri): Grounded in authentic construction-site materiality—natural daylight, wooden pallets, raw concrete, and authentic masonry texture. Solid architectural typography; avoid generic red discount-flyer compositions.'
+  }
+  if (/yazılım|software|saas|uygulama|platform|mesajify/i.test(text)) {
+    if (isShowstopper) {
+      return 'Sector art direction (SaaS & WhatsApp Showstopper): Monumental tech launch poster. Feature the clean, verified mobile UI screen floating in a high-energy, dark-emerald dimensional SaaS keynote space with bold graphic layers, dynamic communication arcs, 2-4 large readable action cards ([Excel Yükle], [Hedef Kitle Seç], [Kampanya Oluştur], [Hemen Gönder]), and a massive conversion CTA. Never an ordinary laptop or phone resting quietly on an office desk.'
+    }
   }
   if (/döner|restoran|yiyecek|gıda|lezzet|menü|kebap|food|doner/i.test(text)) {
     return 'Sector art direction (Restoran & Gıda): Mouth-watering food photography must dominate the scene (70%+ visual share) with warm ambient light, rich textures, and appetizing freshness. Typography must support appetite; do NOT bury or cover the food under heavy graphic boxes or badge packs.'
@@ -683,17 +695,26 @@ export function buildLegacySimpleCreativePrompt(
     'Do not invent prices, discounts, slogans, dates, product names or brand claims that are not in this brief.',
     'Clean visual hierarchy. One focal offer. Not cluttered. Readable on a phone screen.',
     snapshot.styleMode ? styleModeDirective(snapshot.styleMode) : null,
-    snapshot.generationType !== 'revision' ? visualDiversityDirective(snapshot.visualDiversityPlan) : null,
+    snapshot.generationType !== 'revision' && snapshot.styleMode !== 'SHOWSTOPPER_CAMPAIGN' ? visualDiversityDirective(snapshot.visualDiversityPlan) : null,
   ]
     .filter(Boolean)
     .join('\n')
 
+  const isShowstopper = snapshot.styleMode === 'SHOWSTOPPER_CAMPAIGN'
+
   const negative = [
     'no generic Canva template look',
     'no repeated flyer layout',
-    'no cut-out product pasted on graphic background',
-    'no fake 3-badge benefit stack',
-    'no supermarket sticker pack',
+    ...(isShowstopper ? [
+      'no ordinary quiet catalog photo',
+      'no plain brick resting on a wooden pallet',
+      'no phone on a plain office desk',
+      'no passive product placement',
+      'no vertically stretched brick',
+      'no surreal monolithic tower brick',
+      'no elongated brick',
+      'no deformed product geometry',
+    ] : ['no fake 3-badge benefit stack']),
     'no cookie-cutter poster skeleton',
     'no generic boxed price cards',
     'no unverified warranty claims or fake guarantee seals',
@@ -715,8 +736,9 @@ export function buildLegacySimpleCreativePrompt(
     'no misspelled brand names',
     'no cartoon stickers',
     'no starburst badges',
+    'no supermarket sticker pack',
     'no supermarket flyer clipart',
-    'no fake clickable web buttons',
+    ...(isShowstopper ? [] : ['no fake clickable web buttons']),
     'no tiny product in distant background',
     'no generic minimalist empty poster',
     'no cinematic lifestyle drift away from the product',

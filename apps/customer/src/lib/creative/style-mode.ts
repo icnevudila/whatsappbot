@@ -59,7 +59,17 @@ export function styleModeDirective(value: unknown): string {
   let direction = ''
 
   if (mode === 'SHOWSTOPPER_CAMPAIGN') {
-    direction = 'Showstopper Grand Commercial Campaign: Powerful advertising idea designed to stop the viewer in their tracks. Monumental product presentation, bold and unique typography, cinematic film-frame commercial atmosphere, realistic dramatic lighting with deep contrast, and powerful perspective. Highlight authentic physical materials, textures, and engineering presence. Strictly NO neon, NO hologram, NO excessive lens flares, NO floating dark cards, and NOT just a bigger headline version of Smart Campaign. The primary CTA must be dominant, clear, and high-converting. Logo and product identity remain strictly faithful to references.'
+    direction = `Showstopper Grand Commercial Campaign (FIRST-CLASS, HIGH-ENERGY ADVERTISING BILLBOARD):
+- CREATIVE RESET & BOLD ASYMMETRIC COMPOSITION: Do NOT replicate, reuse or decorate an ordinary product catalog photo or simple layout. Completely redesign the visual architecture from scratch with a bold asymmetric composition, heroic camera perspective, dynamic graphic depth layers, and high-energy commercial impact.
+- GIANT ADVERTISING TYPOGRAPHY: Massive, confident commercial headline hierarchy that commands immediate attention and stops social media scrolling.
+- MONUMENTAL PRODUCT HERO PRESENTATION: The product or service is presented with grand, heroic scale, dynamic angle, and monumental depth (occupying 60-70% visual share).
+- DRAMATIC COMMERCIAL LIGHTING & DEPTH: Cinematic lighting, deep dimensional contrast, and rich brand palette accents. Controlled atmospheric lighting, mist, or dynamic rays where commercially impactful.
+- DOMINANT PRIMARY CTA: One massive, high-contrast primary call-to-action button that strongly anchors the conversion focus.
+- 2–4 SUBSTANTIAL, HIGHLY LEGIBLE ACTION CARDS: Meaningful, large, easy-to-read commercial action areas or workflow capability cards embedded as visible design elements of the composition (NOT tiny icon badges).
+  * Mesajify: [Excel Yükle], [Hedef Kitle Seç], [Kampanya Oluştur], [Hemen Gönder] as bold, clearly readable SaaS action cards.
+  * Bofe: [16L Geniş Depo], [Şarjlı Lityum Akü], [Ayarlanabilir Pirinç Nozül] as substantial agricultural capability cards.
+  * Ayvazoğlu: [Toptan Fiyat Teklifi], [Mimari Katalog İste], [Şantiye Adrese Tedarik] as high-impact architectural service areas.
+- NEVER a plain, quiet, minimalist catalog photo, never a brick on a plain pallet, and never an ordinary phone on a desk. Must have the scale, energy, polish, and punch of a world-class advertising agency launch campaign.`
   } else if (mode === 'REAL_LIFE_CAMPAIGN') {
     direction = 'Authentic Real-Life Commercial: Trust and authentic human experience. A natural human subject realistically interacting with the product or software (e.g. business owner or founder managing WhatsApp campaigns on a mobile smartphone or tablet in an authentic cafe/store; agronomist or farmer using the agricultural equipment in an orchard or greenhouse; master mason or contractor checking brickwork on site with safety helmet). Natural ergonomic body posture, credible eye gaze, authentic hand interaction. Natural daylight, realistic depth, zero artificial stock photo feel.'
   } else if (mode === 'PREMIUM_SHOWCASE') {
