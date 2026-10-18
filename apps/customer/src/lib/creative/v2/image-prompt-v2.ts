@@ -61,9 +61,8 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
     `[COMPOSITION]: ${composition}. Ensure comfortable negative space in the upper or outer zones for clean graphic finishing.`,
     `[LIGHTING & DEPTH]: ${lighting}. Realistic material physics, authentic physical shadows, no floating elements.`,
     visualDiversityDirective(options.visualDiversityPlan),
-    desc ? `[PRODUCT SPECIFICS]: ${desc}.` : '',
-    /yazılım|saas|platform|panel|mesajify/i.test(`${brand} ${product} ${desc}`)
-      ? `[COLLABORATIVE TECH WORKSPACE & ERGONOMIC POSTURE]: When presenting ${brand} or digital platform software, feature a bright, modern open office where 1-2 young smiling professional colleagues are gathered naturally at a wooden desk with an authentic Apple MacBook Pro 16-inch in Space Gray unibody finish (viewed from a natural 30-35 degree 3/4 commercial perspective). The laptop display is strictly a low-profile compact widescreen (16:10 / 16:9 ratio, lid height only ~50-55% of width, tilted 115-120 degrees backward) showing an authentic horizontal desktop SaaS layout with left navigation sidebar and wide dashboard canvas. The torso and gaze align comfortably toward the screen; hands rest naturally on the desk or keyboard with anatomical realism (strictly avoiding square screens, tall towering lids, upright frontal boxes, or bottom mobile tabs).`
+    /yazılım|saas|platform|panel|mesajify/i.test(`${brand} ${product} ${desc}`) && options.styleMode === 'REAL_LIFE_CAMPAIGN'
+      ? `[AUTHENTIC WORKSPACE & ERGONOMIC POSTURE]: When presenting ${brand} in real life, feature an authentic business professional or founder naturally holding a modern smartphone or tablet with relaxed posture and credible gaze.`
       : '',
     options.hasProductRef
       ? `[STRICT PRODUCT FIDELITY]: The physical product photo is provided as canonical reference @HeroProduct. Preserve the exact physical shape, materials, proportions, buttons, nozzle/accessories, and authentic colors of @HeroProduct with 100% fidelity. Do NOT mutate or redesign the product.`
@@ -72,7 +71,7 @@ export function buildImagePromptV2(options: ImagePromptV2Options): {
       ? `[BRAND IDENTITY]: Brand identity is verified from reference @BrandLogo. Do NOT invent fictional logos or foreign corporate emblems.`
       : `Do not invent fake logos.`,
     `[RAW IMAGE TYPOGRAPHY POLICY]: Strictly NO newly generated promotional text, NO invented headlines, NO fake prices, NO fake discounts, NO artificial badges, NO painted sticker graphics, NO fake buttons, NO watermarks. Preserve only authentic text already naturally printed or stamped on the physical body of the canonical product reference. Clean commercial background photography only.`,
-    softwarePresentationDirective({ offeringKind: options.offeringKind, preserveScene: options.preserveScene, context: `${product} ${desc}` }),
+    softwarePresentationDirective({ offeringKind: options.offeringKind, preserveScene: options.preserveScene, styleMode: options.styleMode, context: `${brand} ${product} ${desc}` }),
   ].filter(Boolean)
 
   const negativeTerms = [

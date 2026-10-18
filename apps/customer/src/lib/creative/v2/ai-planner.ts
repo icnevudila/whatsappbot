@@ -107,32 +107,67 @@ export function buildDeterministicFallbackPlan(input: PlannerInput): CreativePla
   let lighting = 'doğal ticari aydınlatma, yumuşak gölgeler'
 
   const isSoftware = isMesajify || /yazılım|software|saas|panel|platform|crm|uygulama/i.test(`${brand} ${product} ${input.productDescription || ''}`)
-  if (isSoftware && !isVideo) {
-    environment = 'Aydınlık, ferah ve modern teknoloji ofisi, şık ahşap çalışma masası'
-    humanPresence = 'actor'
-    productInteraction = 'Ekip arkadaşlarının masadaki şık Space Gray metalik laptop (MacBook Pro) başında doğal etkileşimi, ekrandaki paneli inceleme'
-    composition = 'Doğal 35 derece 3/4 açılı zarif laptop ekranında net arayüz, masada çalışan profesyonel ekip, dengeli ve ferah reklam yerleşimi'
-    lighting = 'Doğal pencere ışığı ve yumuşak modern ofis aydınlatması'
-    background = 'Modern açık ofis, toplantı alanı, arka planda hafif fluluk (bokeh)'
+
+  if (isSoftware) {
+    if (isShowstopper) {
+      environment = 'Monumental dijital iletişim sahnesi, derinlikli grafik mimari ve etkileyici görsel atmosfer'
+      humanPresence = 'none'
+      productInteraction = 'Dinamik mesaj gönderimi ve müşteri etkileşim gücünün anıtsal sunumu'
+      composition = 'Büyük başlık, güçlü CTA, belirgin arayüz kartları ve derinlikli kampanya akışı'
+      background = 'Marka renklerine uygun derin kontrastlı kurumsal sahne'
+      lighting = 'Dramatik yönlü ticari aydınlatma'
+    } else if (isRealLife) {
+      environment = 'Aydınlık butik kafe, mağaza veya modern çalışma ortamı'
+      humanPresence = 'actor'
+      productInteraction = 'Girişimci veya işletme sahibinin akıllı telefon veya tablette WhatsApp kampanyalarını doğal şekilde incelemesi'
+      composition = 'İşletme sahibi ile mobil ekranın doğal ve güven veren birlikteliği'
+      background = 'Gerçekçi, doğal derinliğe sahip aydınlık işletme mekanı'
+      lighting = 'Doğal gün ışığı'
+    } else if (isPremium) {
+      environment = 'Rafine mimari stüdyo, sessiz lüks teknoloji vitrini'
+      humanPresence = 'none'
+      productInteraction = 'İnce çerçevesiz cam panel üzerinde seçkin arayüz sunumu'
+      composition = 'Zarif tipografi, geniş negatif alan, heykelsi ışık ve rafine yüzey dokuları'
+      background = 'Minimalist mimari stüdyo duvarı ve zarif gölgeler'
+      lighting = 'Mimari yönlü doğal ışık ve kontrollü yumuşak gölgeler'
+    } else {
+      // SMART_CAMPAIGN
+      environment = 'Sade, aydınlık ve odaklı modern SaaS reklam sahnesi'
+      humanPresence = 'none'
+      productInteraction = 'Net arayüz paneli ve doğrulanmış özellik kartları'
+      composition = 'Odaklı arayüz kartı, 1-2 net özellik hapı, yüksek kontrastlı ana CTA'
+      background = 'Gözü yormayan sade kurumsal arka plan'
+      lighting = 'Temiz ve dengeli ticari aydınlatma'
+    }
+  } else {
+    // Physical product (Bofe, Ayvazoglu, etc.)
+    if (isShowstopper) {
+      environment = 'Dramatik ticari reklam filmi sahnesi, güçlü derinlik ve sinematik atmosfer'
+      composition = 'Büyük başlık, anıtsal ürün kahramanı (Cinematic Hero), cesur tipografi, güçlü perspektif ve net CTA'
+      background = 'Ürünün gücünü vurgulayan derin kontrastlı doğal veya endüstriyel arka plan'
+      lighting = 'Düşük açılı dramatik gün doğumu/batımı veya güçlü stüdyo anahtar ışığı'
+    } else if (isRealLife) {
+      environment = 'Doğal işletme, şantiye veya sahada gerçek çalışma ortamı'
+      humanPresence = 'actor'
+      productInteraction = 'Saha uzmanı veya ustasının ürünü mesleğine uygun doğal ve güvenli şekilde kullanması'
+      composition = 'İnsan ve ürünün dengeli, inandırıcı ve hikaye anlatan birlikteliği'
+      background = 'Sektöre uygun inandırıcı çalışma veya üretim sahası'
+      lighting = 'Doğal dış mekan gün ışığı'
+    } else if (isPremium) {
+      environment = 'Rafine endüstriyel çekim veya mimari dergi stüdyo ortamı'
+      composition = 'Seçkin tipografik hiyerarşi, malzeme dokusu ve mühendislik detaylarına odaklanan rafine sunum'
+      background = 'Ürünün dokusunu öne çıkaran rafine minimalist mimari yüzey'
+      lighting = 'Kontrollü mimari ışık ve zarif gölgeler'
+    } else {
+      // SMART_CAMPAIGN
+      environment = 'Sade, anlaşılır ve ticari satışa odaklı temiz arka plan'
+      composition = 'Net ana ürün odağı, doğrulanmış fayda vurgusu, mobil ekranda kolay okunan başlık ve belirgin CTA'
+      background = 'Ürünü net öne çıkaran ferah ve dengeli arka plan'
+    }
   }
 
-  if (isShowstopper) {
-    environment = isSoftware ? 'Modern, prestijli teknoloji ofisi ve kampanya sahnesi' : 'Ürüne ve marka sektörüne uygun, güçlü kontrastlı ticari afiş ortamı'
-    composition = isSoftware
-      ? 'Büyük başlık, güçlü CTA, 35 derece açılı şık metalik laptop ekranında net arayüz ve enerjik modern ofis ekibi'
-      : 'Büyük başlık, güçlü CTA, belirgin ana ürün ve zengin kampanya vurgu alanları'
-    background = 'Marka renklerine uygun katmanlı ve düzenli kampanya sahnesi'
-  } else if (isRealLife) {
-    environment = isSoftware ? 'Aydınlık, ferah teknoloji şirketi çalışma alanı' : 'Doğal işletme veya sahada gerçek kullanım ortamı'
-    humanPresence = 'actor'
-    productInteraction = isSoftware ? 'Ekip arkadaşlarının 3/4 açılı şık laptop başında canlı paneli incelemesi' : 'doğal profesyonel kullanım ve kullanıcı etkileşimi'
-    composition = isSoftware ? 'Doğal açılı laptop ekranı ve birlikte çalışan profesyonel ekip' : 'İşletme sahibi veya saha uzmanı ile ürünün dengeli birlikteliği'
-    background = isSoftware ? 'Açık plan teknoloji ofisi, şık çalışma masası' : 'Gerçekçi, inandırıcı ve sektöre uygun mekan'
-  } else if (isPremium) {
-    environment = 'Sinematik ve lüks stüdyo ortamı, prestijli taş podyum veya mimari yüzey'
-    composition = 'Merkezde podyum üstünde parlayan ürün, heykelsi derinlik ve kontrollü gölgeler'
-    lighting = 'sinematik dramatik yönlü ışık, zarif gölgeler'
-    background = 'Mat taş veya mimari dokulu lüks arka plan'
+  if (isVideo) {
+    composition = 'merkezde net odak, dengeli reklam yerleşimi'
   }
 
   return {
@@ -203,7 +238,8 @@ DİL VE KALİTE KURALI:
 - Klişe ve bayat reklam sözleri ("kaliteyle tanışın", "siz de gelin", "hemen alın", "${input.brandName} ile ${input.productName}") KESİNLİKLE KULLANMA.
 - Reklam başlığı ürünün somut avantajına, kullanım rahatlığına veya teklifine odaklanmalı; sıradan şirket ismi tekrarı olmamalıdır.
 - Fiyat, indirim veya süre bilgisi verilmişse alt metinde bunu harfiyen koru; verilmemişse asılsız rakam uydurma.
-- YAZILIM / SAAS / MESAJIFY KURALI: Yazılım, SaaS veya dijital platform tanıtımlarında (örn. Mesajify), sahneyi aydınlık ve modern bir teknoloji ofisinde kurgula. Yatay ekranlı (16:10 widescreen) şık bir dizüstü bilgisayara birlikte bakan, güleryüzlü 2-3 genç profesyonel ekip sahnesi oluştur. Ekran asla dikey tablet veya uzatılmış kare ekrana dönüşmemelidir. Laptop yatay ve masada düzgün durmalıdır.
+- YAZILIM / SAAS / MESAJIFY KURALI: Dört stilde aynı dizüstü bilgisayar sahnesini tekrarlama! SaaS ürününü yalnızca bilgisayardan ibaret sunma. Akıllı Kampanya'da net arayüz kartları ve dönüşüm CTA'sı; Gösterişli Kampanya'da iletişimin ve mesaj akışının anıtsal reklam fikri; Gerçek Kullanım'da işletme sahibinin mobil telefon veya tabletteki doğal etkileşimi; Premium Vitrin'de minimalist cam panel ve mimari negatif alan kurgula.
+- TİCARİ İDDİA DOĞRULUĞU: Profilde doğrulanmamış "3 gün içinde teslim", "yüksek dönüşüm gücü", "kesintisiz performans", "kurumsal güvenlik altyapısı", telefon numarası veya sertifika gibi asılsız iddiaları ASLA uydurma.
 
 JSON ŞEMASI:
 {
