@@ -10,6 +10,7 @@ import os
 import logging
 import platform
 import time
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from contextlib import asynccontextmanager
@@ -140,6 +141,16 @@ def _release_supervisor_lease(provider: str, account_id: str, lease_token: Optio
     except Exception as e:
         logger.warning("Failed to release supervisor lease; reconciliation required")
 
+
+def _validate_supervisor_lease(account_id, job_id, lease_token):
+    data = json.dumps({'provider': 'flow', 'accountId': account_id,
+                       'jobId': job_id, 'leaseToken': lease_token}).encode('utf-8')
+    try:
+        with _worker_control_request(f"{SUPERVISOR_URL.rstrip('/')}/v1/browser-workers/lease/validate", data, 5) as resp:
+            return json.loads(resp.read().decode('utf-8')).get('ok') is True
+    except Exception:
+        return False
+
 start_time = time.time()
 
 
@@ -249,6 +260,11 @@ async def execute_job(req: GenerateRequest):
         loop = asyncio.get_event_loop()
         supervisor_lease = req.lease_token
         acquired_by_us = False
+        release_allowed = True
+        cancelled = threading.Event()
+
+        def lease_check():
+            return not cancelled.is_set() and _validate_supervisor_lease(req.account_id, req.job_id, supervisor_lease)
 
         # 1. Request distributed account lease if caller did not provide one
         if not supervisor_lease:
@@ -293,10 +309,24 @@ async def execute_job(req: GenerateRequest):
                 "is_recovery": req.is_recovery,
                 "assets": [a.model_dump() for a in req.assets],
                 "lease_token": supervisor_lease,
+                "_lease_check": lease_check,
             }
 
             # 3. Run existing gflow execution
-            result = await loop.run_in_executor(None, execute_generation_job, payload)
+            release_allowed = False
+            execution = loop.run_in_executor(None, execute_generation_job, payload)
+            try:
+                result = await asyncio.shield(execution)
+            except asyncio.CancelledError:
+                cancelled.set()
+                # A cancelled HTTP waiter must not release the account while its
+                # executor thread/browser is still running.
+                try:
+                    await asyncio.shield(execution)
+                except Exception:
+                    pass
+                raise
+            release_allowed = True
             # 4. Generation / download complete
             return GenerateResponse(**result)
 
@@ -323,7 +353,7 @@ async def execute_job(req: GenerateRequest):
             )
         finally:
             # 5. Release lease
-            if acquired_by_us and supervisor_lease:
+            if acquired_by_us and supervisor_lease and release_allowed:
                 await loop.run_in_executor(
                     None, _release_supervisor_lease, "flow", req.account_id, supervisor_lease
                 )

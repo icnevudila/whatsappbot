@@ -1,0 +1,17 @@
+{
+  "server.js": {
+    "before_sha256": "200bb21106c5bb37b47b5814146134e566908ebb6e7f766e07fca79e4225bfb6",
+    "deployed_sha256": "ada22140e61672a38b24ec6dcc05978c9f0a9f8523e9ff6c5a60106b584cd2c4",
+    "matches_staged_minimal_patch": true
+  },
+  "browser_worker_supervisor.js": {
+    "before_sha256": "e1fe15b202a0049fdedd254ad6641bb6885e3533aad71ee99be0da235cfffa6f",
+    "deployed_sha256": "5d9cd11a98d4dc74eb8e6366df75d0ad86021850015bce621f50bea139fba3ee",
+    "matches_staged_minimal_patch": true
+  },
+  "distributed_lease_store.js": {
+    "before_sha256": "210632cf1c855eb23c3d41c9e7c21da26d98749fc105ac39883f3af5a20fc163",
+    "deployed_sha256": "eedb6d9ef5e5792b6a6f90bf4c97eb2e42bc7e83de1b9d2051874ec66f322e9e",
+    "matches_staged_minimal_patch": true
+  }
+}

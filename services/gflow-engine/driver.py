@@ -19,6 +19,8 @@ import subprocess
 import hashlib
 import asyncio
 import re
+import threading
+import signal
 from contextlib import closing
 import math
 from pathlib import Path
@@ -281,6 +283,53 @@ def bounded_cli_lines(proc, timeout_sec=900):
         raise FlowExecutionError('FLOW_INVOCATION_UNCERTAIN', str(error)) from error
 
 
+def require_execution_lease(check):
+    """An unavailable authority is a lost fence, never permission to continue."""
+    try:
+        valid = callable(check) and check() is True
+    except Exception:
+        valid = False
+    if not valid:
+        raise FlowExecutionError('FLOW_INVOCATION_UNCERTAIN', 'Execution lease could not be verified; no replay is permitted')
+
+
+class ExecutionLeaseMonitor:
+    """Stop the owned CLI process group when distributed ownership is lost.
+
+    Killing a browser does not cancel a provider request already accepted. The
+    durable SUBMISSION_UNCERTAIN fence therefore remains held for reconciliation.
+    """
+    def __init__(self, check, proc, interval=2):
+        self.check, self.proc, self.interval = check, proc, interval
+        self.stopped = threading.Event()
+        self.lost = threading.Event()
+        self.thread = threading.Thread(target=self._watch, daemon=True)
+
+    def _watch(self):
+        while not self.stopped.wait(self.interval):
+            try:
+                require_execution_lease(self.check)
+            except FlowExecutionError:
+                if self.stopped.is_set():
+                    return
+                self.lost.set()
+                try:
+                    os.killpg(self.proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                return
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *_):
+        self.stopped.set()
+        self.thread.join(timeout=6)
+        if self.lost.is_set():
+            raise FlowExecutionError('FLOW_INVOCATION_UNCERTAIN', 'Execution lease lost; owned browser process stopped; reconcile provider before retry')
+
+
 def hard_timeout_seconds():
     try:
         value = float(os.environ.get('GFLOW_HARD_TIMEOUT_SEC', '900'))
@@ -382,6 +431,8 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
     model = payload.get("model", "veo-lite")
     duration = payload.get("duration", 8)
     assets: List[Dict[str, Any]] = payload.get("assets", [])
+    lease_check = payload.get('_lease_check')
+    require_execution_lease(lease_check)
 
     progress = ProgressJournal(OUTPUTS_BASE, org_id, job_id, attempt_id)
     expected_ingredient_count = len(assets)
@@ -468,6 +519,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
         })
 
     with AccountLock(account_id):
+        require_execution_lease(lease_check)
         profile_path = PROFILES_BASE / f"profile_{account_id}"
         sanitize_chrome_profile(profile_path)
 
@@ -494,6 +546,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
             raise FlowExecutionError('FLOW_INVOCATION_UNCERTAIN',str(error)) from error
 
         progress.emit("OPENING_PROJECT")
+        require_execution_lease(lease_check)
         if target_project:
             if not is_recovery:
                 logger.error(f"PROJECT_REUSE_VIOLATION: Reuse of project {target_project} forbidden for new job {job_id}")
@@ -573,6 +626,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
 
         log_file = open(log_file_path, "w", encoding="utf-8")
         try:
+            require_execution_lease(lease_check)
             identity_store = InvocationIdentity(PROFILES_BASE / 'invocations.sqlite3')
             try:
                 identity_store.mark_submitting(job_id)
@@ -594,7 +648,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
         actual_ingredient_count = 0
         references_attached_seen = False
 
-        with log_file, closing(bounded_cli_lines(proc, invocation_timeout)) as output_lines:
+        with log_file, ExecutionLeaseMonitor(lease_check, proc), closing(bounded_cli_lines(proc, invocation_timeout)) as output_lines:
             for line in output_lines:
                 if line:
                     stdout_lines.append(line)
@@ -632,6 +686,7 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
                                     pass
 
         return_code = proc.poll()
+        require_execution_lease(lease_check)
         elapsed = time.time() - start_time
         full_output = "".join(stdout_lines)
 

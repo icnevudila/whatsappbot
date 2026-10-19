@@ -1,0 +1,43 @@
+services/ai-media-control/src/index.ts(10,21): error TS2307: Cannot find module 'express' or its corresponding type declarations.
+services/ai-media-control/src/index.ts(31,21): error TS7006: Parameter '_req' implicitly has an 'any' type.
+services/ai-media-control/src/index.ts(31,27): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/index.ts(49,47): error TS7006: Parameter '_req' implicitly has an 'any' type.
+services/ai-media-control/src/index.ts(49,53): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/index.ts(57,45): error TS7006: Parameter '_req' implicitly has an 'any' type.
+services/ai-media-control/src/index.ts(57,51): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/accounts.ts(5,24): error TS2307: Cannot find module 'express' or its corresponding type declarations.
+services/ai-media-control/src/routes/accounts.ts(11,32): error TS7006: Parameter '_req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/accounts.ts(11,38): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/accounts.ts(22,42): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/accounts.ts(22,47): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/dashboard.ts(5,24): error TS2307: Cannot find module 'express' or its corresponding type declarations.
+services/ai-media-control/src/routes/dashboard.ts(11,41): error TS7006: Parameter '_req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/dashboard.ts(11,47): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/dashboard.ts(51,38): error TS7006: Parameter '_req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/dashboard.ts(51,44): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/incidents.ts(5,24): error TS2307: Cannot find module 'express' or its corresponding type declarations.
+services/ai-media-control/src/routes/incidents.ts(11,33): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/incidents.ts(11,38): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/incidents.ts(43,36): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/incidents.ts(43,41): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/incidents.ts(65,45): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/incidents.ts(65,50): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(6,24): error TS2307: Cannot find module 'express' or its corresponding type declarations.
+services/ai-media-control/src/routes/jobs.ts(13,29): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(13,34): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(93,28): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(93,33): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(110,31): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(110,36): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(127,38): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(127,43): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(138,38): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(138,43): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(166,39): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(166,44): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(184,43): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(184,48): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(204,39): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(204,44): error TS7006: Parameter 'res' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(222,42): error TS7006: Parameter 'req' implicitly has an 'any' type.
+services/ai-media-control/src/routes/jobs.ts(222,47): error TS7006: Parameter 'res' implicitly has an 'any' type.
