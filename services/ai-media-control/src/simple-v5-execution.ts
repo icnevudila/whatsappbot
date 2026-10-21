@@ -16,6 +16,8 @@ import {
   RealHttpGFlowProvider,
   SimpleV5BriefNormalizer,
   SimpleV5SevereReviewer,
+  VideoQualityScorecard,
+  type CandidateEvaluationResult,
   buildSimpleV5ProductionPlan,
   createBrandContextSnapshot,
   type RawBrandInput,
@@ -175,7 +177,7 @@ async function reviewOnce(
   })
   const { context, plan } = buildReviewInputs(job, snapshot, assets, brief, shotPlan, productionPlan)
   const videoReport = await new ChatGPTVideoReviewer().reviewSampledVideo(frames, plan, context, attemptNumber)
-  return { ...SimpleV5SevereReviewer.evaluateSevereErrorsOnly({ audioReport, videoReport, sampledFrames: frames.map(frame => frame.frame_path) }), audio_report: audioReport }
+  return { ...SimpleV5SevereReviewer.evaluateSevereErrorsOnly({ audioReport, videoReport, sampledFrames: frames.map(frame => frame.frame_path) }), audio_report: audioReport, videoReport }
 }
 
 export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions): Promise<void> {
@@ -304,15 +306,33 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
 
   let generated = checkpoint?.generated || await router.execute(requestedProvider, request)
   let review = await reviewOnce(generated, 1, job, snapshot, assets, brief, shotPlan, productionPlan)
+  
+  // Score Candidate #1
+  const scorecard1 = VideoQualityScorecard.evaluateCandidate({
+    candidate_id: `${job.id}-cand-1`,
+    attempt_number: 1,
+    provider: generated.selectedProvider,
+    provider_account_id: generated.providerAccountId || undefined,
+    raw_output_path: generated.outputPath,
+    raw_output_sha256: generated.rawOutputSha256,
+    prompt_used: request.providerPrompts?.[generated.selectedProvider] || request.prompt,
+    audioReport: (review as any).audio_report,
+    videoReport: (review as any).videoReport,
+  })
+
+  const candidateEvaluations: CandidateEvaluationResult[] = [scorecard1]
   const providerAttemptHistory: Array<Record<string, unknown>> = checkpoint ? [...checkpoint.history] : [{
     ...generated,
     combinedReview: review,
+    scorecard: scorecard1,
   }]
   let automaticRegenerations = checkpoint?.automaticRegenerations || 0
-  if (!checkpoint && review.decision === 'REGENERATE') {
+
+  if (!checkpoint && (review.decision === 'REGENERATE' || scorecard1.decision === 'REJECT')) {
     automaticRegenerations = 1
-    const retryDirection = `\n[SEVERE RETRY ONLY]: Correct these failures without changing facts or the approved speech: ${review.severeFailureCodes.join(', ')}.`
-    generated = await router.execute(requestedProvider, {
+    const defects = scorecard1.critical_defects.concat(scorecard1.major_defects).map(d => d.code)
+    const retryDirection = `\n[SEVERE RETRY ONLY]: Correct these failures without changing facts or the approved speech: ${defects.join(', ') || review.severeFailureCodes.join(', ')}.`
+    const regenResult = await router.execute(requestedProvider, {
       ...request,
       attemptId: `${attemptId}-regen-1`,
       prompt: geminiPrompt + retryDirection,
@@ -321,12 +341,40 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
         FLOW_VEO: flowPrompt + retryDirection,
       },
     })
-    review = await reviewOnce(generated, 2, job, snapshot, assets, brief, shotPlan, productionPlan)
+    const regenReview = await reviewOnce(regenResult, 2, job, snapshot, assets, brief, shotPlan, productionPlan)
+    
+    // Score Candidate #2
+    const scorecard2 = VideoQualityScorecard.evaluateCandidate({
+      candidate_id: `${job.id}-cand-2`,
+      attempt_number: 2,
+      provider: regenResult.selectedProvider,
+      provider_account_id: regenResult.providerAccountId || undefined,
+      raw_output_path: regenResult.outputPath,
+      raw_output_sha256: regenResult.rawOutputSha256,
+      prompt_used: request.providerPrompts?.[regenResult.selectedProvider] || (geminiPrompt + retryDirection),
+      audioReport: (regenReview as any).audio_report,
+      videoReport: (regenReview as any).videoReport,
+    })
+
+    candidateEvaluations.push(scorecard2)
     providerAttemptHistory.push({
-      ...generated,
-      combinedReview: review,
+      ...regenResult,
+      combinedReview: regenReview,
+      scorecard: scorecard2,
     })
   }
+
+  // Autonomous Candidate Selection: select candidate with highest scorecard and 0 critical defects
+  const selection = VideoQualityScorecard.selectBestCandidate(candidateEvaluations)
+  const winningCandidate = selection.winner
+  if (winningCandidate && winningCandidate.attempt_number === 2 && providerAttemptHistory[1]) {
+    generated = providerAttemptHistory[1] as any
+    review = (providerAttemptHistory[1] as any).combinedReview
+  } else if (winningCandidate && winningCandidate.attempt_number === 1 && providerAttemptHistory[0]) {
+    generated = providerAttemptHistory[0] as any
+    review = (providerAttemptHistory[0] as any).combinedReview
+  }
+  console.log(`[simple-v5] Autonomous Candidate Selection: ${selection.selection_reason}`)
 
   const providerAttemptCounts = providerAttemptHistory.reduce<Record<'GEMINI_NATIVE_VIDEO' | 'FLOW_VEO', number>>((counts, item: any) => {
     counts.GEMINI_NATIVE_VIDEO += Number(item.attemptCounts?.GEMINI_NATIVE_VIDEO || 0)

@@ -559,7 +559,7 @@ ${require('./brand_learning_store.js').buildLearningPromptBlock(brand, product, 
                         } catch (e) {}
                         const headers = { 'Content-Type': 'application/json' };
                         if (token) headers['Authorization'] = 'Bearer ' + token;
-                        const MESAJIFY_PROJECT_ID = 'g-p-6aaf94b0ae20819180ce47c040ff4a59';
+                        const MESAJIFY_PROJECT_ID = 'g-p-6ad52f176c3c81918f21c8ee6d2d6902';
                         await fetch('/backend-api/conversation/' + ${JSON.stringify(convId)}, {
                           method: 'PATCH',
                           headers,

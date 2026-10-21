@@ -184,6 +184,7 @@ class GenerateRequest(BaseModel):
     is_recovery: bool = False
     assets: List[AssetPayload] = Field(default_factory=list)
     lease_token: Optional[str] = None
+    require_canonical_references: bool = False
 
 class GenerateResponse(BaseModel):
     job_id: str

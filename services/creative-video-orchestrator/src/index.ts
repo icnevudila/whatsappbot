@@ -48,6 +48,7 @@ export * from './qa/source-provenance-gate.js'
 export * from './evaluation/duplicate-output-detector.js'
 export * from './simple-v5/index.js'
 export * from './library/index.js'
+export * from './qa/video-quality-scorecard.js'
 export * from './orchestrator.js'
 
 export type { ProviderProgressEvent } from './adapters/provider-progress.js'

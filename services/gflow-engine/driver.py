@@ -403,6 +403,14 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
             )
 
     # --- GATE 1: Reference Identity Pre-flight Gate ---
+    require_refs = payload.get("require_canonical_references", False) or any(h in prompt for h in ("@HeroProduct", "@BrandLogo", "@SoftwareUI"))
+    if require_refs and len(assets) < 2:
+        logger.error(f"CANONICAL_REFERENCE_PAIR_REQUIRED: Commercial prompt requires logo and product references (received {len(assets)})")
+        raise FlowExecutionError(
+            "INGREDIENT_ATTACHMENT_FAILED",
+            f"CANONICAL_REFERENCE_PAIR_REQUIRED: Commercial video generation requires at least 1 brand logo and 1 hero product reference (received {len(assets)})."
+        )
+
     verified_assets: List[Dict[str, Any]] = []
     ref_args: List[str] = []
     for a in assets:

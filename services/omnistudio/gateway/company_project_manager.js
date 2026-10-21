@@ -5,6 +5,12 @@ const path = require('path');
 
 const PROJECTS_FILE = process.env.PROJECTS_FILE || path.join('/data', 'company_projects.json');
 
+const DEFAULT_MESAJIFY_PROJECT = {
+  projectId: 'g-p-6ad52f176c3c81918f21c8ee6d2d6902',
+  projectUrl: 'https://chatgpt.com/g/g-p-6ad52f176c3c81918f21c8ee6d2d6902-mesajify/project',
+  title: 'Mesajify'
+};
+
 let inMemoryProjects = null;
 let lastProjectsMtimeMs = 0;
 let lastProjectsSize = -1;
@@ -79,13 +85,20 @@ function saveAllCompanyProjects(data) {
 
 function getCompanyProject(identityOrOrgId) {
   const orgKey = normalizeOrgKey(identityOrOrgId);
-  if (!orgKey) return null;
+  
+  // Mesajify varsayılan tenant ve firma eşlemesi
+  if (!orgKey || orgKey === 'Mesajify' || orgKey === 'customer:Mesajify' || orgKey === '2881f690-6853-4064-8768-307463ae6255' || orgKey.includes('2881f690-6853-4064-8768-307463ae6255')) {
+    return DEFAULT_MESAJIFY_PROJECT;
+  }
+
   const data = loadAllCompanyProjects();
   const entry = data[orgKey];
   if (entry && entry.projectUrl && entry.projectId) {
     return entry;
   }
-  return null;
+
+  // Tanımlı olmayanlar varsayılan Mesajify projesine yönlenir
+  return DEFAULT_MESAJIFY_PROJECT;
 }
 
 function setCompanyProject(identityOrOrgId, { projectId, projectUrl, title }) {
@@ -119,152 +132,83 @@ function setCompanyProject(identityOrOrgId, { projectId, projectUrl, title }) {
 }
 
 /**
- * ChatGPT Web arayüzünde mevcut projeleri kontrol eder veya yoksa otomatik oluşturur.
- * Fail-safe: Hata durumunda null döner; çağıran akış normal ana sayfaya fallback yapar.
+ * ChatGPT Web arayüzünde mevcut projeleri kontrol eder veya yoksa API üzerinden otomatik oluşturur.
+ * Fail-safe: Hata durumunda DEFAULT_MESAJIFY_PROJECT döner.
  */
 async function ensureCompanyProject(cdp, identityOrOrgId, companyName) {
   const orgKey = normalizeOrgKey(identityOrOrgId);
   const cleanName = (companyName || '').trim() || 'Genel';
-  const expectedProjectTitle = `Mesajify — ${cleanName}`;
+
+  // Mesajify ise doğrudan ana Mesajify projesine yönlendir
+  if (!orgKey || orgKey === 'Mesajify' || orgKey === 'customer:Mesajify' || cleanName.toLowerCase() === 'mesajify' || orgKey === '2881f690-6853-4064-8768-307463ae6255' || orgKey.includes('2881f690-6853-4064-8768-307463ae6255')) {
+    return DEFAULT_MESAJIFY_PROJECT;
+  }
 
   // 1. Zaten kayıtlı proje var mı?
   const existing = getCompanyProject(orgKey);
-  if (existing) {
+  if (existing && existing.projectId !== DEFAULT_MESAJIFY_PROJECT.projectId) {
     return existing;
   }
 
-  // 2. CDP ile DOM üzerinden mevcut proje var mı veya oluşturulabilir mi kontrol et
-  if (!cdp) return null;
+  if (!cdp) return DEFAULT_MESAJIFY_PROJECT;
+
+  const expectedProjectTitle = `${cleanName}`;
 
   try {
-    console.log(`[ProjectManager] 🔍 "${expectedProjectTitle}" projesi aranıyor / oluşturuluyor...`);
+    console.log(`[ProjectManager] 🔍 "${expectedProjectTitle}" projesi kontrol ediliyor / oluşturuluyor...`);
 
-    // A. DOM'da bu isimde proje bağlantısı veya klasörü var mı tara
-    const checkDomRes = await cdp.send('Runtime.evaluate', {
-      expression: `(() => {
-        const titleToFind = ${JSON.stringify(expectedProjectTitle)};
-        const treeItems = Array.from(document.querySelectorAll('a[href*="/g/g-p-"], [role="treeitem"], div.group\\/folder-row, nav a'));
-        for (const item of treeItems) {
-          const text = (item.innerText || item.textContent || '').trim();
-          if (text.includes(titleToFind)) {
-            const a = item.closest('a') || item.querySelector('a');
-            if (a && a.href && a.href.includes('/g/g-p-')) {
-              const match = a.href.match(/\\/g\\/(g-p-[a-f0-9]+)[^\\/]*(\\/project)?/);
-              if (match) {
-                return { found: true, projectId: match[1], projectUrl: a.href };
-              }
-            }
-          }
-        }
-        return { found: false };
-      })()`,
-      returnByValue: true
-    });
+    // Doğrudan ChatGPT backend API'si üzerinden projeyi oluştur
+    const apiRes = await cdp.send('Runtime.evaluate', {
+      expression: `(async () => {
+        let token = '';
+        try {
+          const sRes = await fetch('/api/auth/session');
+          const s = await sRes.json();
+          token = s.accessToken;
+        } catch(e) {}
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = 'Bearer ' + token;
 
-    if (checkDomRes.result?.value?.found) {
-      const { projectId, projectUrl } = checkDomRes.result.value;
-      console.log(`[ProjectManager] 🎯 Proje DOM üzerinde bulundu: ${projectId} (${projectUrl})`);
-      return setCompanyProject(orgKey, { projectId, projectUrl, title: expectedProjectTitle });
-    }
+        const payload = {
+          name: ${JSON.stringify(expectedProjectTitle)},
+          instructions: ${JSON.stringify(`${expectedProjectTitle} şirketi için profesyonel reklam, sosyal medya ve afiş üretim projesi.`)}
+        };
 
-    // B. Proje henüz yok, otomatik oluşturma modalını tetikle
-    console.log(`[ProjectManager] ➕ "${expectedProjectTitle}" projesi oluşturuluyor...`);
-    const openModalRes = await cdp.send('Runtime.evaluate', {
-      expression: `(() => {
-        const btn = document.querySelector('button[aria-label="Add new project"]');
-        if (btn) { btn.click(); return { clicked: true }; }
-        return { clicked: false };
-      })()`,
-      returnByValue: true
-    });
-
-    if (!openModalRes.result?.value?.clicked) {
-      console.warn('[ProjectManager] "Add new project" butonu bulunamadı, standart akışa devam ediliyor.');
-      return null;
-    }
-
-    // Modalın açılmasını bekle (max 4 sn)
-    let modalReady = false;
-    for (let i = 0; i < 8; i++) {
-      await new Promise(r => setTimeout(r, 500));
-      const modalCheck = await cdp.send('Runtime.evaluate', {
-        expression: `!!document.querySelector('div[role="dialog"] input[name="project-name"]')`,
-        returnByValue: true
-      });
-      if (modalCheck.result?.value) {
-        modalReady = true;
-        break;
-      }
-    }
-
-    if (!modalReady) {
-      console.warn('[ProjectManager] Proje oluşturma modalı zamanında açılmadı.');
-      return null;
-    }
-
-    // Başlığı React-uyumlu prototype setter ile gir ve formu onayla
-    const submitRes = await cdp.send('Runtime.evaluate', {
-      expression: `(() => {
-        const input = document.querySelector('div[role="dialog"] input[name="project-name"]');
-        if (!input) return { success: false, reason: 'input_missing' };
-        
-        const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-        nativeSetter.call(input, ${JSON.stringify(expectedProjectTitle)});
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-
-        const submitBtn = Array.from(document.querySelectorAll('div[role="dialog"] button')).find(b => {
-          const t = (b.innerText || '').toLowerCase();
-          return t.includes('create') || t.includes('oluştur');
+        const r = await fetch('/backend-api/projects', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
         });
 
-        if (submitBtn && !submitBtn.disabled) {
-          submitBtn.click();
-          return { success: true };
-        }
-        return { success: false, reason: 'button_disabled_or_missing' };
+        if (!r.ok) return { success: false, status: r.status };
+        const data = await r.json();
+        return {
+          success: true,
+          projectId: data.resource?.gizmo?.id,
+          shortUrl: data.resource?.gizmo?.short_url
+        };
       })()`,
+      awaitPromise: true,
       returnByValue: true
     });
 
-    if (!submitRes.result?.value?.success) {
-      console.warn('[ProjectManager] Proje modal formu onaylanamadı:', submitRes.result?.value?.reason);
-      return null;
-    }
-
-    // Yeni proje sayfasına yönlenmeyi bekle (max 10 sn)
-    let createdProjectUrl = null;
-    let createdProjectId = null;
-    for (let i = 0; i < 20; i++) {
-      await new Promise(r => setTimeout(r, 500));
-      const urlRes = await cdp.send('Runtime.evaluate', {
-        expression: 'window.location.href',
-        returnByValue: true
-      });
-      const curUrl = urlRes.result?.value || '';
-      const match = curUrl.match(/\/g\/(g-p-[a-f0-9]+)/);
-      if (match) {
-        createdProjectId = match[1];
-        createdProjectUrl = curUrl;
-        break;
-      }
-    }
-
-    if (createdProjectId && createdProjectUrl) {
-      console.log(`[ProjectManager] ✨ Yeni proje başarıyla oluşturuldu: ${createdProjectId} -> ${createdProjectUrl}`);
+    const val = apiRes.result?.value;
+    if (val && val.success && val.projectId) {
+      const pUrl = `https://chatgpt.com/g/${val.shortUrl || val.projectId}/project`;
+      console.log(`[ProjectManager] ✨ Firma projesi başarıyla oluşturuldu: ${val.projectId} -> ${pUrl}`);
       return setCompanyProject(orgKey, {
-        projectId: createdProjectId,
-        projectUrl: createdProjectUrl,
+        projectId: val.projectId,
+        projectUrl: pUrl,
         title: expectedProjectTitle
       });
     }
 
-    console.warn('[ProjectManager] Proje oluşturulduktan sonra URL tespit edilemedi.');
-    return null;
+    console.warn(`[ProjectManager] Proje API oluşturma yanıt vermedi (status: ${val?.status}), varsayılan Mesajify projesi kullanılacak.`);
+    return DEFAULT_MESAJIFY_PROJECT;
 
   } catch (err) {
-    console.warn('[ProjectManager] ensureCompanyProject hatası (fail-safe fallback devreye giriyor):', err.message);
-    return null;
+    console.warn('[ProjectManager] ensureCompanyProject hatası (varsayılana fallback yapılıyor):', err.message);
+    return DEFAULT_MESAJIFY_PROJECT;
   }
 }
 
@@ -276,6 +220,7 @@ function clearCompanyProjectsCache() {
 
 module.exports = {
   PROJECTS_FILE,
+  DEFAULT_MESAJIFY_PROJECT,
   normalizeOrgKey,
   getCompanyProject,
   setCompanyProject,

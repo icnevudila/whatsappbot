@@ -43,8 +43,14 @@ const {
   releaseSessionFlightLease
 } = require('./orphan_tab_reaper.js');
 
-const MESAJIFY_PROJECT_ID = 'g-p-6aaf94b0ae20819180ce47c040ff4a59';
-const MESAJIFY_PROJECT_URL = `https://chatgpt.com/g/${MESAJIFY_PROJECT_ID}`;
+const {
+  DEFAULT_MESAJIFY_PROJECT,
+  ensureCompanyProject,
+  getCompanyProject
+} = require('./company_project_manager.js');
+
+const MESAJIFY_PROJECT_ID = DEFAULT_MESAJIFY_PROJECT.projectId;
+const MESAJIFY_PROJECT_URL = DEFAULT_MESAJIFY_PROJECT.projectUrl;
 
 const reaper = new OrphanTabReaper();
 
@@ -674,13 +680,13 @@ async function ensureCustomerChat(cdp, customer, channel = 'media', identity = {
     }
   }
 
-  // Yeni temiz sohbet aç — Mesajify projesine yönlendir (kayıtlı URL yoksa veya geçersizse)
-  // Proje URL'sine gitmek, yeni sohbetin doğrudan "Mesajify" projesi altında açılmasını sağlar.
-  // Ana sayfaya gitmek yerine proje sayfasına gidiyoruz; böylece ortalık karışmıyor.
-  const MESAJIFY_PROJECT_URL = 'https://chatgpt.com/g/g-p-6aaf94b0ae20819180ce47c040ff4a59-mesajify';
-  console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] icin Mesajify projesine yeni sohbet aciliyor...`);
-  await navigateToChat(cdp, MESAJIFY_PROJECT_URL);
-  return { isNewChat: true, chatUrl: null, title: expectedTitle };
+  // Yeni temiz sohbet aç — Şirketin projesine yönlendir (kayıtlı URL yoksa veya geçersizse)
+  // Proje URL'sine gitmek, yeni sohbetin doğrudan ilgili şirket/Mesajify projesi altında açılmasını ve gruplanmasını sağlar.
+  const companyProject = (await ensureCompanyProject(cdp, chatIdentity, effectiveCustomer)) || DEFAULT_MESAJIFY_PROJECT;
+  const projectNavUrl = companyProject.projectUrl || MESAJIFY_PROJECT_URL;
+  console.log(`[CDP Worker: ${WORKER_ID}] "${effectiveCustomer}" [${effectiveChannel}] için "${companyProject.title || 'Mesajify'}" projesine (${companyProject.projectId}) yeni sohbet açılıyor...`);
+  await navigateToChat(cdp, projectNavUrl);
+  return { isNewChat: true, chatUrl: null, title: expectedTitle, projectId: companyProject.projectId };
 
 }
 

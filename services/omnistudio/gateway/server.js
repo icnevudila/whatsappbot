@@ -2743,7 +2743,7 @@ const server = http.createServer(async (req, res) => {
     if (method === 'GET' && (pathname === '/v1/company-chats' || pathname === '/company-chats')) {
       const chats = loadAllCompanyChats();
       return sendJson(res, 200, {
-        project_id: 'g-p-6aaf94b0ae20819180ce47c040ff4a59',
+        project_id: 'g-p-6ad52f176c3c81918f21c8ee6d2d6902',
         project_name: 'Mesajify',
         companies: chats,
         summary: {

@@ -335,6 +335,26 @@ async function runJobExecution(job: any, accountId: string) {
       throw new Error(`FLOW_ACCOUNT_CONFIGURATION_REQUIRED: no canonical email is configured for ${accountId}`)
     }
     
+    // Canonical Reference Validation Gate: fail closed if commercial job has < 2 references
+    const rawAssets = assets || []
+    const isCommercial = job.job_type === 'SHORT_FORM_VIDEO' || job.metadata?.promotion_type || job.prompt?.includes('@BrandLogo') || job.prompt?.includes('@HeroProduct')
+    if (isCommercial && rawAssets.length < 2) {
+      throw new Error(`COMMERCIAL_VIDEO_CANONICAL_REFERENCE_PAIR_REQUIRED: Commercial video job ${job.id} requires at least one brand logo and one product reference (received ${rawAssets.length}).`)
+    }
+
+    // Materialize assets to local filesystem
+    const materializedAssets: any[] = []
+    for (const a of rawAssets) {
+      const mat = await materializeTenantAsset(job.org_id, a)
+      materializedAssets.push({
+        asset_id: a.id,
+        org_id: a.org_id || job.org_id,
+        role: a.role || 'reference',
+        file_path: mat.filePath,
+        sha256: mat.sha256,
+      })
+    }
+
     // OPENING_PROJECT
     await transitionJob(
       supabase, job.id, job.org_id,
@@ -346,7 +366,7 @@ async function runJobExecution(job: any, accountId: string) {
     await transitionJob(
       supabase, job.id, job.org_id,
       JobState.OPENING_PROJECT, JobState.ATTACHING_INGREDIENTS,
-      `Attaching ${(assets || []).length} ingredient chips`, {}, attemptId
+      `Attaching ${materializedAssets.length} ingredient chips`, {}, attemptId
     )
 
     const enginePayload = {
@@ -359,13 +379,8 @@ async function runJobExecution(job: any, accountId: string) {
       aspect_ratio: job.aspect_ratio || '9:16',
       model: (job.model && job.model !== 'veo-fast' && job.model !== 'omni-lite') ? job.model : 'veo-lite',
       duration: job.duration_seconds || 8,
-      assets: (assets || []).map((a: any) => ({
-        asset_id: a.id,
-        org_id: a.org_id || job.org_id,
-        role: a.role,
-        file_path: a.file_path,
-        sha256: a.sha256,
-      })),
+      require_canonical_references: isCommercial,
+      assets: materializedAssets,
     }
 
     const response = await fetch(`${gflowEngineUrl}/v1/jobs/execute`, {

@@ -188,9 +188,10 @@ function setCompanyChat(customerOrIdentity, channel, chatUrl, customTitle = null
   console.log(`[ChatManager] 💾 [${companyKey}] [${channelKey}] -> "${title}" kaydedildi: ${chatUrl}`);
 }
 
-async function renameChatToTitle(cdp, title) {
+async function renameChatToTitle(cdp, title, projectId = null) {
   if (!title || !cdp) return;
   try {
+    const effectiveProjectId = projectId || 'g-p-6ad52f176c3c81918f21c8ee6d2d6902';
     await cdp.send('Runtime.evaluate', {
       expression: `(async () => {
         const pathParts = window.location.pathname.split('/');
@@ -208,13 +209,12 @@ async function renameChatToTitle(cdp, title) {
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = 'Bearer ' + token;
 
-        const MESAJIFY_PROJECT_ID = 'g-p-6aaf94b0ae20819180ce47c040ff4a59';
         const res = await fetch('/backend-api/conversation/' + conversationId, {
           method: 'PATCH',
           headers,
           body: JSON.stringify({
             title: ${JSON.stringify(title)},
-            gizmo_id: MESAJIFY_PROJECT_ID
+            gizmo_id: ${JSON.stringify(effectiveProjectId)}
           })
         });
 
