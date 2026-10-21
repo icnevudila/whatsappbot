@@ -1,0 +1,57 @@
+name: Golden Master Video Engine Regression Suite
+
+on:
+  push:
+    branches:
+      - main
+      - feature/autonomous-video-director-v2
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - feature/autonomous-video-director-v2
+  workflow_dispatch:
+
+jobs:
+  golden-master-regression:
+    name: Video Engine Integration & Regression Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install System Dependencies (FFmpeg)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pillow SpeechRecognition gtts scipy
+
+      - name: Run Golden Master Real Integration Regression Suite
+        run: |
+          python scripts/run_golden_regression_suite.py
+
+      - name: Upload Test Results Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-test-results-${{ github.sha }}
+          path: |
+            scratch/golden_master_staging/02_REGRESSION_TESTS/golden_regression_suite_results.json
+            scratch/golden_master_staging/02_REGRESSION_TESTS/golden_regression_suite_results.txt
