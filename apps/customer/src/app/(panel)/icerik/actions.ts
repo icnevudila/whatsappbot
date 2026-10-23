@@ -965,10 +965,10 @@ export async function listLibraryCreatives({
           ? `${rawUrl}${rawUrl.includes('?') ? '&' : '?'}preview=1`
           : row.public_url
         let thumb =
-          typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl
+          typeof payload.thumbnailUrl === 'string' && payload.thumbnailUrl && !payload.thumbnailUrl.includes('?thumb=1')
             ? payload.thumbnailUrl
             : isVideo
-              ? (effectivePublicUrl ? `${effectivePublicUrl}${effectivePublicUrl.includes('?') ? '&' : '?'}thumb=1` : null)
+              ? null
               : effectivePublicUrl
         return {
           id: row.id,

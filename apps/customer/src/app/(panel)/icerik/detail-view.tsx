@@ -681,7 +681,7 @@ export function CreativeDetail({
             <div className="overflow-hidden rounded-[var(--radius-card)] border border-hairline bg-black shadow-lg">
               <video
                 src={getSafeMediaUrl(displayPublicUrl)}
-                poster={getSafeMediaUrl(displayThumbnailUrl || undefined)}
+                poster={displayThumbnailUrl && !displayThumbnailUrl.includes('?thumb=1') ? getSafeMediaUrl(displayThumbnailUrl) : undefined}
                 controls
                 autoPlay
                 playsInline

@@ -75,8 +75,9 @@ export default async function CreativeDetailPage({
     provider: provider || null,
     brief: payload?.brief ?? payload?.instruction ?? null,
     thumbnailUrl:
-      (typeof payload?.thumbnailUrl === 'string' && payload.thumbnailUrl) ||
-      (row.public_url?.startsWith('/api/ai-media/outputs/') ? `${row.public_url}?thumb=1` : null),
+      (typeof payload?.thumbnailUrl === 'string' && payload.thumbnailUrl && !payload.thumbnailUrl.includes('?thumb=1'))
+        ? payload.thumbnailUrl
+        : null,
     cleanPublicUrl: payload?.cleanPublicUrl ?? null,
     recoverableImageJob: Boolean(payload?.imageJob && payload?.imageReconciliationRequired),
     imageReconciliationRequired: Boolean(payload?.imageReconciliationRequired),
