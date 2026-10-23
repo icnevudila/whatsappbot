@@ -15,6 +15,10 @@ test('persisted dedicated signing secret supports restart-safe media delivery wi
   const signature=signMediaAccess({filename:'output.png',tenantId:'tenant-a'});
   const result=verifyMediaAccess({req:{url:'/outputs/output.png?'+signature.queryString,headers:{}},filename:'output.png',ownerTenant:'tenant-a'});
   assert.equal(result.allowed,true);
+  const proxy=verifyMediaAccess({req:{url:'/outputs/output.png?'+signature.queryString,headers:{'x-tenant-id':'tenant-a',authorization:'Bearer unrelated-api-key'}},filename:'output.png',ownerTenant:'tenant-a'});
+  assert.equal(proxy.allowed,true);
+  const spoof=verifyMediaAccess({req:{url:'/outputs/output.png?'+signature.queryString,headers:{'x-tenant-id':'tenant-b'}},filename:'output.png',ownerTenant:'tenant-a'});
+  assert.equal(spoof.allowed,false);
   const wrong=verifyMediaAccess({req:{url:'/outputs/output.png?'+signature.queryString,headers:{}},filename:'output.png',ownerTenant:'tenant-b'});
   assert.equal(wrong.allowed,false);
   assert.equal(wrong.statusCode,403);

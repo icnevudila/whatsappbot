@@ -642,8 +642,8 @@ export function CreativeDetail({
                   const res = await reconcileCreative(creative.id)
                   if (res?.error) toast(res.error, 'danger')
                   else {
-                    toast('Üretim durumu doğrulandı. Yeniden deneniyor...', 'success')
-                    await retryNow()
+                    toast(res?.ok || 'Mevcut üretimin durumu güncellendi.', 'success')
+                    router.refresh()
                   }
                   setBusyRender(false)
                 } else {
@@ -651,7 +651,7 @@ export function CreativeDetail({
                 }
               }}
             >
-              {creative.imageReconciliationRequired ? 'Durumu Doğrula ve Tekrar Dene' : 'Tekrar dene'}
+              {creative.imageReconciliationRequired ? 'Mevcut Üretimi Kontrol Et' : 'Tekrar dene'}
             </Button>
           ) : null}
           <QuietLibrary />

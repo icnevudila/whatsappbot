@@ -140,7 +140,9 @@ function verifyMediaAccess({ req, filename, ownerTenant, isInternalWorker = fals
 
   // 3. Client X-Tenant-Id header alone is UNTRUSTED and cannot be used to authenticate
   const reqTenant = req.headers?.['x-tenant-id'];
-  if (reqTenant && !isMasterToken && !isInternalWorker) {
+  const parsedUrl = new URL(req.url, 'http://localhost');
+  const hasSignedCredential = parsedUrl.searchParams.has('sig') || parsedUrl.searchParams.has('token');
+  if (reqTenant && !hasSignedCredential && !isMasterToken && !isInternalWorker) {
     return { allowed: false, statusCode: 401, error: 'UNAUTHENTICATED_TENANT_HEADER' };
   }
 
@@ -153,7 +155,6 @@ function verifyMediaAccess({ req, filename, ownerTenant, isInternalWorker = fals
   }
 
   // 5. Query-based Signed Token Authorization (for <img>, <video>, downloads)
-  const parsedUrl = new URL(req.url, 'http://localhost');
   const sig = parsedUrl.searchParams.get('sig');
   const expStr = parsedUrl.searchParams.get('exp');
   const tid = parsedUrl.searchParams.get('tid') || parsedUrl.searchParams.get('tenantId');
@@ -201,7 +202,7 @@ function verifyMediaAccess({ req, filename, ownerTenant, isInternalWorker = fals
     }
 
     // Check cross-tenant access against actual owner
-    if (tokenTenant !== actualOwner) {
+    if (tokenTenant !== actualOwner || (reqTenant && reqTenant !== tokenTenant)) {
       return { allowed: false, statusCode: 403, error: 'CROSS_TENANT_ACCESS_DENIED' };
     }
 
