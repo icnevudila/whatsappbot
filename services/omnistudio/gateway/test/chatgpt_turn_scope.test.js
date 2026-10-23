@@ -184,6 +184,17 @@ function generatedImage(src, alt = 'Generated image') {
   return image;
 }
 
+test('an older author-role response cannot hide a newer conversation-role image', () => {
+  const older = createMockElement('div', {'data-message-author-role':'assistant'}, [], 'Previous response');
+  const user = createMockElement('div', {'data-message-author-role':'user','data-message-id':'fresh'}, [], 'Create portrait campaign');
+  const heading = createMockElement('h4', {'data-conversation-role':'assistant'}, [], 'ChatGPT said:');
+  const output = createMockElement('div', {}, [heading, generatedImage('blob:portrait')]);
+  mountMessages([older, user, output]);
+  const result = readCurrentTurn('Create portrait campaign', {userKeys:[]});
+  assert.equal(result.ready, true);
+  assert.equal(result.foundImgSrc, 'blob:portrait');
+});
+
 test('image remains detectable when a turn splits thinking and image into separate assistant messages', () => {
   const user = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'fresh' }, [], 'Create a campaign');
   const thinking = createMockElement('div', { 'data-message-author-role': 'assistant' }, [], 'Preparing image');

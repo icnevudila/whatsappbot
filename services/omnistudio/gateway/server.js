@@ -1580,6 +1580,17 @@ const server = http.createServer(async (req, res) => {
         && !isAuthorizedGateway(req)) {
       return sendJson(res, 401, { error: 'GATEWAY_UNAUTHORIZED', error_code: 'GATEWAY_UNAUTHORIZED' });
     }
+    if (method === 'GET' && pathname === '/v1/media/access') {
+      const filename = parsedUrl.searchParams.get('filename') || '';
+      const tenantId = parsedUrl.searchParams.get('tenant_id') || '';
+      if (!filename || path.basename(filename) !== filename || !isMediaFilename(filename) ||
+          !tenantId || getMediaOwner(filename, getOutputDir()) !== tenantId ||
+          !fs.existsSync(path.join(getOutputDir(), filename))) {
+        return sendJson(res, 404, { error: 'MEDIA_NOT_FOUND' });
+      }
+      const signed = signMediaAccess({ filename, tenantId, ttlSeconds: 120 });
+      return sendJson(res, 200, { url: `http://${PUBLIC_HOST}:${PORT}/outputs/${encodeURIComponent(filename)}?${signed.queryString}` });
+    }
     if (method === 'POST' && pathname === '/v1/chat/historical-video-director') {
       if (!isInternalWorkerRequest(req)) return sendJson(res, 403, { error: 'WORKER_UNAUTHORIZED' });
       const { validateHistoricalDirectorInput, assertHistoricalDirectorReceipt } = require('./historical_video_director_contract.js');

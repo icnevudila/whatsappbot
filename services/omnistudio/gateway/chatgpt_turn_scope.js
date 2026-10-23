@@ -27,9 +27,15 @@ function readCurrentTurn(prompt, baseline) {
     user = newUsers.at(-1);
   }
   if (!user) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
-  let assistants = Array.from(document.querySelectorAll('[data-message-author-role="assistant"]'));
-  if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-chatgpt-search-unit-key$=":assistant"]'));
-  if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-conversation-role="assistant"]')).map(h => h.parentElement || h);
+  // Layouts can coexist in one conversation (including an older text response
+  // beside a newer image response). A global fallback hides the newer layout.
+  let assistants = [...new Set([
+    ...document.querySelectorAll('[data-message-author-role="assistant"]'),
+    ...document.querySelectorAll('[data-chatgpt-search-unit-key$=":assistant"]'),
+    ...Array.from(document.querySelectorAll('[data-conversation-role="assistant"]')).map(h => h.parentElement || h),
+  ])];
+  assistants = assistants.filter(node => !assistants.some(parent => parent !== node && parent.contains(node)))
+    .sort((a, b) => (a.compareDocumentPosition(b) & 4) ? -1 : 1);
   const nextUser = users.find(u => !!(user.compareDocumentPosition(u) & 4));
   // A provider turn may have separate thinking, image and text messages. The
   // first assistant message is not necessarily the one containing the output.

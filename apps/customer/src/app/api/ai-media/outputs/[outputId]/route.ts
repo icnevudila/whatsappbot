@@ -154,9 +154,23 @@ export async function GET(
       return new NextResponse('Thumbnail bulunamadı.', { status: 404 })
     }
 
-    const mediaUrl = typeof output.storage_url === 'string' && output.storage_url.startsWith('https://')
+    let mediaUrl = typeof output.storage_url === 'string' && output.storage_url.startsWith('https://')
       ? output.storage_url : persistedVideoUrl(filePath, GATEWAY_HOST)
     if (!mediaUrl) return new NextResponse('Kayıtlı video dosyası bulunamadı.', { status: 502 })
+    if (!output.storage_url) {
+      const token = process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY || ''
+      const access = await fetch(`${GATEWAY_HOST}/v1/media/access?${new URLSearchParams({filename: cleanFileName, tenant_id: output.org_id})}`, {
+        headers: {Authorization: `Bearer ${token}`}, cache: 'no-store', signal: AbortSignal.timeout(10000),
+      })
+      if (!access.ok) return new NextResponse('Video dosyasına güvenli erişim sağlanamadı.', {status: 502})
+      const signed = await access.json()
+      const target = new URL(signed.url)
+      const gateway = new URL(GATEWAY_HOST)
+      if (target.pathname !== `/outputs/${cleanFileName}` || ![gateway.hostname, '167.233.201.31'].includes(target.hostname)) {
+        return new NextResponse('Geçersiz medya bağlantısı.', {status: 502})
+      }
+      mediaUrl = target.toString()
+    }
     const media = await fetch(mediaUrl, { cache: 'no-store', signal: AbortSignal.timeout(30000) })
     if (!media.ok) return new NextResponse('Kayıtlı video açılamadı.', { status: 502 })
     const bytes = new Uint8Array(await media.arrayBuffer())
