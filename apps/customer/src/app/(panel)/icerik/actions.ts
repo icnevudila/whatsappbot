@@ -16,6 +16,7 @@ import { campaignFactsError } from '@/lib/creative/campaign-facts'
 import { isLibraryCreativeEligible } from '@/lib/creative/library-eligibility'
 import { canReviewImage } from '@/lib/creative/image-review'
 import { hasImageProvider } from '@/lib/ai/image'
+import { readImageJob, type ImageJobReceipt } from '@/lib/ai/omnistudio-image-job'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { isUncertainImageFailure } from '@/lib/creative/detail-render-state'
 import { isReadyImageSource } from '@/lib/creative/image-source'
@@ -812,21 +813,14 @@ export async function reconcileCreative(id: string): Promise<CreativeActionState
       .maybeSingle()
     if (!data) return { error: 'Görsel bulunamadı.' }
     const payload = (data.payload || {}) as Record<string, unknown>
-    const lastJob = (payload.lastImageJob || payload.imageJob) as { id: string; gatewayUrl: string } | undefined
+    const lastJob = (payload.lastImageJob || payload.imageJob) as ImageJobReceipt | undefined
 
     if (lastJob?.id && lastJob?.gatewayUrl) {
       try {
-        const gwBase = lastJob.gatewayUrl.replace(/\/$/, '')
-        const gwRes = await fetch(`${gwBase}/v1/images/status/${lastJob.id}`, {
-          signal: AbortSignal.timeout(6000),
-        }).catch(() => null) || await fetch(`${gwBase}/jobs/${lastJob.id}`, {
-          signal: AbortSignal.timeout(6000),
-        }).catch(() => null)
-        if (gwRes && gwRes.ok) {
-          const gwJson = await gwRes.json()
-          if (gwJson.status === 'completed' && gwJson.result_url) {
+        const verifiedImage = await readImageJob(lastJob, org.id)
+        if (verifiedImage) {
             // Restore active imageJob in payload so processCreativeGeneration can complete authentic reconciliation
-            await supabase
+            const { data: restored, error: restoreError } = await supabase
               .from('creatives')
               .update({
                 status: 'rendering',
@@ -838,41 +832,24 @@ export async function reconcileCreative(id: string): Promise<CreativeActionState
               })
               .eq('id', trimmed)
               .eq('org_id', org.id)
+              .eq('status', data.status)
+              .select('id')
+              .maybeSingle()
+            if (restoreError || !restored) return { error: 'İşin durumu değişti; sayfayı yenileyip mevcut sonucu kontrol edin.' }
 
             const processRes = await processCreativeGeneration(trimmed, supabase)
             if (processRes.ready || processRes.needsReview) {
               revalidateLibrary(trimmed)
               return { ok: 'Üretim tamamlanmış olarak kurtarıldı.' }
             }
-          }
         }
       } catch {
-        // Gateway poll timeout or offline
+        return { error: 'Mevcut çıktı henüz doğrulanamadı. İş korunuyor; yeni üretim başlatılmadı.' }
       }
     }
 
-    const updatedPayload = {
-      ...payload,
-      imageJob: null,
-      imageSubmitIntent: null,
-      imageSubmissionUncertain: false,
-      imageReconciliationRequired: false,
-      imageDirectIntent: null,
-      imageTerminalFailure: null,
-    }
-
-    await supabase
-      .from('creatives')
-      .update({
-        status: 'failed',
-        error: 'Önceki sağlayıcı yanıt vermedi. Güvenli şekilde tekrar deneyebilirsiniz.',
-        payload: updatedPayload,
-      })
-      .eq('id', trimmed)
-      .eq('org_id', org.id)
-
     revalidateLibrary(trimmed)
-    return { ok: 'Üretim durumu doğrulandı. Tekrar deneyebilirsiniz.' }
+    return { error: 'Mevcut üretimin sonucu henüz doğrulanamadı. İş korunuyor; yeni üretim başlatılmadı.' }
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'Oturum yok.' }
   }

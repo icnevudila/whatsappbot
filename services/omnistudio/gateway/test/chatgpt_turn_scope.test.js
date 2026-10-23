@@ -178,6 +178,41 @@ function mountMessages(children) {
   };
 }
 
+function generatedImage(src, alt = 'Generated image') {
+  const image = createMockElement('img', { src, alt });
+  Object.assign(image, { complete: true, naturalWidth: 1024, naturalHeight: 1024 });
+  return image;
+}
+
+test('image remains detectable when a turn splits thinking and image into separate assistant messages', () => {
+  const user = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'fresh' }, [], 'Create a campaign');
+  const thinking = createMockElement('div', { 'data-message-author-role': 'assistant' }, [], 'Preparing image');
+  const output = createMockElement('div', { 'data-message-author-role': 'assistant' }, [generatedImage('blob:current')]);
+  mountMessages([user, thinking, output]);
+  const result = readCurrentTurn('Create a campaign', { userKeys: [] });
+  assert.equal(result.ready, true);
+  assert.equal(result.foundImgSrc, 'blob:current');
+});
+
+test('localized image survives a separate final text message', () => {
+  const user = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'fresh' }, [], 'Create a campaign');
+  const output = createMockElement('div', { 'data-message-author-role': 'assistant' }, [generatedImage('blob:current', 'Oluşturulan görsel')]);
+  const text = createMockElement('div', { 'data-message-author-role': 'assistant' }, [], 'Ready');
+  mountMessages([user, output, text]);
+  const result = readCurrentTurn('Create a campaign', { userKeys: [] });
+  assert.equal(result.foundImgSrc, 'blob:current');
+  assert.equal(result.text, 'Ready');
+});
+
+test('a later user turn image cannot satisfy the current job', () => {
+  const user = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'fresh' }, [], 'Create a campaign');
+  const other = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'other' }, [], 'Unrelated request');
+  const output = createMockElement('div', { 'data-message-author-role': 'assistant' }, [generatedImage('blob:unrelated')]);
+  mountMessages([user, other, output]);
+  const result = readCurrentTurn('Create a campaign', { userKeys: [] });
+  assert.equal(result.foundImgSrc, null);
+});
+
 test('nested user wrappers are one turn and do not hide its fresh assistant', () => {
   const inner = createMockElement('div', { class: 'user-message' }, [], 'Yeni istek');
   const user = createMockElement('div', { 'data-message-author-role': 'user', 'data-message-id': 'new-user' }, [inner], 'Yeni istek');

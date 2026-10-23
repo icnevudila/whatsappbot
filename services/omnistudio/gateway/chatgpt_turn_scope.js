@@ -31,22 +31,19 @@ function readCurrentTurn(prompt, baseline) {
   if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-chatgpt-search-unit-key$=":assistant"]'));
   if (!assistants.length) assistants = Array.from(document.querySelectorAll('[data-conversation-role="assistant"]')).map(h => h.parentElement || h);
   const nextUser = users.find(u => !!(user.compareDocumentPosition(u) & 4));
-  let assistant = assistants.find(a => (user.compareDocumentPosition(a) & 4) && (!nextUser || (a.compareDocumentPosition(nextUser) & 4)));
-  if (!assistant && assistants.length > 0) {
-    const lastAssistant = assistants.at(-1);
-    if (user.compareDocumentPosition(lastAssistant) & 4) {
-      assistant = lastAssistant;
-    }
-  }
-  if (!assistant) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
+  // A provider turn may have separate thinking, image and text messages. The
+  // first assistant message is not necessarily the one containing the output.
+  const turnAssistants = assistants.filter(a => (user.compareDocumentPosition(a) & 4) && (!nextUser || (a.compareDocumentPosition(nextUser) & 4)));
+  if (!turnAssistants.length) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
+  const assistant = turnAssistants.at(-1);
   const stop = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
-  const isGenerating = !!stop || !!assistant.querySelector('[data-is-streaming="true"], .streaming-animation, .result-thinking, [data-testid*="generating"]');
-  const images = Array.from(assistant.querySelectorAll('img')).filter(img => {
+  const isGenerating = !!stop || turnAssistants.some(node => !!node.querySelector('[data-is-streaming="true"], .streaming-animation, .result-thinking, [data-testid*="generating"]'));
+  const images = [...new Set(turnAssistants.flatMap(node => Array.from(node.querySelectorAll('img'))))].filter(img => {
     const alt = String(img.alt || '').toLowerCase();
     const src = img.currentSrc || img.src || '';
     if (!src || !img.complete || img.naturalWidth < 200 || img.naturalHeight < 200) return false;
     if (alt.includes('user attachment') || img.closest('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], form')) return false;
-    return alt.includes('generated') || alt.includes('dall-e') || alt.includes('üretilen') || !!img.closest('[data-testid="generated-image-gallery"]') || src.includes('backend-api/estuary') || src.includes('files.oaiusercontent.com');
+    return alt.includes('generated') || alt.includes('dall-e') || alt.includes('üretilen') || alt.includes('oluşturulan') || !!img.closest('[data-testid="generated-image-gallery"]') || src.includes('backend-api/estuary') || src.includes('files.oaiusercontent.com');
   });
   // Writing-block headers and suggested-followup buttons are provider UI, not
   // generated copy. The content marker is also used by ChatGPT's copy action.

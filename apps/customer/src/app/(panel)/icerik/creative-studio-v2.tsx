@@ -193,6 +193,7 @@ export function CreativeStudioV2({
   const [jobViewModel, setJobViewModel] = useState<JobUserViewModel | null>(null)
   const [completedVideoUrl, setCompletedVideoUrl] = useState<string | null>(null)
   const [jobFailureMessage, setJobFailureMessage] = useState<string | null>(null)
+  const [jobSyncError, setJobSyncError] = useState<string | null>(null)
 
   // The server supplies initialJobId on navigation and reload.
 
@@ -229,6 +230,7 @@ export function CreativeStudioV2({
     setJobState('IDLE')
     setCompletedVideoUrl(null)
     setJobFailureMessage(null)
+    setJobSyncError(null)
     setStep('product_goal')
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href)
@@ -561,11 +563,22 @@ export function CreativeStudioV2({
       syncing = true
       try {
         const res = await fetch(`/api/ai-media/jobs/${activeJobId}`, { signal: controller.signal })
-        if (!res.ok) return
+        if (!isMounted) return
+        if (!res.ok) {
+          setJobSyncError(res.status === 404 || res.status === 403
+            ? 'Bu video işi seçili işletmede bulunamadı veya erişim izniniz yok. İşlemi başlattığınız işletmeyi seçip tekrar açın.'
+            : 'Üretim durumu şu anda alınamıyor. Bağlantı yeniden kontrol ediliyor.')
+          return
+        }
         const resData = await res.json()
         const vm = resData.job as JobUserViewModel
         if (!vm || !isMounted) return
+        if (vm.job_id !== activeJobId || vm.org_id !== data.org.id) {
+          setJobSyncError('Video işi seçili işletmeyle eşleşmiyor. İşlemi başlattığınız işletmeyi seçip tekrar açın.')
+          return
+        }
 
+        setJobSyncError(null)
         setJobViewModel(vm)
         setJobState(vm.state)
         setJobFailureMessage(vm.failure_user_message || null)
@@ -575,7 +588,10 @@ export function CreativeStudioV2({
           setCompletedVideoUrl(vm.playback_url)
         }
       } catch (e) {
-        if (!controller.signal.aborted) console.error('Job sync error:', e)
+        if (!controller.signal.aborted && isMounted) {
+          setJobSyncError('Üretim durumu şu anda alınamıyor. Bağlantı yeniden kontrol ediliyor.')
+          console.error('Job sync error:', e)
+        }
       } finally {
         syncing = false
       }
@@ -606,7 +622,7 @@ export function CreativeStudioV2({
       clearInterval(interval)
       void supabase.removeChannel(channel)
     }
-  }, [activeJobId])
+  }, [activeJobId, data.org.id])
 
   // SUBMIT HANDLER: Image or Video
   const handleCreateCreative = async () => {
@@ -830,11 +846,15 @@ export function CreativeStudioV2({
       {/* 1. Realtime Production Waiting View (Authoritative ProductionProgress V2) */}
       {jobState !== 'IDLE' && jobState !== 'COMPLETED' && jobState !== 'FAILED' && jobState !== 'NEEDS_REVIEW' ? (
         <div className="p-4 sm:p-6">
-          <ProductionProgress
+          {jobSyncError ? (
+            <div role="alert"><Notice tone="warn">{jobSyncError}</Notice></div>
+          ) : !jobViewModel ? (
+            <p role="status">Üretim durumu kontrol ediliyor…</p>
+          ) : <ProductionProgress
             viewModel={activeViewModel}
             kind="video"
             onNavigateLibrary={() => {}}
-          />
+          />}
         </div>
       ) : null}
 

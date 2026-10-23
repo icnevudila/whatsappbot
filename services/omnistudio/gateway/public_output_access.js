@@ -70,7 +70,10 @@ function clearMediaRegistry() {
  * Throws a configuration error if no secret is configured.
  */
 function getSigningSecret(customSecret) {
-  const secret = (customSecret || process.env.MEDIA_SIGNING_SECRET || process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim();
+  let secret = (customSecret || process.env.MEDIA_SIGNING_SECRET || process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim();
+  if (!secret) {
+    try { secret = fs.readFileSync(path.join(__dirname, '.media_signing_secret'), 'utf8').trim(); } catch (_) {}
+  }
   if (!secret) {
     const err = new Error('CONFIG_ERROR_MEDIA_SIGNING_SECRET_REQUIRED');
     err.statusCode = 500;
