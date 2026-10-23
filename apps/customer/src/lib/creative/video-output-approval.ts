@@ -6,7 +6,7 @@ export function hasBlockingVideoProblem(value: unknown): boolean {
   // An explicitly non-severe editorial decision or voiceover-window warning is not a confirmed failure.
   // Still traverse nested reports so a serious finding cannot hide under that parent decision.
   const editorialWarning = report.isSevere === false && report.decision === 'NEEDS_REVIEW'
-  const timingWarning = report.failureCode === 'VOICEOVER_TIMING_FAIL' || report.failureCode === 'AUDIO_VERIFICATION_UNAVAILABLE'
+  const timingWarning = report.failureCode === 'VOICEOVER_TIMING_FAIL' || report.failureCode === 'AUDIO_VERIFICATION_UNAVAILABLE' || report.failureCode === 'SPOKEN_DIALOGUE_FAIL'
   if ((report.passed === false && !editorialWarning && !timingWarning) || report.isSevere === true || report.blocked === true || report.critical === true ||
     ['FAIL', 'FAILED', 'BLOCKED', 'CRITICAL', 'REJECTED'].includes(String(report.status || '').toUpperCase()) ||
     ['critical', 'severe'].includes(String(report.severity || '').toLowerCase()) ||
