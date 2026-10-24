@@ -304,6 +304,7 @@ function LibraryCard({
   renderError?: string
   onDelete: () => void
 }) {
+  const [imgError, setImgError] = useState(false)
   const failed = Boolean(renderError) && item.status !== 'ready'
   const ready =
     (item.status === 'ready' || (item.status === 'needs_review' && Boolean(item.thumbnailUrl || item.publicUrl))) &&
