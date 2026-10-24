@@ -157,7 +157,7 @@ export function planShots(
   } else if (isManualPressureSprayer) {
     shot1Action = `The gardener or operator carries the ${subject} by its top ergonomic handle alongside garden beds, with the shoulder strap slung comfortably over one shoulder, holding the lightweight spray lance ready at side. No spraying yet.`
   } else if (isBrickOrMasonry) {
-    shot1Action = `Baret ve reflektörlü güvenlik yeleği giyen deneyimli inşaat ustası, dış cephe duvarında harç yatağına düz ve nizami oturan hakiki terracotta ${subject} tuğlasını su terazisiyle kontrol eder. Tuğla duvarda yatay ve sağlam konumdadır; delikler yalnızca üst harç yüzeyindedir, kameraya bakan ön yüzü ise oluklu dolu kildir.`
+    shot1Action = `Baret ve reflektörlü güvenlik yeleği giyen deneyimli inşaat ustası, dış cephe duvarında harç yatağına düz ve nizami oturan hakiki terracotta ${subject} tuğlasını su terazisiyle kontrol eder. Kanonik fotoğraftaki yüz düzeni ve boşluk sayısı korunur: boşluklar yalnızca iki karşılıklı uç yüzde tek eksende bulunur; üst, alt ve uzun yan yüzeyler dolu ve oluklu kildir. Kamera hareketi yeni bir yüzde delik oluşturmaz.`
   } else if (isCosmeticOrSkincare) {
     shot1Action = `In front of the bright morning mirror, the user holds the elegant ${subject}, gently unsealing or inspecting the glass dropper bottle with delicate fingertips. No application yet.`
   } else if (ontology.offerType === 'food_or_consumable') {

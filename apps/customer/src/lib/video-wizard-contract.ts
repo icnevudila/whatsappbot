@@ -329,10 +329,10 @@ export function defaultFidelityContract(brandName: string, productName: string):
     return {
       must_preserve: [
         'Doğal terracotta ürün rengi',
-        'Üst yüzdeki gerçek boşluk düzeni ve ürün geometrisi',
+        'Kanonik fotoğraftaki tek eksenli uç yüz boşlukları ve ürün geometrisi',
         'Oluklu fakat kapalı yan yüzeyler',
       ],
-      surface_rules: ['Yan yüzeyler kanonik ürün fotoğrafındaki gibi dolu ve oluklu kalmalı'],
+      surface_rules: ['Boşluklar yalnızca kanonik fotoğraftaki iki karşılıklı uç yüzde aynı eksende kalmalı; üst, alt ve uzun yan yüzeyler kapalı ve oluklu olmalı'],
       forbidden_mutations: [
         'Yan yüzeylerde yeni delik veya perforasyon üretme',
         'Ürünün rengini, oranını ya da boşluk sayısını değiştirme',

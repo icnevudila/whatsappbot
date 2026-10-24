@@ -97,5 +97,13 @@ test('construction brick derives construction jobsite without sprayer keywords o
   assert.match(result.veoPrompt, /construction jobsite and sunlit outdoor building material yard/)
   assert.doesNotMatch(result.veoPrompt, /orchard|olive grove|sprayer|spray wand|logistics hub/)
   assert.match(result.veoPrompt, /perforated hollow clay brick/)
+  assert.match(result.veoPrompt, /iki karşılıklı uç yüzde tek eksende/)
+  assert.doesNotMatch(result.veoPrompt, /delikler yalnızca üst harç yüzeyindedir/)
   assert.match(result.veoPrompt, /Zero premature zoom before 5.8s/)
+})
+
+test('brick director preserves end-face perforations without requiring a second perforation axis', () => {
+  const prompt = buildHistoricalDirectorPrompt({brandName:'Ayvazoğlu', productName:'tuğla 2', compiledPrompt:'Ürün tanıtımı', logoVisualDescription:'Kanonik logo', sector:'construction', sceneAtmosphere:'Şantiye'})
+  assert.match(prompt, /iki karşılıklı uç yüzünde tek eksenli hava delikleri/)
+  assert.doesNotMatch(prompt, /üst yüzeyinde hava delikleri|üstünde hava delikleri/)
 })

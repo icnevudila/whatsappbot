@@ -67,9 +67,9 @@ export const UNIVERSAL_STRUCTURAL_MASONRY_CONTRACT: ResolvedProductFidelityContr
     'CAMERA-FACING FINISH FACE: The surface facing the camera is the solid, grooved terracotta exterior finish face.',
     'NO RAW HONEYCOMB GRILLE: Internal perforation chambers must never be presented as an oversized open honeycomb grille staring directly into the camera lens.',
     'REALISTIC MASONRY PHYSICS: Bricks strictly obey terrestrial gravity. Bricks never float in mid-air. When placed onto a wall, a worker in safety gear sets it directly onto a bed of fresh wet cement mortar.',
-    'side faces contain no holes or cavities',
-    'openings exist only on the top face',
-    'side faces remain solid vertical ribbed clay surfaces',
+    'long lateral side faces contain no holes or cavities',
+    'when the canonical brick is perforated, openings exist only on the two opposite end faces along one single axis',
+    'the top, bottom and long lateral faces remain solid ribbed clay surfaces in the canonical reference orientation',
   ],
   forbidden_mutations: [
     'brick standing vertically with giant hollow holes facing camera',
