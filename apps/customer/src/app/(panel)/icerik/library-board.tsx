@@ -78,7 +78,7 @@ export function LibraryBoard({
   }, [searchOpen])
 
   const fetchPage = useCallback(
-    async (offset: number, replace = false) => {
+    async (offset: number, replace = false, silent = false) => {
       const id = ++requestId.current
       loadingMore.current = true
       setLoading(true)
@@ -86,20 +86,31 @@ export function LibraryBoard({
         replace && offset === 0 && loadedCount.current > LIBRARY_PAGE_SIZE
           ? loadedCount.current
           : LIBRARY_PAGE_SIZE
-      const result = await listLibraryCreatives({
-        query: debouncedQuery,
-        sort,
-        offset,
-        limit: size,
-      })
-      if (id !== requestId.current) return
-      if (result.error) toast(result.error, 'danger')
-      nextOffset.current = result.nextOffset ?? offset + result.items.length
-      setPageCursor(nextOffset.current)
-      loadingMore.current = false
-      setItems((current) => (replace ? result.items : [...current, ...result.items]))
-      setHasMore(result.hasMore)
-      setLoading(false)
+      try {
+        const result = await listLibraryCreatives({
+          query: debouncedQuery,
+          sort,
+          offset,
+          limit: size,
+        })
+        if (id !== requestId.current) return
+        if (result.error) {
+          if (!silent) toast(result.error, 'danger')
+          return
+        }
+        nextOffset.current = result.nextOffset ?? offset + result.items.length
+        setPageCursor(nextOffset.current)
+        loadingMore.current = false
+        setItems((current) => (replace ? result.items : [...current, ...result.items]))
+        setHasMore(result.hasMore)
+      } catch {
+        if (!silent && id === requestId.current) toast('Kütüphane şu anda yenilenemiyor. Tekrar deneyin.', 'danger')
+      } finally {
+        if (id === requestId.current) {
+          loadingMore.current = false
+          setLoading(false)
+        }
+      }
     },
     [debouncedQuery, sort, toast],
   )
@@ -125,6 +136,20 @@ export function LibraryBoard({
       .subscribe()
     return () => {
       void supabase.removeChannel(channel)
+    }
+  }, [orgId, fetchPage])
+
+  // Realtime may disconnect while the tab sleeps. Read the persisted library
+  // periodically as well, so a finished generation appears without a reload.
+  useEffect(() => {
+    const refreshVisible = () => {
+      if (document.visibilityState === 'visible' && !loadingMore.current) void fetchPage(0, true, true)
+    }
+    const timer = window.setInterval(refreshVisible, 8000)
+    document.addEventListener('visibilitychange', refreshVisible)
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', refreshVisible)
     }
   }, [orgId, fetchPage])
 

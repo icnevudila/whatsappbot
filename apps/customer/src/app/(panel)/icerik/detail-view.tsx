@@ -449,16 +449,20 @@ export function CreativeDetail({
 
     let isMounted = true
     let pollTimer: ReturnType<typeof setTimeout> | null = null
+    let syncing = false
+    let settled = false
     const startTime = Date.now()
     const SLOW_POLL_AFTER_MS = 6 * 60 * 1000
 
     async function pollLoop() {
-      if (!isMounted) return
+      if (!isMounted || syncing || settled) return
+      syncing = true
       try {
         const res = await requestRender()
         if (!isMounted) return
 
         if (res.error) {
+          settled = true
           setLocalError(res.error)
           setBusyRender(false)
           router.refresh()
@@ -470,6 +474,7 @@ export function CreativeDetail({
         }
 
         if (res.ready || res.publicUrl) {
+          settled = true
           if (res.publicUrl) setLivePublicUrl(res.publicUrl)
           if (res.thumbnailUrl) setLiveThumbnailUrl(res.thumbnailUrl)
           setServerProgress(null)
@@ -480,12 +485,6 @@ export function CreativeDetail({
         }
 
         if (res.pending) {
-          if (!isVideo && Date.now() - startTime > 5 * 60 * 1000) {
-            setBusyRender(false)
-            setLocalError('Görsel üretimi durumu doğrulanamıyor, işlem inceleniyor. Çift ücretlendirme yapılmadı.')
-            router.refresh()
-            return
-          }
           const delay = (res.retryAfterSeconds || 3) * 1000
           pollTimer = setTimeout(pollLoop, Math.max(Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 2500, delay))
         } else {
@@ -497,13 +496,9 @@ export function CreativeDetail({
       } catch (err: unknown) {
         if (!isMounted) return
         console.warn('[detail-view] poll error:', err)
-        if (!isVideo && Date.now() - startTime > 5 * 60 * 1000) {
-          setBusyRender(false)
-          setLocalError('Görsel üretimi durumu doğrulanamıyor, işlem inceleniyor. Çift ücretlendirme yapılmadı.')
-          router.refresh()
-          return
-        }
         pollTimer = setTimeout(pollLoop, Date.now() - startTime > SLOW_POLL_AFTER_MS ? 15000 : 4000)
+      } finally {
+        syncing = false
       }
     }
 

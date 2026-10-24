@@ -1,4 +1,5 @@
 'use client'
+import { videoObservationComplete } from '@/lib/creative/job-observation'
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -586,14 +587,20 @@ export function CreativeWizard({
     if (!activeJobId) return
 
     let isMounted = true
+    let syncing = false
+    let terminal = false
+    const controller = new AbortController()
 
     const syncJobStatus = async () => {
+      if (!isMounted || syncing || terminal) return
+      syncing = true
       try {
-        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`)
+        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) })
         if (!res.ok) return
         const resData = await res.json()
         const vm = resData.job as JobUserViewModel
-        if (!vm || !isMounted) return
+        if (!vm || !isMounted || vm.job_id !== activeJobId || vm.org_id !== data.org.id) return
+        terminal = videoObservationComplete(vm)
 
         setJobState(vm.state)
         setJobStageIndex(vm.stage_index)
@@ -609,7 +616,9 @@ export function CreativeWizard({
           setCompletedVideoUrl(vm.playback_url)
         }
       } catch (e) {
-        console.error('Job sync error:', e)
+        if (!controller.signal.aborted) console.error('Job sync error:', e)
+      } finally {
+        syncing = false
       }
     }
 
@@ -638,10 +647,11 @@ export function CreativeWizard({
 
     return () => {
       isMounted = false
+      controller.abort()
       clearInterval(interval)
       void supabase.removeChannel(channel)
     }
-  }, [activeJobId])
+  }, [activeJobId, data.org.id])
 
 
 

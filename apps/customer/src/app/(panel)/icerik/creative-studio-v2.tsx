@@ -1,4 +1,5 @@
 'use client'
+import { videoObservationComplete } from '@/lib/creative/job-observation'
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
@@ -562,7 +563,7 @@ export function CreativeStudioV2({
       if (!isMounted || syncing || terminal) return
       syncing = true
       try {
-        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`, { signal: controller.signal })
+        const res = await fetch(`/api/ai-media/jobs/${activeJobId}`, { cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) })
         if (!isMounted) return
         if (!res.ok) {
           setJobSyncError(res.status === 404 || res.status === 403
@@ -582,7 +583,7 @@ export function CreativeStudioV2({
         setJobViewModel(vm)
         setJobState(vm.state)
         setJobFailureMessage(vm.failure_user_message || null)
-        terminal = vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW' || vm.state === 'FAILED'
+        terminal = videoObservationComplete(vm)
 
         if ((vm.state === 'COMPLETED' || vm.state === 'NEEDS_REVIEW') && vm.playback_url) {
           setCompletedVideoUrl(vm.playback_url)
