@@ -27,6 +27,7 @@ from redactor import redact_har, redact_string
 from process_bounds import OwnedFileLock, bounded_lines
 from progress_journal import ProgressJournal
 from invocation_identity import InvocationIdentity, IdentityConflict, IdentityHeld
+from recover_output import recover_submitted_video
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("gflow-engine.driver")
@@ -714,6 +715,14 @@ def execute_generation_job(payload: Dict[str, Any]) -> Dict[str, Any]:
                         f"Asset {va['asset_id']} ({va['role']}) has no confirmed attached_media_id.",
                         incident=incident
                     )
+
+        if (return_code != 0 or not dest_path.exists()) and 'TransportTimeoutError' in full_output:
+            try:
+                if recover_submitted_video(full_output, sys.executable, account_id, target_project, dest_path, env):
+                    return_code = 0
+                    logger.info('Recovered exact submitted video for job %s without another generation', job_id)
+            except Exception as recovery_error:
+                logger.warning('Existing video recovery remains unresolved for job %s: %s', job_id, type(recovery_error).__name__)
 
         if return_code != 0 or not dest_path.exists():
             error_code = "FLOW_EXECUTION_FAILED"

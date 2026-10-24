@@ -220,6 +220,7 @@ services:
       - flow-incidents:/shared/incidents
       # Raw checkpoints must survive worker replacement as well as final outputs.
       - ai-media-workspaces:/shared/jobs
+      - ../services/omnistudio/docker/data/outputs:/shared/gateway_outputs
     env_file:
       - ../apps/wa-service/.env
     environment:

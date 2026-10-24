@@ -40,10 +40,12 @@ import { publishImmutableVideoFile } from './immutable-video-publication.js'
 import { assertSimpleV5ReferencePair } from './simple-v5-reference-pair.js'
 import { runHistoricalVideoDirector } from './historical-video-director.js'
 import { createHistoricalExecutionContract } from './historical-execution-contract.js'
+import {validateRecoveredProvider,type ProviderRecoveryReceipt} from './recovered-provider-output.js'
 
 type ProviderAsset = VideoGenerationRequest['assets'][number]
 
 interface SimpleExecutionOptions {
+  providerRecovery?: ProviderRecoveryReceipt
   supabase: any
   gflowEngineUrl: string
   job: any
@@ -192,13 +194,14 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     throw new Error(`FLOW_ACCOUNT_CONFIGURATION_REQUIRED: no canonical email is configured for ${accountId}`)
   }
   assertSimpleV5ReferencePair(rawInput.org_id, assets)
-  const directed = await runHistoricalVideoDirector({
+  const recovered = options.providerRecovery ? validateRecoveredProvider(options.providerRecovery, job, attemptId, rawInput, assets) : null
+  const directed = recovered ? null : await runHistoricalVideoDirector({
     rawInput,
     assets,
     jobId: job.id,
     attemptId,
   })
-  const historicalContract = createHistoricalExecutionContract(rawInput, directed)
+  const historicalContract = recovered || createHistoricalExecutionContract(rawInput, directed!)
   const { snapshot, brief, shotPlan, productionPlan, providerPrompt: historicalPrompt } = historicalContract
   const geminiPrompt = historicalPrompt
   const flowPrompt = historicalPrompt
@@ -304,7 +307,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     } as any),
   }
 
-  let generated = checkpoint?.generated || await router.execute(requestedProvider, request)
+  let generated = recovered?.generated || checkpoint?.generated || await router.execute(requestedProvider, request)
   let review = await reviewOnce(generated, 1, job, snapshot, assets, brief, shotPlan, productionPlan)
   
   // Score Candidate #1
@@ -328,7 +331,7 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
   }]
   let automaticRegenerations = checkpoint?.automaticRegenerations || 0
 
-  if (!checkpoint && (review.decision === 'REGENERATE' || scorecard1.decision === 'REJECT')) {
+  if (!checkpoint && !recovered && (review.decision === 'REGENERATE' || scorecard1.decision === 'REJECT')) {
     automaticRegenerations = 1
     const defects = scorecard1.critical_defects.concat(scorecard1.major_defects).map(d => d.code)
     const retryDirection = `\n[SEVERE RETRY ONLY]: Correct these failures without changing facts or the approved speech: ${defects.join(', ') || review.severeFailureCodes.join(', ')}.`
@@ -420,8 +423,8 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     generation_completed_at: providerRecord.generation_completed_at,
   }).eq('id', job.id)
 
-  if (checkpoint) {
-    await transitionJob(supabase, job.id, job.org_id, JobState.PREPARING_ENV, JobState.MEDIA_DOWNLOADED, 'Resuming verified raw media without a provider submission', { source_attempt_id: checkpoint.sourceAttemptId, raw_output_sha256: generated.rawOutputSha256 }, attemptId)
+  if (checkpoint || recovered) {
+    await transitionJob(supabase, job.id, job.org_id, JobState.PREPARING_ENV, JobState.MEDIA_DOWNLOADED, 'Resuming verified raw media without a provider submission', { source_attempt_id: checkpoint?.sourceAttemptId || options.providerRecovery?.sourceAttemptId, raw_output_sha256: generated.rawOutputSha256 }, attemptId)
   } else {
   await transitionJob(supabase, job.id, job.org_id, JobState.GENERATING, JobState.POLLING_FLOW, `${generated.selectedProvider} generation completed; collecting provider output`, { selected_provider: generated.selectedProvider }, attemptId)
   await transitionJob(supabase, job.id, job.org_id, JobState.POLLING_FLOW, JobState.DOWNLOADING_MEDIA, 'Collecting generated MP4 from selected provider', {}, attemptId)
@@ -578,20 +581,26 @@ export async function runSimpleV5HybridExecution(options: SimpleExecutionOptions
     join('/shared/outputs', job.org_id, job.id),
   ]
   const persistedFinalPath = publishImmutableVideoFile(finishedPath, '/shared/outputs', job.id, attemptId, 'finished')
+  writeFileSync(`${persistedFinalPath}.owner`, job.org_id, 'utf8')
   publishImmutableVideoFile(ws.rawMp4Path(), '/shared/outputs', job.id, attemptId, 'raw')
 
   for (const dir of targetDirs) {
     if (existsSync(dir)) {
       try {
-        publishImmutableVideoFile(finishedPath, dir, job.id, attemptId, 'finished')
+        const publishedFinalPath = publishImmutableVideoFile(finishedPath, dir, job.id, attemptId, 'finished')
+        writeFileSync(`${publishedFinalPath}.owner`, job.org_id, 'utf8')
         // 1. As <jobId>_finished.mp4
         copyFileSync(finishedPath, join(dir, `${job.id}_finished.mp4`))
+        writeFileSync(join(dir, `${job.id}_finished.mp4.owner`), job.org_id, 'utf8')
         // 2. As <jobId>.mp4 (overwrite raw video with finished post-production video!)
         copyFileSync(finishedPath, join(dir, `${job.id}.mp4`))
+        writeFileSync(join(dir, `${job.id}.mp4.owner`), job.org_id, 'utf8')
         // 3. As <jobId>_thumb.jpg
         if (existsSync(thumbPath)) {
           copyFileSync(thumbPath, join(dir, `${job.id}_thumb.jpg`))
+          writeFileSync(join(dir, `${job.id}_thumb.jpg.owner`), job.org_id, 'utf8')
           copyFileSync(thumbPath, join(dir, `${job.id}.jpg`))
+          writeFileSync(join(dir, `${job.id}.jpg.owner`), job.org_id, 'utf8')
         }
       } catch (copyErr) {
         console.warn(`[simple-v5] Output mirroring warning for ${dir}:`, copyErr)

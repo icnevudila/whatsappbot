@@ -1,4 +1,5 @@
 import { executeWithProgress } from './provider-progress.js'
+import { postGenerationJson } from './long-json-request.js'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createHash } from 'node:crypto'
@@ -91,15 +92,10 @@ export class RealHttpGFlowProvider implements IGFlowProvider {
       attempts++
       const attemptCreatedAt = new Date().toISOString()
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 360000) // 6 min timeout for video generation
+      const timeout = setTimeout(() => controller.abort(), 15 * 60_000) // Includes provider setup, generation and download.
 
       try {
-        const resp = await executeWithProgress(() => fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          signal: controller.signal,
-        }), `${this.baseUrl}/v1/jobs/${encodeURIComponent(req.job_id)}/attempts/${encodeURIComponent(req.attempt_id)}/progress?org_id=${encodeURIComponent(req.org_id)}`, req, req.onProgress)
+        const resp = await executeWithProgress(() => postGenerationJson(endpoint, payload, controller.signal), `${this.baseUrl}/v1/jobs/${encodeURIComponent(req.job_id)}/attempts/${encodeURIComponent(req.attempt_id)}/progress?org_id=${encodeURIComponent(req.org_id)}`, req, req.onProgress)
         clearTimeout(timeout)
 
         if (!resp.ok) {
