@@ -39,3 +39,13 @@ test('ambiguous portals, disabled chooser and absent composer fail closed', () =
 test('one unambiguous portal image chooser remains supported', () => {
   assert.equal(choose([{ accept: '.png,.jpg,.webp', multiple: true }]).index, 0);
 });
+
+test('unowned portals filter out capture camera and select dedicated photo chooser', () => {
+  const result = choose([
+    { accept: 'image/*', multiple: false, getAttribute: (k) => k === 'capture' ? 'environment' : null },
+    { accept: 'image/*,video/*', multiple: true },
+    { accept: 'image/*', multiple: true },
+    { accept: '', multiple: true },
+  ]);
+  assert.equal(result.index, 2);
+});

@@ -12,10 +12,7 @@ function findImageUploadInput(requiredCount) {
   if (candidates.length === 0) return null;
   if (candidates.length === 1) return { index: candidates[0].index, multiple: !!candidates[0].input.multiple };
 
-  // Multiple unowned portals outside composer are ambiguous: fail closed
-  if (!owned.length) return null;
-
-  // Inside composer: filter out camera/capture inputs
+  // Filter out camera/capture inputs
   const nonCapture = candidates.filter(({ input }) => typeof input.getAttribute !== 'function' || !input.getAttribute('capture'));
   if (nonCapture.length === 1) {
     return { index: nonCapture[0].index, multiple: !!nonCapture[0].input.multiple };
@@ -28,6 +25,9 @@ function findImageUploadInput(requiredCount) {
   if (photoOnly.length === 1) {
     return { index: photoOnly[0].index, multiple: !!photoOnly[0].input.multiple };
   }
+
+  // Multiple unowned portals outside composer that remain ambiguous: fail closed
+  if (!owned.length) return null;
 
   return null;
 }

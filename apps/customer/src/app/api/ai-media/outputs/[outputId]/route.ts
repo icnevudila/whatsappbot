@@ -121,6 +121,7 @@ export async function GET(
 
     // If thumbnail requested, resolve corresponding cover JPEG
     if (isThumb) {
+      const token = process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.CHATGPT_API_KEY || ''
       const thumbCandidates = Array.from(
         new Set(
           [
@@ -135,12 +136,25 @@ export async function GET(
         )
       )
 
+      const hosts = Array.from(new Set([GATEWAY_HOST, 'http://167.233.201.31:3456', 'https://media.167.233.201.31.nip.io'].filter(Boolean)))
       for (const tName of thumbCandidates) {
-        const hosts = Array.from(new Set([GATEWAY_HOST, 'http://167.233.201.31:3456', 'https://media.167.233.201.31.nip.io'].filter(Boolean)))
         for (const host of hosts) {
-          const thumbUrl = `${host}/outputs/${tName}`
           try {
-            const tRes = await fetch(thumbUrl, { cache: 'force-cache' })
+            if (token) {
+              const access = await fetch(`${host}/v1/media/access?${new URLSearchParams({ filename: tName, tenant_id: output.org_id })}`, {
+                headers: { Authorization: `Bearer ${token}` },
+                cache: 'no-store',
+                signal: AbortSignal.timeout(5000),
+              })
+              if (access.ok) {
+                const signed = await access.json()
+                const image = await fetch(signed.url, { cache: 'no-store', signal: AbortSignal.timeout(10000) })
+                if (image.ok) return await buildStreamResponse(image, tName, reviewPreview)
+              }
+            }
+
+            const thumbUrl = `${host}/outputs/${tName}`
+            const tRes = await fetch(thumbUrl, { cache: 'force-cache', signal: AbortSignal.timeout(5000) })
             if (tRes.ok) {
               const image = await fetch(thumbUrl, { cache: 'no-store' })
               if (image.ok) return await buildStreamResponse(image, tName, reviewPreview)

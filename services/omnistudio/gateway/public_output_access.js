@@ -48,12 +48,23 @@ function getMediaOwner(filename, outputDir) {
   const dir = outputDir || process.env.OUTPUT_DIR;
   if (dir) {
     try {
-      const ownerPath = path.join(dir, `${base}.owner`);
-      if (fs.existsSync(ownerPath)) {
-        const diskOwner = fs.readFileSync(ownerPath, 'utf8').trim();
-        if (diskOwner) {
-          fileTenantRegistry.set(base, diskOwner);
-          return diskOwner;
+      const candidates = [
+        base,
+        base.replace(/_thumb\.jpg$/i, '_finished.mp4'),
+        base.replace(/\.jpg$/i, '_finished.mp4'),
+        base.replace(/_thumb\.jpg$/i, '.mp4'),
+        base.replace(/\.jpg$/i, '.mp4'),
+        base.replace(/_finished\.mp4$/i, '.mp4'),
+        base.replace(/\.mp4$/i, '_finished.mp4')
+      ];
+      for (const cand of candidates) {
+        const ownerPath = path.join(dir, `${cand}.owner`);
+        if (fs.existsSync(ownerPath)) {
+          const diskOwner = fs.readFileSync(ownerPath, 'utf8').trim();
+          if (diskOwner) {
+            fileTenantRegistry.set(base, diskOwner);
+            return diskOwner;
+          }
         }
       }
     } catch (_) {}
