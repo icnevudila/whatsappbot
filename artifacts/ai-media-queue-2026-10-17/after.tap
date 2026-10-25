@@ -1,0 +1,35 @@
+TAP version 13
+# [BrandManifest] 🏢 Tenant Registry Başlatıldı (4 kurum, 1 varlık)
+# Subtest: heartbeat and release fail closed on RPC errors or malformed responses
+ok 1 - heartbeat and release fail closed on RPC errors or malformed responses
+  ---
+  duration_ms: 4.4721
+  type: 'test'
+  ...
+# Subtest: worker disappearance after image claim requires reconciliation rather than a second generation
+ok 2 - worker disappearance after image claim requires reconciliation rather than a second generation
+  ---
+  duration_ms: 14.2693
+  type: 'test'
+  ...
+# Subtest: late worker error cannot turn a completed image into failed or pending
+ok 3 - late worker error cannot turn a completed image into failed or pending
+  ---
+  duration_ms: 2.1904
+  type: 'test'
+  ...
+# Subtest: video status does not fabricate a wait estimate or an unqueued position
+ok 4 - video status does not fabricate a wait estimate or an unqueued position
+  ---
+  duration_ms: 1.5376
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 631.7058

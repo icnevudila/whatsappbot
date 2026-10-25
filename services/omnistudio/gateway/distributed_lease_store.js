@@ -55,7 +55,7 @@ class SharedDatabaseSimulator {
     const key = `${provider}:${accountId}`;
     const now = this.clock();
     const existing = this.table.get(key);
-    if (!existing || existing.leaseToken !== leaseToken || existing.releasedAt !== null) {
+    if (!existing || existing.leaseToken !== leaseToken || existing.releasedAt !== null || existing.expiresAt <= now) {
       return false;
     }
     existing.heartbeatAt = now;
@@ -147,7 +147,7 @@ class DistributedLeaseStore {
         p_ttl_seconds: ttlSeconds,
       });
       if (!error && typeof data === 'boolean') return data;
-      return true;
+      return false;
     }
     return false;
   }
@@ -164,7 +164,7 @@ class DistributedLeaseStore {
         p_lease_token: leaseToken,
       });
       if (!error && typeof data === 'boolean') return data;
-      return true;
+      return false;
     }
     return false;
   }

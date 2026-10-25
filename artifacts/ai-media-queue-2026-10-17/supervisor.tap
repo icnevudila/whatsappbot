@@ -1,0 +1,232 @@
+TAP version 13
+# Subtest: failed account renewal fences execution and quarantines subsequent acquisitions
+ok 1 - failed account renewal fences execution and quarantines subsequent acquisitions
+  ---
+  duration_ms: 55.6162
+  type: 'test'
+  ...
+# Subtest: late heartbeat failure for an old token cannot quarantine a newer reservation
+ok 2 - late heartbeat failure for an old token cannot quarantine a newer reservation
+  ---
+  duration_ms: 9.9132
+  type: 'test'
+  ...
+# Subtest: external aliases share canonical leases and never fall back to another account
+ok 3 - external aliases share canonical leases and never fall back to another account
+  ---
+  duration_ms: 5.6584
+  type: 'test'
+  ...
+# Subtest: 1. cold browser incoming job boots, validates and executes only after READY
+ok 4 - 1. cold browser incoming job boots, validates and executes only after READY
+  ---
+  duration_ms: 10.8342
+  type: 'test'
+  ...
+# Subtest: failed video browser shutdown retains process ownership and future exit tracking
+ok 5 - failed video browser shutdown retains process ownership and future exit tracking
+  ---
+  duration_ms: 5.4972
+  type: 'test'
+  ...
+# Subtest: 2. warm browser incoming job reuses browser and canonical tab
+ok 6 - 2. warm browser incoming job reuses browser and canonical tab
+  ---
+  duration_ms: 3.519
+  type: 'test'
+  ...
+# Subtest: 3. same account + two jobs -> second waits
+ok 7 - 3. same account + two jobs -> second waits
+  ---
+  duration_ms: 55.3534
+  type: 'test'
+  ...
+# Subtest: 4. two different accounts -> real parallel scheduling
+ok 8 - 4. two different accounts -> real parallel scheduling
+  ---
+  duration_ms: 52.9375
+  type: 'test'
+  ...
+# Subtest: 5. third tab -> rejected or safe orphan cleaned
+ok 9 - 5. third tab -> rejected or safe orphan cleaned
+  ---
+  duration_ms: 22.981
+  type: 'test'
+  ...
+# Subtest: 6. active generation -> TTL cannot close browser
+ok 10 - 6. active generation -> TTL cannot close browser
+  ---
+  duration_ms: 8.0322
+  type: 'test'
+  ...
+# Subtest: 7. active download -> reaper cannot close browser
+ok 11 - 7. active download -> reaper cannot close browser
+  ---
+  duration_ms: 5.3658
+  type: 'test'
+  ...
+# Subtest: 8. idle 20 minutes -> graceful Browser.close
+ok 12 - 8. idle 20 minutes -> graceful Browser.close
+  ---
+  duration_ms: 25.0687
+  type: 'test'
+  ...
+# Subtest: 9. graceful shutdown and restart reuse the same persistent profile
+ok 13 - 9. graceful shutdown and restart reuse the same persistent profile
+  ---
+  duration_ms: 10.7617
+  type: 'test'
+  ...
+# Subtest: 10. expired auth becomes AUTH_REQUIRED and alternate account is selected
+ok 14 - 10. expired auth becomes AUTH_REQUIRED and alternate account is selected
+  ---
+  duration_ms: 29.2308
+  type: 'test'
+  ...
+# Subtest: 10b. expired auth retries once with Chrome last-session restore
+ok 15 - 10b. expired auth retries once with Chrome last-session restore
+  ---
+  duration_ms: 5.6351
+  type: 'test'
+  ...
+# Subtest: 10c. persistent auth failure is bounded and remains AUTH_REQUIRED
+ok 16 - 10c. persistent auth failure is bounded and remains AUTH_REQUIRED
+  ---
+  duration_ms: 4.8027
+  type: 'test'
+  ...
+# Subtest: 10d. non-video auth failures do not trigger video session restore
+ok 17 - 10d. non-video auth failures do not trigger video session restore
+  ---
+  duration_ms: 43.9057
+  type: 'test'
+  ...
+# Subtest: 10e. auth restore kills an orphaned CDP browser before relaunch
+ok 18 - 10e. auth restore kills an orphaned CDP browser before relaunch
+  ---
+  duration_ms: 13.1577
+  type: 'test'
+  ...
+# Subtest: 10f. unexpected CDP disconnect arms restore on the next launch
+ok 19 - 10f. unexpected CDP disconnect arms restore on the next launch
+  ---
+  duration_ms: 8.2223
+  type: 'test'
+  ...
+# Subtest: auth recovery runs under an existing reservation before provider execution
+ok 20 - auth recovery runs under an existing reservation before provider execution
+  ---
+  duration_ms: 4.593
+  type: 'test'
+  ...
+# Subtest: a terminal auth failure clears STARTING and does not loop on later readiness calls
+ok 21 - a terminal auth failure clears STARTING and does not loop on later readiness calls
+  ---
+  duration_ms: 6.2549
+  type: 'test'
+  ...
+# Subtest: reserved startup permission never shuts down provider execution
+ok 22 - reserved startup permission never shuts down provider execution
+  ---
+  duration_ms: 2.7731
+  type: 'test'
+  ...
+# Subtest: 11. startup failure preserves provider execution and selects alternate account
+ok 23 - 11. startup failure preserves provider execution and selects alternate account
+  ---
+  duration_ms: 3.3199
+  type: 'test'
+  ...
+# Subtest: 12. Gemini account NO_QUOTA -> another Gemini account tried first
+ok 24 - 12. Gemini account NO_QUOTA -> another Gemini account tried first
+  ---
+  duration_ms: 11.713
+  type: 'test'
+  ...
+# Subtest: 13. whole Gemini pool unavailable -> Flow fallback
+ok 25 - 13. whole Gemini pool unavailable -> Flow fallback
+  ---
+  duration_ms: 6.699
+  type: 'test'
+  ...
+# Subtest: 14. heartbeat does not create tab leak
+ok 26 - 14. heartbeat does not create tab leak
+  ---
+  duration_ms: 7.8722
+  type: 'test'
+  ...
+# Subtest: legacy busy heartbeat protects browser beyond idle TTL, idle liveness does not
+ok 27 - legacy busy heartbeat protects browser beyond idle TTL, idle liveness does not
+  ---
+  duration_ms: 5.6588
+  type: 'test'
+  ...
+# Subtest: 15. maintenance scan does not refresh real lastActivity
+ok 28 - 15. maintenance scan does not refresh real lastActivity
+  ---
+  duration_ms: 7.1617
+  type: 'test'
+  ...
+# Subtest: 16. duplicate recovery cannot execute the same job twice
+ok 29 - 16. duplicate recovery cannot execute the same job twice
+  ---
+  duration_ms: 3.4541
+  type: 'test'
+  ...
+# Subtest: idle shutdown never closes STARTING, BUSY, GENERATING, DOWNLOADING or VERIFYING workers
+ok 30 - idle shutdown never closes STARTING, BUSY, GENERATING, DOWNLOADING or VERIFYING workers
+  ---
+  duration_ms: 28.6487
+  type: 'test'
+  ...
+# Subtest: queue-aware prewarm starts an eligible Gemini worker only when queue has work
+ok 31 - queue-aware prewarm starts an eligible Gemini worker only when queue has work
+  ---
+  duration_ms: 36.436
+  type: 'test'
+  ...
+# Subtest: 17. VNC disabled -> normal mocked job path works
+ok 32 - 17. VNC disabled -> normal mocked job path works
+  ---
+  duration_ms: 71.5426
+  type: 'test'
+  ...
+# Subtest: mocked stress test: 100 sequential jobs across 4 accounts
+ok 33 - mocked stress test: 100 sequential jobs across 4 accounts
+  ---
+  duration_ms: 162.5913
+  type: 'test'
+  ...
+# Subtest: 21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions
+ok 34 - 21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions
+  ---
+  duration_ms: 109.3917
+  type: 'test'
+  ...
+# Subtest: 22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL
+ok 35 - 22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL
+  ---
+  duration_ms: 4.6869
+  type: 'test'
+  ...
+# Subtest: 23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions
+ok 36 - 23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions
+  ---
+  duration_ms: 3.1455
+  type: 'test'
+  ...
+# Subtest: 24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently
+ok 37 - 24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently
+  ---
+  duration_ms: 68.1089
+  type: 'test'
+  ...
+1..37
+# tests 37
+# suites 0
+# pass 37
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1507.8527

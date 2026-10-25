@@ -1,0 +1,17 @@
+2026-10-17 10:26:49 [info     ] browser.engine_selected        engine=playwright
+2026-10-17 10:26:50 [info     ] cookie_decryption_failed_falling_back_to_playwright profile=/app/flow-profiles/profile_account-04
+2026-10-17 10:26:51 [info     ] playwright_cookie_read         all_cookies=62 flow_domain=0 flow_path_root=0
+2026-10-17 10:26:51 [info     ] client.preread_flow_cookies    preread_count=0 preread_session=False
+2026-10-17 10:26:51 [info     ] client.persistent_context_launch channel=chrome chrome_executable=/usr/bin/google-chrome chrome_strategy_requested=True cookies_db_path=/app/flow-profiles/profile_account-04/Default/Cookies cookies_db_present=True ignore_default_args=['--enable-automation', '--no-sandbox'] launch_args=['--password-store=basic', '--disable-blink-features=AutomationControlled', '--disable-dev-shm-usage'] password_store_basic=True platform=linux user_data_dir=/app/flow-profiles/profile_account-04
+2026-10-17 10:26:51 [info     ] client.context_cookie_state    context_cookie_count=62 flow_session_cookie_expired=False flow_session_cookie_present=False google_sapisid_present=True
+2026-10-17 10:26:51 [warning  ] client.context_cookie_seed_unavailable
+2026-10-17 10:26:56 [info     ] client.account_locale_lang_unchanged lang=en reason=TimeoutError waited_ms=4000.0
+2026-10-17 10:26:56 [info     ] client.account_locale_resolved locale=en source=html_lang
+2026-10-17 10:26:56 [info     ] client.account_locale_state    now= was=?
+2026-10-17 10:26:56 [info     ] ui_automation.setup_shared_page
+FAILURE_WIRE_MESSAGES [{"rpc": "cPZSdc", "path": "/1/0/1/1", "text": "Your Google AI plan now comes with 50 additional Flow credits daily."}, {"rpc": "cPZSdc", "path": "/1/0/1/13", "text": "BANNER_FEATURE_CREDITS"}]
+PROJECT_MEDIA_COUNTS {"videos": 0, "images": 4}
+[sitecustomize] ✅ Set FRAME_SEARCH_ATTEMPTS=6, RETRY_PAUSE=2.5s for zero chip misses
+[sitecustomize] ✅ Hooked MigratedComposer._dismiss_cookie_bar with bulletproof DOM purge
+[sitecustomize] Hooked batchexecute.generation_record with resilient MZZa6b/as29s envelope fallback
+[sitecustomize] Hooked MigratedComposer.submit_and_observe with active tile watcher

@@ -1,0 +1,29 @@
+TAP version 13
+# [BrandManifest] 🏢 Tenant Registry Başlatıldı (4 kurum, 1 varlık)
+# Subtest: image: actual child process exit preserves the claimed job without paid replay
+ok 1 - image: actual child process exit preserves the claimed job without paid replay
+  ---
+  duration_ms: 276.9879
+  type: 'test'
+  ...
+# Subtest: video: actual child process exit preserves the claimed job without paid replay
+ok 2 - video: actual child process exit preserves the claimed job without paid replay
+  ---
+  duration_ms: 369.4958
+  type: 'test'
+  ...
+# Subtest: provider success followed by receipt write failure stays uncertain after reload, with no resubmit
+ok 3 - provider success followed by receipt write failure stays uncertain after reload, with no resubmit
+  ---
+  duration_ms: 74.4638
+  type: 'test'
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1090.4351

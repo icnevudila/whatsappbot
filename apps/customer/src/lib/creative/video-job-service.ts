@@ -143,9 +143,8 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
     }
 
     // 1. Video Kotası Kontrolü
-    const startOfMonth = new Date()
-    startOfMonth.setDate(1)
-    startOfMonth.setHours(0, 0, 0, 0)
+    const now = new Date()
+    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
 
     const [{ count: videoUsedCount, error: quotaCountError }, { data: quotaOrg, error: quotaOrgError }] = await Promise.all([
       (supabase as any)
@@ -398,6 +397,17 @@ export async function createVideoJob(req: NextRequest, context: Awaited<ReturnTy
       .single()
 
     if (jobError || !job) {
+      if (jobError?.code === 'PZ429' || jobError?.code === 'PZ503') {
+        // Admission happens under the database's per-org transaction lock.
+        // This request owns this revision; no job was inserted on rejection.
+        const { error: cleanupError } = await (supabase as any).from('creative_revisions')
+          .delete().eq('id', revision.id).eq('org_id', org.id).is('job_id', null)
+        if (cleanupError) console.error('[ai-media-jobs] Rejected revision cleanup failed:', cleanupError)
+        return NextResponse.json({ error: jobError.code === 'PZ429'
+          ? 'Aylık video üretim kotanıza ulaştınız.'
+          : 'Video kotası doğrulanamadı; üretim güvenli biçimde başlatılmadı.' },
+          { status: jobError.code === 'PZ429' ? 429 : 503 })
+      }
       console.error('[ai-media-jobs] Job insert failed:', jobError)
       return NextResponse.json({ error: 'Video işi kuyruğa alınamadı.' }, { status: 500 })
     }

@@ -1,0 +1,191 @@
+TAP version 13
+# Subtest: independent expected references block zero or partial payload before any provider request
+ok 1 - independent expected references block zero or partial payload before any provider request
+  ---
+  duration_ms: 5.8532
+  type: 'test'
+  ...
+# Subtest: actual pixels, dimensions, MIME and byte hash are required
+ok 2 - actual pixels, dimensions, MIME and byte hash are required
+  ---
+  duration_ms: 244.6434
+  type: 'test'
+  ...
+# Subtest: image MIME cannot make corrupt bytes a valid reference
+ok 3 - image MIME cannot make corrupt bytes a valid reference
+  ---
+  duration_ms: 9.4958
+  type: 'test'
+  ...
+# Subtest: foreign storage namespace is rejected before any network request
+ok 4 - foreign storage namespace is rejected before any network request
+  ---
+  duration_ms: 2.9891
+  type: 'test'
+  ...
+# Subtest: unconfigured filesystem paths cannot be read as assets
+ok 5 - unconfigured filesystem paths cannot be read as assets
+  ---
+  duration_ms: 2.4147
+  type: 'test'
+  ...
+# Subtest: canonical source matrix runs offline with decoded byte identity
+    # Subtest: a lookalike Gateway hostname never receives its backend credential
+    ok 1 - a lookalike Gateway hostname never receives its backend credential
+      ---
+      duration_ms: 204.0728
+      type: 'test'
+      ...
+    # Subtest: absolute_url https://fixture.invalid/product.png
+    ok 2 - absolute_url https://fixture.invalid/product.png
+      ---
+      duration_ms: 18.6275
+      type: 'test'
+      ...
+    # Subtest: gateway_output /outputs/offline-fixture.png
+    ok 3 - gateway_output /outputs/offline-fixture.png
+      ---
+      duration_ms: 15.5437
+      type: 'test'
+      ...
+    # Subtest: public_brand /brand/offline-fixture.png
+    ok 4 - public_brand /brand/offline-fixture.png
+      ---
+      duration_ms: 23.8865
+      type: 'test'
+      ...
+    # Subtest: public_logo /logos/offline-fixture.png
+    ok 5 - public_logo /logos/offline-fixture.png
+      ---
+      duration_ms: 32.3697
+      type: 'test'
+      ...
+    # Subtest: gateway_output /api/media-proxy?file=offline-fixture.png
+    ok 6 - gateway_output /api/media-proxy?file=offline-fixture.png
+      ---
+      duration_ms: 27.7497
+      type: 'test'
+      ...
+    # Subtest: storage brand-assets
+    ok 7 - storage brand-assets
+      ---
+      duration_ms: 24.8704
+      type: 'test'
+      ...
+    # Subtest: storage creatives
+    ok 8 - storage creatives
+      ---
+      duration_ms: 19.3038
+      type: 'test'
+      ...
+    # Subtest: negative inputs and cross-tenant namespace
+    ok 9 - negative inputs and cross-tenant namespace
+      ---
+      duration_ms: 36.6564
+      type: 'test'
+      ...
+    # Subtest: explicit missing bucket cannot silently load another asset
+    ok 10 - explicit missing bucket cannot silently load another asset
+      ---
+      duration_ms: 1.7085
+      type: 'test'
+      ...
+    # Subtest: nested output identity and symlink containment
+    ok 11 - nested output identity and symlink containment
+      ---
+      duration_ms: 68.4665
+      type: 'test'
+      ...
+    # Subtest: approved filesystem source rejects paths outside operator roots
+    ok 12 - approved filesystem source rejects paths outside operator roots
+      ---
+      duration_ms: 46.6705
+      type: 'test'
+      ...
+    1..12
+ok 6 - canonical source matrix runs offline with decoded byte identity
+  ---
+  duration_ms: 592.9477
+  type: 'test'
+  ...
+# Subtest: video retry queues the tenant-scoped orchestrator job once with compare-and-set
+ok 7 - video retry queues the tenant-scoped orchestrator job once with compare-and-set
+  ---
+  duration_ms: 8.5563
+  type: 'test'
+  ...
+# Subtest: active, exhausted, missing and concurrently changed jobs never report retry success
+ok 8 - active, exhausted, missing and concurrently changed jobs never report retry success
+  ---
+  duration_ms: 1.4689
+  type: 'test'
+  ...
+# Subtest: Vercel-local static reference becomes an absolute source for the production worker
+ok 9 - Vercel-local static reference becomes an absolute source for the production worker
+  ---
+  duration_ms: 4.6995
+  type: 'test'
+  ...
+# Subtest: tenant storage source remains unchanged
+ok 10 - tenant storage source remains unchanged
+  ---
+  duration_ms: 1.1238
+  type: 'test'
+  ...
+# Subtest: different URLs carrying identical logo/product bytes fail before a job is published
+ok 11 - different URLs carrying identical logo/product bytes fail before a job is published
+  ---
+  duration_ms: 3.2352
+  type: 'test'
+  ...
+# Subtest: foreign product cannot be published even when the caller supplies its valid public image URL
+ok 12 - foreign product cannot be published even when the caller supplies its valid public image URL
+  ---
+  duration_ms: 7.2309
+  type: 'test'
+  ...
+# Subtest: a same-tenant product cannot borrow another product or tenant image
+ok 13 - a same-tenant product cannot borrow another product or tenant image
+  ---
+  duration_ms: 13.2826
+  type: 'test'
+  ...
+# Subtest: canonical catalog assets and facts are returned for the selected product
+ok 14 - canonical catalog assets and facts are returned for the selected product
+  ---
+  duration_ms: 1.4897
+  type: 'test'
+  ...
+# Subtest: persisted branding file is not accepted as a product reference
+ok 15 - persisted branding file is not accepted as a product reference
+  ---
+  duration_ms: 0.8852
+  type: 'test'
+  ...
+# Subtest: selected foreign brand kit fails closed instead of falling back to default branding
+ok 16 - selected foreign brand kit fails closed instead of falling back to default branding
+  ---
+  duration_ms: 0.8798
+  type: 'test'
+  ...
+# Subtest: selected tenant kit controls the canonical logo and persisted campaign identity
+ok 17 - selected tenant kit controls the canonical logo and persisted campaign identity
+  ---
+  duration_ms: 2.9148
+  type: 'test'
+  ...
+# Subtest: three independent tenants reject Bofe 16L / Delta 10L SKU and foreign logo swaps
+ok 18 - three independent tenants reject Bofe 16L / Delta 10L SKU and foreign logo swaps
+  ---
+  duration_ms: 7.2592
+  type: 'test'
+  ...
+1..18
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2753.0222

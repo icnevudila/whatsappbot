@@ -1,0 +1,269 @@
+TAP version 13
+# Subtest: navigation context loss rechecks readiness once without a browser restart
+not ok 1 - navigation context loss rechecks readiness once without a browser restart
+  ---
+  duration_ms: 129.2762
+  type: 'test'
+  location: 'C:\\Users\\TP2\\.codex\\worktrees\\ai-media-queue-hardening\\whatsapp\\services\\omnistudio\\gateway\\test\\browser_worker_supervisor.test.js:4:1'
+  failureType: 'testCodeFailure'
+  error: 'Persistent session validation failed for flow-navigation'
+  code: 'SESSION_VALIDATION_TIMEOUT'
+  stack: |-
+    workerError (C:\Users\TP2\.codex\worktrees\ai-media-queue-hardening\whatsapp\services\omnistudio\gateway\browser_worker_supervisor.js:41:17)
+    BrowserWorkerSupervisor._ensureReadyAttempt (C:\Users\TP2\.codex\worktrees\ai-media-queue-hardening\whatsapp\services\omnistudio\gateway\browser_worker_supervisor.js:383:17)
+    async C:\Users\TP2\.codex\worktrees\ai-media-queue-hardening\whatsapp\services\omnistudio\gateway\browser_worker_supervisor.js:454:25
+    async TestContext.<anonymous> (C:\Users\TP2\.codex\worktrees\ai-media-queue-hardening\whatsapp\services\omnistudio\gateway\test\browser_worker_supervisor.test.js:8:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: readiness context recovery is bounded and never retries paid execution or auth failures
+not ok 2 - readiness context recovery is bounded and never retries paid execution or auth failures
+  ---
+  duration_ms: 119.4692
+  type: 'test'
+  location: 'C:\\Users\\TP2\\.codex\\worktrees\\ai-media-queue-hardening\\whatsapp\\services\\omnistudio\\gateway\\test\\browser_worker_supervisor.test.js:13:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The validation function is expected to return "true". Received false
+
+    Caught error:
+
+    Error: Persistent session validation failed for flow-context-bound
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  stack: |-
+    async TestContext.<anonymous> (C:\Users\TP2\.codex\worktrees\ai-media-queue-hardening\whatsapp\services\omnistudio\gateway\test\browser_worker_supervisor.test.js:17:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: failed account renewal fences execution and quarantines subsequent acquisitions
+ok 3 - failed account renewal fences execution and quarantines subsequent acquisitions
+  ---
+  duration_ms: 12.4075
+  type: 'test'
+  ...
+# Subtest: late heartbeat failure for an old token cannot quarantine a newer reservation
+ok 4 - late heartbeat failure for an old token cannot quarantine a newer reservation
+  ---
+  duration_ms: 2.2043
+  type: 'test'
+  ...
+# Subtest: external aliases share canonical leases and never fall back to another account
+ok 5 - external aliases share canonical leases and never fall back to another account
+  ---
+  duration_ms: 2.5471
+  type: 'test'
+  ...
+# Subtest: 1. cold browser incoming job boots, validates and executes only after READY
+ok 6 - 1. cold browser incoming job boots, validates and executes only after READY
+  ---
+  duration_ms: 4.9304
+  type: 'test'
+  ...
+# Subtest: failed video browser shutdown retains process ownership and future exit tracking
+ok 7 - failed video browser shutdown retains process ownership and future exit tracking
+  ---
+  duration_ms: 6.4005
+  type: 'test'
+  ...
+# Subtest: 2. warm browser incoming job reuses browser and canonical tab
+ok 8 - 2. warm browser incoming job reuses browser and canonical tab
+  ---
+  duration_ms: 2.4199
+  type: 'test'
+  ...
+# Subtest: 3. same account + two jobs -> second waits
+ok 9 - 3. same account + two jobs -> second waits
+  ---
+  duration_ms: 30.1896
+  type: 'test'
+  ...
+# Subtest: 4. two different accounts -> real parallel scheduling
+ok 10 - 4. two different accounts -> real parallel scheduling
+  ---
+  duration_ms: 41.906
+  type: 'test'
+  ...
+# Subtest: 5. third tab -> rejected or safe orphan cleaned
+ok 11 - 5. third tab -> rejected or safe orphan cleaned
+  ---
+  duration_ms: 18.0234
+  type: 'test'
+  ...
+# Subtest: 6. active generation -> TTL cannot close browser
+ok 12 - 6. active generation -> TTL cannot close browser
+  ---
+  duration_ms: 3.4806
+  type: 'test'
+  ...
+# Subtest: 7. active download -> reaper cannot close browser
+ok 13 - 7. active download -> reaper cannot close browser
+  ---
+  duration_ms: 2.904
+  type: 'test'
+  ...
+# Subtest: 8. idle 20 minutes -> graceful Browser.close
+ok 14 - 8. idle 20 minutes -> graceful Browser.close
+  ---
+  duration_ms: 2.1132
+  type: 'test'
+  ...
+# Subtest: 9. graceful shutdown and restart reuse the same persistent profile
+ok 15 - 9. graceful shutdown and restart reuse the same persistent profile
+  ---
+  duration_ms: 2.1691
+  type: 'test'
+  ...
+# Subtest: 10. expired auth becomes AUTH_REQUIRED and alternate account is selected
+ok 16 - 10. expired auth becomes AUTH_REQUIRED and alternate account is selected
+  ---
+  duration_ms: 6.0761
+  type: 'test'
+  ...
+# Subtest: 10b. expired auth retries once with Chrome last-session restore
+ok 17 - 10b. expired auth retries once with Chrome last-session restore
+  ---
+  duration_ms: 4.0327
+  type: 'test'
+  ...
+# Subtest: 10c. persistent auth failure is bounded and remains AUTH_REQUIRED
+ok 18 - 10c. persistent auth failure is bounded and remains AUTH_REQUIRED
+  ---
+  duration_ms: 3.9309
+  type: 'test'
+  ...
+# Subtest: 10d. non-video auth failures do not trigger video session restore
+ok 19 - 10d. non-video auth failures do not trigger video session restore
+  ---
+  duration_ms: 2.4496
+  type: 'test'
+  ...
+# Subtest: 10e. auth restore kills an orphaned CDP browser before relaunch
+ok 20 - 10e. auth restore kills an orphaned CDP browser before relaunch
+  ---
+  duration_ms: 3.4215
+  type: 'test'
+  ...
+# Subtest: 10f. unexpected CDP disconnect arms restore on the next launch
+ok 21 - 10f. unexpected CDP disconnect arms restore on the next launch
+  ---
+  duration_ms: 7.576
+  type: 'test'
+  ...
+# Subtest: auth recovery runs under an existing reservation before provider execution
+ok 22 - auth recovery runs under an existing reservation before provider execution
+  ---
+  duration_ms: 3.9826
+  type: 'test'
+  ...
+# Subtest: a terminal auth failure clears STARTING and does not loop on later readiness calls
+ok 23 - a terminal auth failure clears STARTING and does not loop on later readiness calls
+  ---
+  duration_ms: 3.8917
+  type: 'test'
+  ...
+# Subtest: reserved startup permission never shuts down provider execution
+ok 24 - reserved startup permission never shuts down provider execution
+  ---
+  duration_ms: 1.5036
+  type: 'test'
+  ...
+# Subtest: 11. startup failure preserves provider execution and selects alternate account
+ok 25 - 11. startup failure preserves provider execution and selects alternate account
+  ---
+  duration_ms: 3.2494
+  type: 'test'
+  ...
+# Subtest: 12. Gemini account NO_QUOTA -> another Gemini account tried first
+ok 26 - 12. Gemini account NO_QUOTA -> another Gemini account tried first
+  ---
+  duration_ms: 3.1004
+  type: 'test'
+  ...
+# Subtest: 13. whole Gemini pool unavailable -> Flow fallback
+ok 27 - 13. whole Gemini pool unavailable -> Flow fallback
+  ---
+  duration_ms: 3.4335
+  type: 'test'
+  ...
+# Subtest: 14. heartbeat does not create tab leak
+ok 28 - 14. heartbeat does not create tab leak
+  ---
+  duration_ms: 3.2816
+  type: 'test'
+  ...
+# Subtest: legacy busy heartbeat protects browser beyond idle TTL, idle liveness does not
+ok 29 - legacy busy heartbeat protects browser beyond idle TTL, idle liveness does not
+  ---
+  duration_ms: 2.4508
+  type: 'test'
+  ...
+# Subtest: 15. maintenance scan does not refresh real lastActivity
+ok 30 - 15. maintenance scan does not refresh real lastActivity
+  ---
+  duration_ms: 8.4401
+  type: 'test'
+  ...
+# Subtest: 16. duplicate recovery cannot execute the same job twice
+ok 31 - 16. duplicate recovery cannot execute the same job twice
+  ---
+  duration_ms: 2.7419
+  type: 'test'
+  ...
+# Subtest: idle shutdown never closes STARTING, BUSY, GENERATING, DOWNLOADING or VERIFYING workers
+ok 32 - idle shutdown never closes STARTING, BUSY, GENERATING, DOWNLOADING or VERIFYING workers
+  ---
+  duration_ms: 8.8963
+  type: 'test'
+  ...
+# Subtest: queue-aware prewarm starts an eligible Gemini worker only when queue has work
+ok 33 - queue-aware prewarm starts an eligible Gemini worker only when queue has work
+  ---
+  duration_ms: 2.541
+  type: 'test'
+  ...
+# Subtest: 17. VNC disabled -> normal mocked job path works
+ok 34 - 17. VNC disabled -> normal mocked job path works
+  ---
+  duration_ms: 2.4399
+  type: 'test'
+  ...
+# Subtest: mocked stress test: 100 sequential jobs across 4 accounts
+ok 35 - mocked stress test: 100 sequential jobs across 4 accounts
+  ---
+  duration_ms: 56.0948
+  type: 'test'
+  ...
+# Subtest: 21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions
+ok 36 - 21. TWO_PROCESS_SAME_ACCOUNT_TEST: two independent supervisor hosts -> same account -> exactly one acquires, second waits/rejects, 0 duplicate executions
+  ---
+  duration_ms: 64.744
+  type: 'test'
+  ...
+# Subtest: 22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL
+ok 37 - 22. STALE_LEASE_RECOVERY_TEST: stale lease takeover after TTL
+  ---
+  duration_ms: 3.1669
+  type: 'test'
+  ...
+# Subtest: 23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions
+ok 38 - 23. REAL_FLOW_USES_SUPERVISOR: Flow external lease contract works and prevents collisions
+  ---
+  duration_ms: 3.7703
+  type: 'test'
+  ...
+# Subtest: 24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently
+ok 39 - 24. SAME_ACCOUNT_TWO_PROFILE_LEASE_TEST: profile 9223 and 9225 sharing same canonical Google account result in exactly ONE lease concurrently
+  ---
+  duration_ms: 73.5424
+  type: 'test'
+  ...
+1..39
+# tests 39
+# suites 0
+# pass 37
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1209.4563

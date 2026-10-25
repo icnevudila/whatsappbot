@@ -1,0 +1,24 @@
+2026-10-17 08:31:33 [info     ] browser.engine_selected        engine=playwright
+2026-10-17 08:31:34 [info     ] cookie_decryption_failed_falling_back_to_playwright profile=/app/flow-profiles/profile_account-03
+2026-10-17 08:31:37 [info     ] playwright_cookie_read         all_cookies=85 flow_domain=0 flow_path_root=0
+2026-10-17 08:31:37 [info     ] client.preread_flow_cookies    preread_count=0 preread_session=False
+2026-10-17 08:31:37 [info     ] client.persistent_context_launch channel=chrome chrome_executable=/usr/bin/google-chrome chrome_strategy_requested=True cookies_db_path=/app/flow-profiles/profile_account-03/Default/Cookies cookies_db_present=True ignore_default_args=['--enable-automation', '--no-sandbox'] launch_args=['--password-store=basic', '--disable-blink-features=AutomationControlled', '--disable-dev-shm-usage'] password_store_basic=True platform=linux user_data_dir=/app/flow-profiles/profile_account-03
+2026-10-17 08:31:38 [info     ] client.context_cookie_state    context_cookie_count=85 flow_session_cookie_expired=False flow_session_cookie_present=False google_sapisid_present=True
+2026-10-17 08:31:38 [warning  ] client.context_cookie_seed_unavailable
+2026-10-17 08:31:43 [info     ] client.account_locale_lang_unchanged lang=en reason=TimeoutError waited_ms=4000.0
+2026-10-17 08:31:43 [info     ] client.account_locale_resolved locale=en source=html_lang
+2026-10-17 08:31:43 [info     ] client.account_locale_cached   locale=en settle_skipped=True
+2026-10-17 08:31:43 [info     ] ui_automation.setup_shared_page
+{"account": "account-03", "project": "fa7611a7-045b-45fd-b1b5-213d273f81b7", "url": "https://flow.google.com/project/fa7611a7-045b-45fd-b1b5-213d273f81b7", "body": "Skip to main content\nL\no\na\nd\ni\nn\ng\n\u2026\n\nGoogle Flow can make mistakes, so double check it", "videos": 0}
+2026-10-17 08:31:45 [info     ] browser.engine_selected        engine=playwright
+2026-10-17 08:31:46 [info     ] cookie_decryption_failed_falling_back_to_playwright profile=/app/flow-profiles/profile_account-04
+2026-10-17 08:31:47 [info     ] playwright_cookie_read         all_cookies=62 flow_domain=0 flow_path_root=0
+2026-10-17 08:31:47 [info     ] client.preread_flow_cookies    preread_count=0 preread_session=False
+2026-10-17 08:31:47 [info     ] client.persistent_context_launch channel=chrome chrome_executable=/usr/bin/google-chrome chrome_strategy_requested=True cookies_db_path=/app/flow-profiles/profile_account-04/Default/Cookies cookies_db_present=True ignore_default_args=['--enable-automation', '--no-sandbox'] launch_args=['--password-store=basic', '--disable-blink-features=AutomationControlled', '--disable-dev-shm-usage'] password_store_basic=True platform=linux user_data_dir=/app/flow-profiles/profile_account-04
+2026-10-17 08:31:48 [info     ] client.context_cookie_state    context_cookie_count=62 flow_session_cookie_expired=False flow_session_cookie_present=False google_sapisid_present=True
+2026-10-17 08:31:48 [warning  ] client.context_cookie_seed_unavailable
+2026-10-17 08:31:54 [info     ] client.account_locale_lang_unchanged lang=en reason=TimeoutError waited_ms=4000.0
+2026-10-17 08:31:54 [info     ] client.account_locale_resolved locale=en source=html_lang
+2026-10-17 08:31:54 [info     ] client.account_locale_cached   locale=en settle_skipped=True
+2026-10-17 08:31:54 [info     ] ui_automation.setup_shared_page
+{"account": "account-04", "project": "1f6cdde7-06d2-4070-8a2f-34a42c8dd940", "url": "https://flow.google.com/project/1f6cdde7-06d2-4070-8a2f-34a42c8dd940", "body": "flow.google.com uses cookies from Google to deliver and enhance the quality of its services and to analyze traffic. Learn more\n\nHide\nSkip to main content\nL\no\na\nd\ni\nn\ng\n\u2026\n\nGoogle Flow can make mistakes, so double check it", "videos": 0}

@@ -1,0 +1,14 @@
+test_signed_cae_result_keeps_submitted_workflow_and_frozen_record (test_generation_record_identity.GenerationIdentityTests.test_signed_cae_result_keeps_submitted_workflow_and_frozen_record) ... ok
+test_durable_identity_fences_resubmission_and_foreign_ownership (test_invocation_identity.InvocationTests.test_durable_identity_fences_resubmission_and_foreign_ownership) ... ok
+test_paths_and_incomplete_writes_fail_closed (test_progress_journal.ProgressTests.test_paths_and_incomplete_writes_fail_closed) ... ok
+test_physical_identity_precedes_generation_and_replay_is_rejected (test_progress_journal.ProgressTests.test_physical_identity_precedes_generation_and_replay_is_rejected) ... ok
+test_explicit_provider_reason_survives_without_serializing_arbitrary_record_fields (test_provider_failure_diagnostics.FailureDiagnosticsTests.test_explicit_provider_reason_survives_without_serializing_arbitrary_record_fields) ... ok
+test_failed_record_preserves_status_and_only_reads_visible_error_messages (test_provider_failure_diagnostics.FailureDiagnosticsTests.test_failed_record_preserves_status_and_only_reads_visible_error_messages) ... ok
+test_failure_classes_do_not_allow_policy_or_uncertain_account_retry (test_provider_failure_diagnostics.FailureDiagnosticsTests.test_failure_classes_do_not_allow_policy_or_uncertain_account_retry) ... ok
+test_signed_urls_credentials_and_unbounded_messages_do_not_leak (test_provider_failure_diagnostics.FailureDiagnosticsTests.test_signed_urls_credentials_and_unbounded_messages_do_not_leak) ... ok
+test_successful_and_running_records_do_not_touch_the_page (test_provider_failure_diagnostics.FailureDiagnosticsTests.test_successful_and_running_records_do_not_touch_the_page) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.460s
+
+OK

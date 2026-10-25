@@ -1,0 +1,8 @@
+{"invocation_db_exists": true}
+{"held_invocations": [["2c443840-ea5f-47d5-bbc6-52a20fdbf8b5", "4a58b0dd-0931-4901-880a-686457d15010", "b99bdffc-81e6-4189-8ba0-123924c1b75e", "account-03", "fa7611a7-045b-45fd-b1b5-213d273f81b7", "SUBMISSION_UNCERTAIN"], ["bf166a60-7349-5b79-a486-951d8854edea", "2881f690-6853-4064-8768-307463ae6255", "57978a42-8429-470f-b57d-c6a3d95669fa", "account-04", "1f6cdde7-06d2-4070-8a2f-34a42c8dd940", "SUBMISSION_UNCERTAIN"]]}
+{"job_output_files": [{"job": "2c443840-ea5f-47d5-bbc6-52a20fdbf8b5", "files": []}, {"job": "bf166a60-7349-5b79-a486-951d8854edea", "files": []}]}
+
+ERR: [sitecustomize] ✅ Set FRAME_SEARCH_ATTEMPTS=6, RETRY_PAUSE=2.5s for zero chip misses
+[sitecustomize] ✅ Hooked MigratedComposer._dismiss_cookie_bar with bulletproof DOM purge
+[sitecustomize] Hooked batchexecute.generation_record with resilient MZZa6b/as29s envelope fallback
+[sitecustomize] Hooked MigratedComposer.submit_and_observe with active tile watcher

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { loadVideoCatalogReferences } from './video-catalog-references'
 
 // Execute tenant-scoped queries against records belonging to two distinct tenants.
-function catalog() {
+function catalog(expectedOrg = 'tenant-a') {
   const rows: Record<string, Record<string, unknown>[]> = {
     org_products:[{org_id:'tenant-a',id:'product-a',is_active:true,name:'Pompa',description:'16 litre'},
       {org_id:'tenant-b',id:'product-b',is_active:true,name:'Tuğla',description:'Kil'}],
@@ -17,7 +17,7 @@ function catalog() {
     const filters: Array<[string,unknown]> = []
     return {select(){return this},eq(key:string,value:unknown){filters.push([key,value]);return this},
       order(){return this},limit(){return this},async maybeSingle(){
-        assert.ok(filters.some(([key,value]) => key === (table === 'organizations' ? 'id':'org_id') && value === 'tenant-a'), 'every lookup must scope the authenticated tenant')
+        assert.ok(filters.some(([key,value]) => key === (table === 'organizations' ? 'id':'org_id') && value === expectedOrg), 'every lookup must scope the authenticated tenant')
         return {data:rows[table].find(row=>filters.every(([key,value])=>row[key]===value)) || null,error:null}
       }}
   }}
@@ -61,4 +61,28 @@ test('selected tenant kit controls the canonical logo and persisted campaign ide
   const result=await loadVideoCatalogReferences(fixture.supabase,'tenant-a',{...input,brandKitId:'kit-a',logoUrl:'https://assets.invalid/subbrand.png'})
   assert.equal(result.logoUrl,'https://assets.invalid/subbrand.png')
   assert.equal(result.kit?.id,'kit-a')
+})
+
+test('three independent tenants reject Bofe 16L / Delta 10L SKU and foreign logo swaps', async () => {
+  const tenants = ['tenant-a','tenant-b','tenant-c']
+  for (const org of tenants) {
+    const fixture = catalog(org)
+    fixture.rows.org_products = tenants.flatMap(tenant => [
+      {org_id:tenant,id:`${tenant}-bofe16`,is_active:true,name:'Bofe 16L'},
+      {org_id:tenant,id:`${tenant}-delta10`,is_active:true,name:'Delta 10L'},
+    ])
+    fixture.rows.org_product_images = tenants.flatMap(tenant => ['bofe16','delta10'].map(sku => ({
+      org_id:tenant,product_id:`${tenant}-${sku}`,public_url:`https://assets.invalid/${tenant}/${sku}.png`,
+    })))
+    fixture.rows.organizations = tenants.map(tenant => ({id:tenant,logo_path:`https://assets.invalid/${tenant}/identity.png`}))
+    const owned = {productId:`${org}-bofe16`,productUrl:`https://assets.invalid/${org}/bofe16.png`,logoUrl:`https://assets.invalid/${org}/identity.png`}
+    assert.equal((await loadVideoCatalogReferences(fixture.supabase,org,owned)).product.name,'Bofe 16L')
+    await assert.rejects(loadVideoCatalogReferences(fixture.supabase,org,{...owned,
+      productUrl:`https://assets.invalid/${org}/delta10.png`}),{code:'ASSET_REFERENCE_CHANGED'})
+    const foreign = tenants.find(tenant=>tenant!==org)!
+    await assert.rejects(loadVideoCatalogReferences(fixture.supabase,org,{...owned,
+      productId:`${foreign}-delta10`,productUrl:`https://assets.invalid/${foreign}/delta10.png`}),{code:'PRODUCT_NOT_IN_ORG'})
+    await assert.rejects(loadVideoCatalogReferences(fixture.supabase,org,{...owned,
+      logoUrl:`https://assets.invalid/${foreign}/identity.png`}),{code:'ASSET_REFERENCE_CHANGED'})
+  }
 })
