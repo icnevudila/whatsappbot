@@ -1140,7 +1140,10 @@ async function executeChatGPTJob(tab, job) {
     };
     console.log(JSON.stringify({ event: 'image_reference_gate', ...referenceReceipt }));
     submissionActivated = true; // Any error after this point may hide an accepted paid submission.
-    const injectRes = await injectPromptAndSend(cdp, job.prompt);
+    const effectivePrompt = job.prompt.startsWith('Create exactly one image')
+      ? job.prompt
+      : 'Create exactly one image using the image generation tool. Do NOT output a text summary, conversational reply, or explanation. Directly generate and paint the visual creative:\n\n' + job.prompt;
+    const injectRes = await injectPromptAndSend(cdp, effectivePrompt);
     if (!injectRes?.success) {
       throw new Error(injectRes?.error || 'Prompt kutusu bulunamadı veya gönderilemedi');
     }
@@ -1239,18 +1242,19 @@ async function executeChatGPTJob(tab, job) {
         consecutiveCandidateHits = 0;
       }
 
-      // ChatGPT Ret / Metin Cevabı Algılayıcı (Hızlı Başarısızlık)
+      // ChatGPT Gerçek Ret Algılayıcı (Model referans görseli göremediğini veya açıkça reddettiğini söylediğinde)
       if (checkResult?.hasNewMsg && !checkResult.isGenerating && !checkResult.foundImgSrc && checkResult.text) {
         const text = checkResult.text;
-        const isRefusal = /(?:referans|görsel|resim|fotoğraf|image|photo|file).*(?:yükle|ekle|sağla|upload|attach|provide|göremiyorum|bulunamadı)/i.test(text) ||
-          /(?:lütfen|lutfen|please).*(?:referans|görsel|resim|fotoğraf|image|photo)/i.test(text) ||
+        const isRefusal = /(?:referans|görsel|resim|fotoğraf|image|dosya).*(?:göremiyorum|bulunamadı|erişemiyorum|yüklenmemiş|eklenmemiş)/i.test(text) ||
+          /(?:lütfen|lutfen|please).*(?:referans|görsel|resim|fotoğraf|image).*(?:yükleyin|ekleyin|sağlayın|upload|attach|provide)/i.test(text) ||
           /(?:yüklemeniz|eklemeniz) gerekmektedir/i.test(text);
 
         if (isRefusal) {
           throw new Error(`REFERENCE_ATTACHMENT_NOT_VISIBLE_TO_MODEL: ChatGPT responded with refusal text instead of generating image: "${text.slice(0, 160)}"`);
         }
 
-        if (elapsed > 20 && text.length > 30) {
+        // Genişletilmiş DALL-E / Thinking süre toleransı: En az 120 saniye bekle
+        if (elapsed > 120 && text.length > 50) {
           throw new Error(`MODEL_TEXT_RESPONSE_WITHOUT_IMAGE: ChatGPT produced text response without image generation: "${text.slice(0, 160)}"`);
         }
       }

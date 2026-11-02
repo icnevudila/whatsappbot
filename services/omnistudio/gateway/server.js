@@ -235,7 +235,7 @@ function sanitizeConversationHistory(history, maxChars = 3000) {
 }
 
 const PORT = parseInt(process.env.PORT || '3456', 10);
-const PUBLIC_HOST = process.env.PUBLIC_HOST || '167.233.201.31';
+const PUBLIC_HOST = process.env.PUBLIC_HOST || '92.5.30.109';
 function getOutputDir() {
   return process.env.OUTPUT_DIR ? path.resolve(process.env.OUTPUT_DIR) : path.resolve(__dirname, 'outputs');
 }
@@ -3100,6 +3100,11 @@ const server = http.createServer(async (req, res) => {
           const signed = signMediaAccess({ filename: fn, tenantId: job.tenantId });
           signedResultUrl = `${signedResultUrl}?${signed.queryString}`;
         } catch (_) {}
+      }
+      const hostHeader = req.headers['x-forwarded-host'] || req.headers.host;
+      const protoHeader = req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http');
+      if (signedResultUrl && hostHeader) {
+        signedResultUrl = signedResultUrl.replace(/^https?:\/\/[^\/]+/, `${protoHeader}://${hostHeader}`);
       }
       return sendJson(res, 200, {
         id: job.id,

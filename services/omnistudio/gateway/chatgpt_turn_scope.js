@@ -43,13 +43,17 @@ function readCurrentTurn(prompt, baseline) {
   if (!turnAssistants.length) return { ready: false, candidateCount: 0, hasNewMsg: false, text: '', foundImgSrc: null, isGenerating: true };
   const assistant = turnAssistants.at(-1);
   const stop = document.querySelector('button[data-testid*="stop"], button[aria-label*="Stop"], button[aria-label*="durdur"], button[aria-label*="Durdur"]');
-  const isGenerating = !!stop || turnAssistants.some(node => !!node.querySelector('[data-is-streaming="true"], .streaming-animation, .result-thinking, [data-testid*="generating"]'));
+  const hasWorkingText = Array.from(document.querySelectorAll('div, span, button')).some(el => {
+    const t = el.innerText || '';
+    return t.includes('One last tweak') || t.includes('Working for') || t.includes('Creating image') || t.includes('Görsel oluşturuluyor') || t.includes('Görsel çiziliyor');
+  });
+  const isGenerating = !!stop || hasWorkingText || turnAssistants.some(node => !!node.querySelector('[data-is-streaming="true"], .streaming-animation, .result-thinking, [data-testid*="generating"], div[class*="thinking"]'));
   const images = [...new Set(turnAssistants.flatMap(node => Array.from(node.querySelectorAll('img'))))].filter(img => {
     const alt = String(img.alt || '').toLowerCase();
     const src = img.currentSrc || img.src || '';
     if (!src || !img.complete || img.naturalWidth < 200 || img.naturalHeight < 200) return false;
     if (alt.includes('user attachment') || img.closest('[data-message-author-role="user"], [data-chatgpt-search-unit-key$=":user"], form')) return false;
-    return alt.includes('generated') || alt.includes('dall-e') || alt.includes('üretilen') || alt.includes('oluşturulan') || !!img.closest('[data-testid="generated-image-gallery"]') || src.includes('backend-api/estuary') || src.includes('files.oaiusercontent.com');
+    return alt.includes('generated') || alt.includes('dall-e') || alt.includes('üretilen') || alt.includes('oluşturulan') || !!img.closest('[data-testid="generated-image-gallery"]') || src.includes('backend-api/estuary') || src.includes('oaiusercontent.com') || src.includes('dalle');
   });
   // Writing-block headers and suggested-followup buttons are provider UI, not
   // generated copy. The content marker is also used by ChatGPT's copy action.

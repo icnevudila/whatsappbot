@@ -364,14 +364,15 @@ export async function processCreativeGeneration(
 
   // Flow işi HTTP isteğinin ömründen uzundur. Job kimliği DB'de tutulur ve her
   // servis turunda yalnızca bir kez sorgulanır; uzun kuyrukta isteği açık tutmayız.
-  if (!isVideo && payload.imageJob) {
+  const activeImageJob = payload.imageJob || (creative.status === 'failed' && payload.lastImageJob?.id && payload.lastImageJob?.gatewayUrl ? payload.lastImageJob : null);
+  if (!isVideo && activeImageJob) {
     try {
-      const image = await readImageJob(payload.imageJob, creative.org_id)
+      const image = await readImageJob(activeImageJob, creative.org_id)
       if (!image) return { ok: true, pending: true, retryAfterSeconds: 5 }
       assertImageAspect(image.width, image.height, asSnapshot(payload)?.aspect || formatToAspect(creative.format))
       const ext = image.mimeType === 'image/jpeg' ? 'jpg' : image.mimeType === 'image/webp' ? 'webp' : 'png'
       // Stable storage identity: concurrent polls and upload retries reuse the same bytes, never another render.
-      const storagePath = `${creative.org_id}/${creative.id}/${payload.imageJob.id}.${ext}`
+      const storagePath = `${creative.org_id}/${creative.id}/${activeImageJob.id}.${ext}`
       const upload = await supabase.storage.from('creatives').upload(storagePath, image.data, { contentType: image.mimeType, upsert: true })
       if (upload.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: upload.error.message }
       const readback = await supabase.storage.from('creatives').download(storagePath)
@@ -381,12 +382,12 @@ export async function processCreativeGeneration(
       const update = await supabase.from('creatives').update({
         status: imagePublicationStatus(payload), error: null, storage_path: storagePath, public_url: url.publicUrl,
         width: image.width || null, height: image.height || null,
-        payload: { ...payload, lastImageJob: payload.imageJob, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
+        payload: { ...payload, lastImageJob: activeImageJob, imageJob: null, provider: 'omnistudio', outputSha256: storedReceipt.sha256,
           campaignMessage: payload.campaignMessage || (asSnapshot(payload) ? generateCampaignWhatsAppMessage(deriveVerifiedCampaignData(asSnapshot(payload)!)) : null),
-          imageOutputReceipt: {orgId:creative.org_id,creativeId,jobId:payload.imageJob.id,sha256:storedReceipt.sha256,size:storedReceipt.size,
+          imageOutputReceipt: {orgId:creative.org_id,creativeId,jobId:activeImageJob.id,sha256:storedReceipt.sha256,size:storedReceipt.size,
             mimeType:storedReceipt.mimeType,width:storedReceipt.width,height:storedReceipt.height,decodedImage:true,storagePath,
             referenceReceipt:image.referenceReceipt || null}, cost: { provider: 'omnistudio', imageCount: 1 } },
-      }).eq('id', creativeId).eq('org_id', creative.org_id).in('status',['rendering','failed']).eq('payload->imageJob->>id', payload.imageJob.id).select('id').maybeSingle()
+      }).eq('id', creativeId).eq('org_id', creative.org_id).in('status',['rendering','failed']).select('id').maybeSingle()
       if (update.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: update.error.message }
       if (update.data?.id !== creativeId) return { ok: true, pending: true, retryAfterSeconds: 5 }
       return { ok: true, ready: imagePublicationStatus(payload) === 'ready', needsReview: imagePublicationStatus(payload) === 'needs_review', publicUrl: url.publicUrl }
@@ -399,17 +400,17 @@ export async function processCreativeGeneration(
           payload: {
             ...payload,
             imageReconciliationRequired: true,
-            lastImageJob: payload.imageJob,
-            imageTerminalFailure: { kind: 'RECONCILIATION_REQUIRED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, queuedAt: payload.imageJob.queuedAt, error: reconciliationMsg },
+            lastImageJob: activeImageJob,
+            imageTerminalFailure: { kind: 'RECONCILIATION_REQUIRED', jobId: activeImageJob.id, gatewayUrl: activeImageJob.gatewayUrl, queuedAt: activeImageJob.queuedAt, error: reconciliationMsg },
             imageJob: null,
           },
-        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+        }).eq('id', creativeId).eq('org_id', creative.org_id)
         return {
           ok: false,
           pending: false,
           error: reconciliationMsg,
           progressInfo: {
-            elapsedSeconds: Math.max(0, Math.floor((Date.now() - Date.parse(payload.imageJob.queuedAt)) / 1000)) || 0,
+            elapsedSeconds: Math.max(0, Math.floor((Date.now() - Date.parse(activeImageJob.queuedAt)) / 1000)) || 0,
             remainingSeconds: 0,
             progressPercent: 0,
             stage: 'reconciliation',
@@ -425,15 +426,15 @@ export async function processCreativeGeneration(
           error: message,
           payload: {
             ...payload,
-            lastImageJob: payload.imageJob,
-            imageTerminalFailure: { kind: error instanceof ImageOutputInvalidError ? 'OUTPUT_INVALID' : 'PROVIDER_FAILED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, error: message },
+            lastImageJob: activeImageJob,
+            imageTerminalFailure: { kind: error instanceof ImageOutputInvalidError ? 'OUTPUT_INVALID' : 'PROVIDER_FAILED', jobId: activeImageJob.id, gatewayUrl: activeImageJob.gatewayUrl, error: message },
             imageSubmissionUncertain: false,
             imageJob: null,
           },
-        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+        }).eq('id', creativeId).eq('org_id', creative.org_id)
         return { ok: false, error: message }
       }
-      const queuedMs = Date.parse(payload.imageJob.queuedAt) || 0
+      const queuedMs = Date.parse(activeImageJob.queuedAt) || 0
       const elapsedMs = queuedMs > 0 ? Date.now() - queuedMs : 0
       if (elapsedMs > 5 * 60 * 1000) {
         const timeoutMsg = 'Görsel üretimi zaman aşımına uğradı (5 dakika). Sonuç doğrulanamadı; işlem inceleniyor.'
@@ -443,11 +444,11 @@ export async function processCreativeGeneration(
           payload: {
             ...payload,
             imageReconciliationRequired: true,
-            lastImageJob: payload.imageJob,
-            imageTerminalFailure: { kind: 'TIMEOUT_RECONCILIATION_REQUIRED', jobId: payload.imageJob.id, gatewayUrl: payload.imageJob.gatewayUrl, queuedAt: payload.imageJob.queuedAt, error: timeoutMsg },
+            lastImageJob: activeImageJob,
+            imageTerminalFailure: { kind: 'TIMEOUT_RECONCILIATION_REQUIRED', jobId: activeImageJob.id, gatewayUrl: activeImageJob.gatewayUrl, queuedAt: activeImageJob.queuedAt, error: timeoutMsg },
             imageJob: null,
           },
-        }).eq('id', creativeId).eq('org_id', creative.org_id).eq('payload->imageJob->>id', payload.imageJob.id)
+        }).eq('id', creativeId).eq('org_id', creative.org_id)
         return { ok: false, pending: false, error: timeoutMsg }
       }
       return { ok: true, pending: true, retryAfterSeconds: 5 }
