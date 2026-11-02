@@ -715,7 +715,11 @@ export async function processCreativeGeneration(
 
     // 3. Logo Referansı:
     if (expectedLogo && expectedLogoPath) {
-      const logoAsset = await resolveAssetSource(expectedLogoPath, { tenantId: creative.org_id, supabase })
+      let logoAsset = await resolveAssetSource(expectedLogoPath, { tenantId: creative.org_id, supabase })
+      if (!logoAsset) {
+        console.warn(`[process] Brand logo resolution failed for ${expectedLogoPath}, attempting fallback to official logo...`)
+        logoAsset = await resolveAssetSource('/brand/mesajify-official-logo.png', { tenantId: creative.org_id, supabase })
+      }
       if (!logoAsset) {
         throw new Error(`REFERENCE_RESOLUTION_FAILED: Marka logosu indirilemedi (${expectedLogoPath}); logosuz üretim başlatılmadı.`)
       }
