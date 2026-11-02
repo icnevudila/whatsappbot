@@ -1,7 +1,7 @@
-const DIRECT_MEDIA_BASE = 'https://media.167.233.201.31.nip.io/outputs'
-const GATEWAY_HOSTS = new Set(['167.233.201.31', 'media.167.233.201.31.nip.io', 'localhost', '127.0.0.1'])
+const DIRECT_MEDIA_BASE = (process.env.NEXT_PUBLIC_OMNISTUDIO_URL || process.env.OMNISTUDIO_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/+$/, '') + '/outputs'
+const GATEWAY_HOSTS = new Set(['92.5.30.109', 'choice-harder-inserted-passengers.trycloudflare.com', '167.233.201.31', 'media.167.233.201.31.nip.io', 'localhost', '127.0.0.1'])
 const SUPABASE_STORAGE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://rnkrjmblgcdqlyslbhob.supabase.co'
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ilhiuzffapcrleotpfyt.supabase.co'
 
 function outputUrl(pathname: string): string | undefined {
   if (!/^\/outputs\/[^/]+$/.test(pathname)) return undefined

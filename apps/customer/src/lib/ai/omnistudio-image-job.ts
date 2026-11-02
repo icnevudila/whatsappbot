@@ -53,8 +53,8 @@ export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expe
   if (typeof expectedReferences !== 'number' || !Number.isSafeInteger(expectedReferences) || expectedReferences < 0 || expectedReferences > 4) {
     throw new ImageJobReconciliationError(job)
   }
-  const rawGateway = process.env.OMNISTUDIO_GATEWAY_URL || job.gatewayUrl || 'http://167.233.201.31:3456'
-  const activeGateway = (rawGateway.includes('nip.io') ? 'http://167.233.201.31:3456' : rawGateway).replace(/\/$/, '')
+  const rawGateway = process.env.OMNISTUDIO_GATEWAY_URL || job.gatewayUrl || 'https://choice-harder-inserted-passengers.trycloudflare.com'
+  const activeGateway = (rawGateway.includes('nip.io') ? 'https://choice-harder-inserted-passengers.trycloudflare.com' : rawGateway).replace(/\/$/, '')
   const query = tenantId ? '?tenant_id=' + encodeURIComponent(tenantId) : ''
   const response = await fetch(`${activeGateway}/v1/images/status/${encodeURIComponent(job.id)}${query}`, { headers: gatewayAuthHeaders(), signal: AbortSignal.timeout(10000), cache: 'no-store' }).catch(() => {
     throw new ImageJobPendingError(job) // Transient network error

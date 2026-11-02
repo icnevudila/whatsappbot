@@ -27,8 +27,9 @@ export async function GET(req: NextRequest) {
       return new NextResponse('Gecersiz dosya adi', { status: 400 })
     }
 
-    // Direct 307 redirect to Hetzner HTTPS stream (0 bytes transferred through Vercel origin)
-    return NextResponse.redirect(`https://media.167.233.201.31.nip.io/outputs/${cleanFileName}`, 307)
+    // Direct 307 redirect to Oracle / Cloudflare HTTPS stream (0 bytes transferred through Vercel origin)
+    const gw = (process.env.OMNISTUDIO_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/+$/, '')
+    return NextResponse.redirect(`${gw}/outputs/${cleanFileName}`, 307)
   } catch (err) {
     return new NextResponse(err instanceof Error ? err.message : 'Sunucu hatasi', { status: 500 })
   }

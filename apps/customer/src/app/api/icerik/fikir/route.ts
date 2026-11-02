@@ -22,7 +22,7 @@ export async function POST(request: Request) {
   const fallback = `${org.name} için ${category.toLocaleLowerCase('tr-TR')} odaklı, markamızın renkleriyle sade bir tanıtım görseli hazırlayalım.`
   const system = 'Sen yaratıcı bir reklam direktörüsün. Verilen işletme, marka tonu ve ürün bilgilerine dayanarak özgün, sektöre özel ve dikkat çekici bir Türkçe kampanya / reklam görseli fikri yaz. En fazla iki akıcı cümle (maksimum 300 karakter). Klişe sloganlardan ("kaliteyle tanışın", "siz de gelin") kaçın. Verilmeyen fiyat, sahte indirim veya doğrulanmamış vaat uydurma. Yalnızca fikir metnini döndür.'
   try {
-    const gateway = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+    const gateway = (process.env.OMNISTUDIO_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/$/, '')
     const token = (process.env.OMNISTUDIO_GATEWAY_TOKEN || process.env.WORKER_CONTROL_TOKEN || process.env.CHATGPT_API_KEY || '').trim()
     const headers: Record<string, string> = { 'content-type': 'application/json' }
     if (token) {

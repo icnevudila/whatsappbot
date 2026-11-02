@@ -24,7 +24,7 @@ function detectMime(filePathOrExt: string): string {
 }
 
 function defaultGatewayUrl(): string {
-  return (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+  return (process.env.OMNISTUDIO_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/$/, '')
 }
 
 const MAX_ASSET_BYTES = 20 * 1024 * 1024

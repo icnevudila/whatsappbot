@@ -174,7 +174,7 @@ export function computeVideoProgress(
 type FlowJobState = NonNullable<CreativePayload['flowJob']>
 
 function defaultGatewayUrl(): string {
-  return (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+  return (process.env.OMNISTUDIO_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/$/, '')
 }
 
 /** Eski kayıtlardaki jobId alanını da okuyarak yarım kalmış işleri kurtarır. */
@@ -856,7 +856,7 @@ export async function processCreativeGeneration(
 
       const resolveAssetUrl = (rawUrl: string | null): string | null => {
         if (!rawUrl) return null
-        const gw = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+        const gw = (process.env.OMNISTUDIO_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/$/, '')
         if (rawUrl.includes('media-proxy?file=')) {
           const fileName = rawUrl.split('media-proxy?file=')[1]?.split('&')[0]
           if (fileName) return `${gw}/outputs/${decodeURIComponent(fileName)}`
@@ -979,7 +979,7 @@ export async function processCreativeGeneration(
         }
       }
 
-      const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+      const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/$/, '')
 
       let videoUrl = (snapshot as CreativePayload).pendingVideoUrl || null
       let cleanVideoUrl: string | null = (snapshot as CreativePayload).cleanPublicUrl || null

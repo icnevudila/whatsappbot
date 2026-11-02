@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     }
 
     // 2. Try Primary Zero-Cost Local Hetzner Whisper Service ($0.00 / 0 TL)
-    const whisperHost = process.env.WHISPER_SERVICE_URL?.trim() || 'http://167.233.201.31:3457'
+    const whisperHost = process.env.WHISPER_SERVICE_URL?.trim() || 'https://choice-harder-inserted-passengers.trycloudflare.com'
     let transcribedText = ''
     let providerUsed = 'hetzner_local_whisper'
 

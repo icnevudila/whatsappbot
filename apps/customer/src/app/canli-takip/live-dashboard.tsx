@@ -845,7 +845,7 @@ export function LiveDashboard() {
     }
   }
 
-  // Yeni Hesap Slotu Oluştur (Hetzner'de Başlat)
+  // Yeni Hesap Slotu Oluştur (Oracle Cloud'de Başlat)
   const handleProvisionAccount = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsProvisioning(true)
@@ -862,7 +862,7 @@ export function LiveDashboard() {
       })
       const json = await res.json()
       if (json.success && json.ok) {
-        showNotice(`Port ${newAccountPort} Hetzner'de aktif edildi! VNC üzerinden Google & Flow hesabınıza giriş yapabilirsiniz.`)
+        showNotice(`Port ${newAccountPort} Oracle Cloud'de aktif edildi! VNC üzerinden Google & Flow hesabınıza giriş yapabilirsiniz.`)
         setShowAddAccountModal(false)
         setShowVncModal(true)
         setNewAccountName('')
@@ -2321,7 +2321,7 @@ export function LiveDashboard() {
                         </span>
                       </div>
                       <p className="text-[11px] text-ink-muted">
-                        Hetzner CDP port rotasyonu: Günlük 50'şer Gemini video kotası ve Google Flow kalıcı kredi bakiyeleri.
+                        Oracle Cloud CDP port rotasyonu: Günlük 50'şer Gemini video kotası ve Google Flow kalıcı kredi bakiyeleri.
                       </p>
                     </div>
 
@@ -2455,7 +2455,7 @@ export function LiveDashboard() {
                               onClick={() => handleRefreshFlowAccounts(port)}
                               disabled={isUpdatingFlow || port === 9222}
                               className="w-full rounded border border-accent/25 bg-accent-soft/20 px-2 py-1 text-[10px] font-bold text-accent transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:opacity-45"
-                              title={port === 9222 ? 'Ana ChatGPT slotu Flow generation havuzuna otomatik kopyalanmaz' : 'Flow oturumunu, gerçek krediyi ve Hetzner generation profilini eşitle'}
+                              title={port === 9222 ? 'Ana ChatGPT slotu Flow generation havuzuna otomatik kopyalanmaz' : 'Flow oturumunu, gerçek krediyi ve Oracle Cloud generation profilini eşitle'}
                             >
                               {isUpdatingFlow ? 'Eşitleniyor…' : flowAcc?.status === 'active' ? 'Oturum & Krediyi Yenile' : 'Flow Hesabını Etkinleştir'}
                             </button>
@@ -4039,7 +4039,7 @@ export function LiveDashboard() {
                     onClick={() => handleRefreshFlowAccounts()}
                     disabled={isUpdatingFlow}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-[11px] font-bold bg-accent text-accent-ink hover:bg-accent-dim shadow-sm transition disabled:opacity-50"
-                    title="9223-9225 Flow oturumlarını, kredilerini ve Hetzner generation profillerini eşitle"
+                    title="9223-9225 Flow oturumlarını, kredilerini ve Oracle Cloud generation profillerini eşitle"
                   >
                     {isUpdatingFlow && <span className="w-3 h-3 border-2 border-accent-ink border-t-transparent rounded-full animate-spin" />}
                     <span>{isUpdatingFlow ? 'Flow Eşitleniyor…' : 'Flow Hesaplarını Eşitle'}</span>
@@ -4087,7 +4087,7 @@ export function LiveDashboard() {
                         </div>
                         <div>
                           <h3 className="text-xs font-bold text-ink">Google Gemini Havuz Matrisi</h3>
-                          <span className="text-[10px] text-ink-muted">Hetzner Multi-Port CDP Rotasyonu</span>
+                          <span className="text-[10px] text-ink-muted">Oracle Cloud Multi-Port CDP Rotasyonu</span>
                         </div>
                       </div>
                       <span
@@ -4235,7 +4235,7 @@ export function LiveDashboard() {
                             </button>
 
                             <a
-                              href={acc.vncUrl || 'http://167.233.201.31:6080/vnc.html'}
+                              href={acc.vncUrl || 'http://92.5.30.109:6080/vnc.html'}
                               target="_blank"
                               rel="noreferrer"
                               className="text-[9px] px-1.5 py-0.5 rounded bg-surface-raised hover:bg-canvas border border-[var(--color-hairline)] text-ink-muted transition"
@@ -5120,7 +5120,7 @@ export function LiveDashboard() {
                   const activeOutput = aiMediaJobDetail.output || (aiMediaData?.outputs || []).find((o: any) => o.job_id === aiMediaJobDetail.id)
                   const videoUrl = activeOutput?.id
                     ? `/api/ai-media/outputs/${activeOutput.id}`
-                    : (aiMediaJobDetail.state === 'COMPLETED' ? `http://167.233.201.31:3456/outputs/${aiMediaJobDetail.id}.mp4` : null)
+                    : (aiMediaJobDetail.state === 'COMPLETED' ? `https://choice-harder-inserted-passengers.trycloudflare.com/outputs/${aiMediaJobDetail.id}.mp4` : null)
                   const rawVeoPrompt =
                     aiMediaJobDetail.metadata?.simple_v5_diagnostics?.prompt_plan?.FLOW_VEO ||
                     aiMediaJobDetail.metadata?.simple_v5_diagnostics?.prompt_plan?.GEMINI_NATIVE_VIDEO ||
@@ -5534,14 +5534,14 @@ export function LiveDashboard() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[var(--color-hairline)] pb-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-xs sm:text-sm font-bold text-ink">Hetzner VPS Donanım & Sistem Kaynakları</h2>
+                    <h2 className="text-xs sm:text-sm font-bold text-ink">Oracle Cloud VPS Donanım & Sistem Kaynakları</h2>
                     <span className="inline-flex items-center gap-1 text-[10px] font-mono px-2 py-0.5 rounded-full bg-ok-soft text-ok-dim font-semibold">
                       <span className="w-1.5 h-1.5 rounded-full bg-ok animate-pulse" />
                       Canlı Telemetri
                     </span>
                   </div>
                   <p className="text-[11px] text-ink-muted mt-0.5">
-                    Sunucu IP: <span className="font-mono font-medium text-ink-soft">167.233.201.31</span> · Uptime: <span className="font-medium text-ink-soft">{data?.serverMetrics?.uptime_text || '10 gün 3 saat'}</span> · Son Ölçüm: {timeAgo(data?.serverMetrics?.updated_at)}
+                    Sunucu IP: <span className="font-mono font-medium text-ink-soft">92.5.30.109</span> · Uptime: <span className="font-medium text-ink-soft">{data?.serverMetrics?.uptime_text || '10 gün 3 saat'}</span> · Son Ölçüm: {timeAgo(data?.serverMetrics?.updated_at)}
                   </p>
                 </div>
 
@@ -7291,7 +7291,7 @@ export function LiveDashboard() {
               {diagnosticLoading ? (
                 <div className="text-center py-12 space-y-3">
                   <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-xs font-semibold text-ink">Hetzner VPS ve WhatsApp hatları canlı test ediliyor...</p>
+                  <p className="text-xs font-semibold text-ink">Oracle Cloud VPS ve WhatsApp hatları canlı test ediliyor...</p>
                   <p className="text-[10px] text-ink-muted">Soket bağlantıları, oturum sağlığı ve senkronizasyon kontrolleri yapılıyor.</p>
                 </div>
               ) : diagnosticData ? (
@@ -7480,7 +7480,7 @@ export function LiveDashboard() {
                 </div>
                 <div>
                   <h3 className="text-xs sm:text-sm font-bold text-ink">Yeni AI Hesabı & Port Bağla</h3>
-                  <p className="text-[11px] text-ink-muted">Hetzner VPS üzerinde bağımsız bir Chrome slotu başlatır</p>
+                  <p className="text-[11px] text-ink-muted">Oracle Cloud VPS üzerinde bağımsız bir Chrome slotu başlatır</p>
                 </div>
               </div>
               <button
@@ -7537,7 +7537,7 @@ export function LiveDashboard() {
               <div className="bg-accent-soft/20 border border-accent/30 rounded-[var(--radius-sm)] p-2.5 space-y-1 text-[11px] text-ink">
                 <div className="font-bold text-accent">Nasıl Çalışır?</div>
                 <ol className="list-decimal pl-4 space-y-0.5 text-ink-soft">
-                  <li><strong>Hetzner'de Başlat</strong> butonuna bastığınızda izole Chrome oturumu ayağa kalkar.</li>
+                  <li><strong>Oracle Cloud'de Başlat</strong> butonuna bastığınızda izole Chrome oturumu ayağa kalkar.</li>
                   <li>Açılan <strong>VNC ekranında</strong> Google hesabınıza (veya Flow stüdyonuza) giriş yapın.</li>
                   <li>Giriş tamamlandığında <strong>Doğrula</strong> butonuna basarak hesabı havuza alın.</li>
                 </ol>
@@ -7557,7 +7557,7 @@ export function LiveDashboard() {
                   className="px-4 py-1.5 rounded-[var(--radius-sm)] bg-accent text-accent-ink font-bold hover:bg-accent-dim shadow transition disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {isProvisioning && <span className="w-3 h-3 border-2 border-accent-ink border-t-transparent rounded-full animate-spin" />}
-                  <span>{isProvisioning ? 'Hetzner Hazırlanıyor...' : 'Hetzner\'de Başlat ve VNC Aç'}</span>
+                  <span>{isProvisioning ? 'Oracle Cloud Hazırlanıyor...' : 'Oracle Cloud\'de Başlat ve VNC Aç'}</span>
                 </button>
               </div>
             </form>
@@ -7577,13 +7577,13 @@ export function LiveDashboard() {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-xs sm:text-sm font-bold text-ink">Hetzner VPS Canlı VNC Masası</h3>
+                  <h3 className="text-xs sm:text-sm font-bold text-ink">Oracle Cloud VPS Canlı VNC Masası</h3>
                   <p className="text-[10px] text-ink-muted">Chrome pencerelerinden Google / Gemini / ChatGPT hesaplarınıza tek tıkla giriş yapın</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 <a
-                  href={data?.ai_engine?.geminiPool?.vncUrl || 'http://167.233.201.31:6080/vnc.html'}
+                  href={data?.ai_engine?.geminiPool?.vncUrl || 'http://92.5.30.109:6080/vnc.html'}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2.5 py-1 text-xs font-semibold rounded bg-surface-raised border border-[var(--color-hairline)] text-ink hover:bg-canvas flex items-center gap-1"
@@ -7606,8 +7606,8 @@ export function LiveDashboard() {
             {/* VNC iframe */}
             <div className="flex-1 bg-black relative">
               <iframe
-                src={data?.ai_engine?.geminiPool?.vncUrl || 'http://167.233.201.31:6080/vnc.html'}
-                title="Hetzner noVNC Desktop"
+                src={data?.ai_engine?.geminiPool?.vncUrl || 'http://92.5.30.109:6080/vnc.html'}
+                title="Oracle Cloud noVNC Desktop"
                 className="w-full h-full border-0"
               />
             </div>
@@ -7711,7 +7711,7 @@ export function LiveDashboard() {
                   className="w-full bg-surface-raised border border-[var(--color-hairline)] rounded-[var(--radius-sm)] p-2 text-ink placeholder:text-ink-muted outline-none focus:border-accent font-mono text-[11px]"
                 />
                 <p className="text-[10px] text-ink-muted">
-                  <strong>İpucu:</strong> "Otomatik Algıla & Bağla" butonuna bastığınızda sistem Hetzner'deki Chrome oturumuna bağlanıp projeyi kendisi bulur veya oluşturur; URL aramanıza gerek yoktur.
+                  <strong>İpucu:</strong> "Otomatik Algıla & Bağla" butonuna bastığınızda sistem Oracle Cloud'deki Chrome oturumuna bağlanıp projeyi kendisi bulur veya oluşturur; URL aramanıza gerek yoktur.
                 </p>
               </div>
 
@@ -7727,7 +7727,7 @@ export function LiveDashboard() {
                   <span>Sıfır VNC Gereksinimi</span>
                 </div>
                 <p className="text-ink-soft">
-                  Kaydettiğiniz an Hetzner'deki izole Chrome sekmesi arka planda doğrudan bu stüdyo projesine yönlendirilir ve anında ortak havuza dahil edilir.
+                  Kaydettiğiniz an Oracle Cloud'deki izole Chrome sekmesi arka planda doğrudan bu stüdyo projesine yönlendirilir ve anında ortak havuza dahil edilir.
                 </p>
               </div>
 
@@ -7766,7 +7766,7 @@ export function LiveDashboard() {
                 </div>
                 <div>
                   <h3 className="text-xs sm:text-sm font-bold text-ink">Tarayıcımdan Oturum / Çerez Aktar</h3>
-                  <p className="text-[11px] text-ink-muted">Hetzner VNC'ye girmeden 1 tıkla Google veya ChatGPT oturumu bağlayın</p>
+                  <p className="text-[11px] text-ink-muted">Oracle Cloud VNC'ye girmeden 1 tıkla Google veya ChatGPT oturumu bağlayın</p>
                 </div>
               </div>
               <button

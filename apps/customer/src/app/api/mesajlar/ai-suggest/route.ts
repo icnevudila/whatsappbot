@@ -197,7 +197,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+  const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/$/, '')
 
   try {
     const timeoutMs = body.force ? 35000 : 7000

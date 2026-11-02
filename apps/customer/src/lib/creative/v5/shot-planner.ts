@@ -103,7 +103,7 @@ export function planShots(
 
   const shot1Action = contracts[0]?.action_description || (profile.preferredUsageContext[0]
     ? profile.preferredUsageContext[0].replace(/\{subject\}/g, subject)
-    : `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively and prominently visible in the foreground engaging with the product or activity.`)
+    : `${hook.visualEventDescription} The canonical product is presented in its pristine commercial setting with elegant lighting and clear brand framing.`)
 
   const shot1: ShotItem = {
     shotNumber: 1,

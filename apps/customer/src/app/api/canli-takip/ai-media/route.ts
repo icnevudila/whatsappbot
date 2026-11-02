@@ -103,7 +103,7 @@ export async function GET() {
       resolvedWorkers = [
         {
           id: 'worker-flow-account-03',
-          host: '167.233.201.31 (Hetzner Dedicated)',
+          host: '92.5.30.109 (Oracle Cloud Always Free)',
           status: activeLeasedJob ? 'busy' : 'online',
           pid: activeLeasedJob ? 'gflow-engine:3461' : 'gflow-engine:standby',
           cpu_percent: activeLeasedJob ? 68 : 2,
@@ -116,7 +116,7 @@ export async function GET() {
         },
         {
           id: 'worker-flow-account-04',
-          host: '167.233.201.31 (Hetzner Dedicated)',
+          host: '92.5.30.109 (Oracle Cloud Always Free)',
           status: 'online',
           pid: 'gflow-engine:standby',
           cpu_percent: 2,

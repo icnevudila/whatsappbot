@@ -37,7 +37,7 @@ export async function GET() {
 
     let aiEngineStatus = null
     try {
-      const aiRes = await fetch('http://167.233.201.31:3456/v1/ai-engine/status', {
+      const aiRes = await fetch('https://choice-harder-inserted-passengers.trycloudflare.com/v1/ai-engine/status', {
         headers: gatewayAuthHeaders(),
         signal: AbortSignal.timeout(4500),
         cache: 'no-store',
@@ -50,8 +50,8 @@ export async function GET() {
             const tFile = v.thumbnailUrl ? v.thumbnailUrl.split('/').pop() : ''
             return {
               ...v,
-              videoUrl: `https://media.167.233.201.31.nip.io/outputs/${encodeURIComponent(vFile)}`,
-              thumbnailUrl: tFile ? `https://media.167.233.201.31.nip.io/outputs/${encodeURIComponent(tFile)}` : null,
+              videoUrl: `https://choice-harder-inserted-passengers.trycloudflare.com/outputs/${encodeURIComponent(vFile)}`,
+              thumbnailUrl: tFile ? `https://choice-harder-inserted-passengers.trycloudflare.com/outputs/${encodeURIComponent(tFile)}` : null,
             }
           })
         }

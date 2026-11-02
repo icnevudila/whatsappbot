@@ -13,7 +13,7 @@ const rawGateway = process.env.OMNISTUDIO_GATEWAY_URL || process.env.AI_GATEWAY_
 const GATEWAY_HOST =
   rawGateway && !rawGateway.includes('127.0.0.1') && !rawGateway.includes('localhost')
     ? rawGateway
-    : 'https://media.167.233.201.31.nip.io'
+    : 'https://choice-harder-inserted-passengers.trycloudflare.com'
 
 /**
  * GET /api/ai-media/outputs/[outputId]
@@ -136,7 +136,7 @@ export async function GET(
         )
       )
 
-      const hosts = Array.from(new Set([GATEWAY_HOST, 'http://167.233.201.31:3456', 'https://media.167.233.201.31.nip.io'].filter(Boolean)))
+      const hosts = Array.from(new Set([GATEWAY_HOST, 'https://choice-harder-inserted-passengers.trycloudflare.com', 'https://choice-harder-inserted-passengers.trycloudflare.com'].filter(Boolean)))
       for (const tName of thumbCandidates) {
         for (const host of hosts) {
           try {
@@ -180,7 +180,7 @@ export async function GET(
       const signed = await access.json()
       const target = new URL(signed.url)
       const gateway = new URL(GATEWAY_HOST)
-      if (target.pathname !== `/outputs/${cleanFileName}` || ![gateway.hostname, '167.233.201.31'].includes(target.hostname)) {
+      if (target.pathname !== `/outputs/${cleanFileName}` || ![gateway.hostname, '92.5.30.109', '167.233.201.31'].includes(target.hostname)) {
         return new NextResponse('Geçersiz medya bağlantısı.', {status: 502})
       }
       mediaUrl = target.toString()

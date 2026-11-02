@@ -42,7 +42,7 @@ async function download(request: Request, {params}: {params: Promise<{creativeId
       return result.error ? null : result.data.signedUrl
     },
     storageOrigin:process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    gatewayOrigin:process.env.OMNISTUDIO_GATEWAY_URL || process.env.AI_GATEWAY_URL || 'https://media.167.233.201.31.nip.io',
+    gatewayOrigin:process.env.OMNISTUDIO_GATEWAY_URL || process.env.AI_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com',
     mediaSigningSecret:process.env.MEDIA_SIGNING_SECRET || process.env.OMNISTUDIO_GATEWAY_TOKEN || '',
     fetch,
   })

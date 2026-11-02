@@ -6,7 +6,7 @@ import { createSupabaseServiceClient } from '@/lib/supabase/service'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const GATEWAY_URL = process.env.AI_GATEWAY_URL || 'http://167.233.201.31:3456'
+const GATEWAY_URL = (process.env.OMNISTUDIO_GATEWAY_URL || process.env.AI_GATEWAY_URL || 'https://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/+$/, '')
 
 export async function GET() {
   try {

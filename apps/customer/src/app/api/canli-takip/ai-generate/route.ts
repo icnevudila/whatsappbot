@@ -40,8 +40,8 @@ Görev: Aşağıda verilen ürün, kampanya veya duyuru için WhatsApp pazarlama
       })
     }
 
-    // Hetzner VPS OmniStudio / ChatGPT mikroservisinden anlık öneri al
-    const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://167.233.201.31:3456').replace(/\/$/, '')
+    // Oracle Cloud VPS OmniStudio / ChatGPT mikroservisinden anlık öneri al
+    const gatewayUrl = (process.env.OMNISTUDIO_GATEWAY_URL || 'http://choice-harder-inserted-passengers.trycloudflare.com').replace(/\/$/, '')
     const gatewayRes = await fetch(`${gatewayUrl}/v1/chat/suggestions`, {
       method: 'POST',
       headers: {
