@@ -96,8 +96,19 @@ async function resolveRawAssetSource(
   },
 ): Promise<ResolvedAsset | null> {
   if (!rawSource || typeof rawSource !== 'string') return null
-  const source = rawSource.trim()
+  let source = rawSource.trim()
   if (!source) return null
+
+  // Otomatik Supabase Proje Host Değişimi (eski kapalı rnkrjmblgcdqlyslbhob -> yeni ilhiuzffapcrleotpfyt)
+  if (source.includes('rnkrjmblgcdqlyslbhob.supabase.co')) {
+    try {
+      const targetHost = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ilhiuzffapcrleotpfyt.supabase.co').host
+      source = source.replace(/rnkrjmblgcdqlyslbhob\.supabase\.co/g, targetHost)
+    } catch {
+      source = source.replace(/rnkrjmblgcdqlyslbhob\.supabase\.co/g, 'ilhiuzffapcrleotpfyt.supabase.co')
+    }
+  }
+
   if (/^\/?(?:brand|logos|outputs)\//.test(source)) {
     try {
       if (decodeURIComponent(source).split(/[\\/]/).some(part => part === '..' || part === '.') || source.includes('\u0000')) return null
