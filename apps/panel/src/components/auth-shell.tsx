@@ -5,7 +5,7 @@ import { Wordmark, BRAND_NAME } from './brand'
 
 /**
  * Mesajify Kurumsal Auth Shell:
- * Sol: Koyu zümrüt/obsidyen marka alanı (Desktop)
+ * Sol: Koyu obsidyen marka alanı (Desktop)
  * Sağ: Yüksek kontrastlı, sade ve lüks giriş alanı
  */
 export function AuthShell({
@@ -14,9 +14,7 @@ export function AuthShell({
     <>
       WhatsApp ile
       <br />
-      <span className="bg-gradient-to-r from-[#25D366] via-[#00A884] to-[#25D366] bg-clip-text text-transparent">
-        satışlarınızı büyütün.
-      </span>
+      <span className="text-white">satışlarınızı büyütün.</span>
     </>
   ),
   asideLead = 'WhatsApp hatlarınızı bağlayın, hedef kitlenizi hazırlayın, kişiselleştirilmiş kampanyalarınızı güvenle gönderin.',
@@ -38,19 +36,11 @@ export function AuthShell({
   return (
     <div className="grid min-h-dvh bg-[#F8FAFC] md:grid-cols-2">
       {/* Sol Hero / Marka Alanı */}
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#07100C] px-10 py-12 text-white md:flex lg:px-14 lg:py-14">
-        {/* Zarif zümrüt ve kobalt radial ışıkları */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#0A0A0A] border-r border-black/[0.08] px-10 py-12 text-white md:flex lg:px-14 lg:py-14">
+        {/* Zarif radyal arka plan ışığı (Monochrome & Premium) */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -left-20 -top-20 size-[420px] rounded-full bg-[rgba(34,197,94,0.12)] blur-[110px]"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute bottom-0 right-0 size-[380px] rounded-full bg-[rgba(47,91,255,0.07)] blur-[100px]"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.03),transparent_70%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.035),transparent_70%)]"
         />
 
         {/* Tek Yetkili Logo (Masaüstü Sol) */}
@@ -63,36 +53,48 @@ export function AuthShell({
             />
           </Link>
 
-          <div className="mt-12 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[12px] font-medium text-white/80 backdrop-blur-sm">
-            <span className="size-2 rounded-full bg-[#25D366] shadow-[0_0_8px_#25D366]" />
+          <div className="mt-12 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[12px] font-medium text-zinc-300">
+            <span className="size-1.5 rounded-full bg-emerald-500" />
             <span>Kurumsal WhatsApp Kampanya Altyapısı</span>
           </div>
 
-          <h2 className="mt-5 max-w-[15ch] text-[clamp(28px,3.5vw,42px)] font-black leading-[1.15] tracking-[-0.035em]">
+          <h2 className="mt-5 max-w-[15ch] text-[clamp(28px,3.5vw,42px)] font-bold leading-[1.15] tracking-[-0.035em] text-white">
             {asideTitle}
           </h2>
-          <p className="mt-5 max-w-[40ch] text-[15px] leading-relaxed text-white/75">{asideLead}</p>
+          <p className="mt-5 max-w-[40ch] text-[15px] leading-relaxed text-zinc-400">{asideLead}</p>
 
           {/* Güven ve Özellik Maddeleri */}
-          <div className="mt-10 space-y-3 border-t border-white/10 pt-8 text-[13px] text-white/85">
-            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-3.5 py-2.5">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#25D366]/20 text-[#25D366] font-bold text-xs">✓</span>
-              <span><strong>Akıllı Hat Yönetimi & Isındırma</strong> — Hat sağlığını koruyan akıllı dağıtım</span>
+          <div className="mt-10 space-y-3 border-t border-white/[0.08] pt-8 text-[13px]">
+            <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-300">
+                <svg viewBox="0 0 16 16" fill="none" className="size-3 stroke-current stroke-2" aria-hidden>
+                  <path d="M3.5 8.5L6.5 11.5L12.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span><strong className="font-semibold text-white">Akıllı Hat Yönetimi & Isındırma</strong><span className="text-zinc-400"> — Hat sağlığını koruyan akıllı dağıtım</span></span>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-3.5 py-2.5">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#25D366]/20 text-[#25D366] font-bold text-xs">✓</span>
-              <span><strong>Yapay Zeka Destekli Kreatif Stüdyo</strong> — Marka kitine özel görsel ve video</span>
+            <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-300">
+                <svg viewBox="0 0 16 16" fill="none" className="size-3 stroke-current stroke-2" aria-hidden>
+                  <path d="M3.5 8.5L6.5 11.5L12.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span><strong className="font-semibold text-white">Yapay Zeka Destekli Kreatif Stüdyo</strong><span className="text-zinc-400"> — Marka kitine özel görsel ve video</span></span>
             </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.02] px-3.5 py-2.5">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#25D366]/20 text-[#25D366] font-bold text-xs">✓</span>
-              <span><strong>Ortak Gelen Kutusu & Canlı İletim</strong> — Anlık yanıt ve müşteri etkileşimi</span>
+            <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5">
+              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-300">
+                <svg viewBox="0 0 16 16" fill="none" className="size-3 stroke-current stroke-2" aria-hidden>
+                  <path d="M3.5 8.5L6.5 11.5L12.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span><strong className="font-semibold text-white">Ortak Gelen Kutusu & Canlı İletim</strong><span className="text-zinc-400"> — Anlık yanıt ve müşteri etkileşimi</span></span>
             </div>
           </div>
         </div>
 
-        <div className="relative z-10 flex items-center justify-between border-t border-white/10 pt-5 text-[12px] font-medium text-white/50">
+        <div className="relative z-10 flex items-center justify-between border-t border-white/[0.08] pt-5 text-[12px] font-medium text-zinc-500">
           <span>{footerLabel}</span>
-          <span className="font-mono text-[11px] text-white/40">app.mesajify.com</span>
+          <span className="font-mono text-[11px] text-zinc-600">app.mesajify.com</span>
         </div>
       </aside>
 

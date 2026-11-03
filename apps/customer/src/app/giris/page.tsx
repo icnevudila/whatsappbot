@@ -16,7 +16,7 @@ export default function LoginPage() {
         <>
           WhatsApp ile
           <br />
-          <span className="bg-gradient-to-r from-[#25D366] via-[#00A884] to-[#25D366] bg-clip-text text-transparent">
+          <span className="text-white">
             satışlarınızı büyütün.
           </span>
         </>
