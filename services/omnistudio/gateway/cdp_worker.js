@@ -534,16 +534,23 @@ async function injectPromptAndSend(cdp, promptText) {
         clickedOnce = true;
         // sendBtn.click() above already activated the control. A second native
         // click can hit the same control after it changes to Stop and abort the reply.
-        await sleep(1000);
-        const verifyRes = await cdp.send('Runtime.evaluate', {
-          expression: `(() => {
-            if (document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"]')) return true;
-            const textarea = document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]');
-            return textarea && (textarea.innerText || textarea.value || '').trim().length === 0;
-          })()`,
-          returnByValue: true
-        });
-        if (verifyRes.result?.value) {
+        let confirmed = false;
+        for (let verifyAttempt = 0; verifyAttempt < 10; verifyAttempt++) {
+          await sleep(500);
+          const verifyRes = await cdp.send('Runtime.evaluate', {
+            expression: `(() => {
+              if (document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="Durdur" i]')) return true;
+              const textarea = document.querySelector('form [contenteditable="true"], form [role="textbox"], form textarea, #prompt-textarea, [data-composer] [contenteditable="true"]');
+              return textarea && (textarea.innerText || textarea.value || '').trim().length === 0;
+            })()`,
+            returnByValue: true
+          });
+          if (verifyRes.result?.value) {
+            confirmed = true;
+            break;
+          }
+        }
+        if (confirmed) {
           submitted = true;
           break;
         }

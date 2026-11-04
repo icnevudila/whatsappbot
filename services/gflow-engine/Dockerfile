@@ -29,9 +29,13 @@ COPY services/gflow-engine/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Install Google Chrome for Playwright 'chrome' channel symmetry
-RUN curl -fsSL https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o /tmp/chrome.deb \
-    && apt-get update && apt-get install -y --no-install-recommends /tmp/chrome.deb \
-    && rm /tmp/chrome.deb && rm -rf /var/lib/apt/lists/*
+RUN if [ "$(dpkg --print-architecture)" = "amd64" ]; then \
+      curl -fsSL https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb -o /tmp/chrome.deb \
+      && apt-get update && apt-get install -y --no-install-recommends /tmp/chrome.deb \
+      && rm /tmp/chrome.deb && rm -rf /var/lib/apt/lists/*; \
+    else \
+      ln -sf /usr/bin/chromium /usr/bin/google-chrome-stable; \
+    fi
 
 # Clone pinned gflow-cli v0.79.1
 RUN git clone --depth 1 --branch v0.79.1 \

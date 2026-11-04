@@ -1,6 +1,8 @@
-const WebSocket = (() => {
-  try { return require('ws'); } catch { return globalThis.WebSocket; }
-})();
+function resolveWebSocket() {
+  try { return require('ws'); } catch {}
+  if (typeof globalThis.WebSocket !== 'undefined') return globalThis.WebSocket;
+  return null;
+}
 
 const FLOW_URL = 'https://flow.google.com/';
 
@@ -101,8 +103,9 @@ function cdpRequest(ws, id, method, params = {}, timeoutMs = 10_000) {
 }
 
 async function connectWebSocket(url, timeoutMs = 8_000) {
-  if (!WebSocket) throw new Error('WebSocket desteği bulunamadı');
-  const ws = new WebSocket(url);
+  const WS = resolveWebSocket();
+  if (!WS) throw new Error('WebSocket desteği bulunamadı');
+  const ws = new WS(url);
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('CDP bağlantı zaman aşımı')), timeoutMs);
     const onOpen = () => {

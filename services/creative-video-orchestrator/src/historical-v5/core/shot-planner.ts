@@ -151,19 +151,19 @@ export function planShots(
   const isContinuous = cameraMode === 'continuous_take'
 
   // Shot 1 Action: Immediate hook in genuine product context (0.0s - 2.2s)
-  let shot1Action = `${hook.visualEventDescription} A real professional person (clear recognizable face, industry-appropriate attire, confident purposeful body language) is actively visible in the foreground engaging with the product.`
+  let shot1Action = `${hook.visualEventDescription} The canonical product is presented in its pristine commercial setting with elegant lighting and clear brand framing.`
   if (isBackpackSprayer) {
-    shot1Action = `Deneyimli tarım çalışanı, sırtında ergonomik askılarla taşınan ${subject} ile güneşli zeytinlikte ağaçlar arasında güvenle adım atar; ergonomik püskürtme borusunu yönlendirerek bitki koruma uygulamasına başlar.`
+    shot1Action = `Ergonomik ${subject} güneşli zeytinlik ve tarım arazisinde doğal sabah ışığında sergilenir; Markanın resmi logosu (Reference Image 1) sahneyle uyumlu, şık bir kurumsal sunumla yer alır.`
   } else if (isManualPressureSprayer) {
-    shot1Action = `The gardener or operator carries the ${subject} by its top ergonomic handle alongside garden beds, with the shoulder strap slung comfortably over one shoulder, holding the lightweight spray lance ready at side. No spraying yet.`
+    shot1Action = `The ${subject} is elegantly presented alongside garden beds in natural morning sunlight; Markanın resmi logosu (Reference Image 1) sahneyle uyumlu, şık bir kurumsal sunumla yer alır.`
   } else if (isBrickOrMasonry) {
-    shot1Action = `Baret ve reflektörlü güvenlik yeleği giyen deneyimli inşaat ustası, dış cephe duvarında harç yatağına düz ve nizami oturan hakiki terracotta ${subject} tuğlasını su terazisiyle kontrol eder. Kanonik fotoğraftaki yüz düzeni ve boşluk sayısı korunur: boşluklar yalnızca iki karşılıklı uç yüzde tek eksende bulunur; üst, alt ve uzun yan yüzeyler dolu ve oluklu kildir. Kamera hareketi yeni bir yüzde delik oluşturmaz.`
+    shot1Action = `Kanonik terracotta ${subject} tuğlası, şantiye ve mimari yapı harç yatağında kusursuz terazide sergilenir. Markanın resmi logosu (Reference Image 1) sahneyle uyumlu, şık bir kurumsal sunumla yer alır. Kanonik fotoğraftaki yüz düzeni ve boşluk sayısı korunur: boşluklar yalnızca iki karşılıklı uç yüzde tek eksende bulunur; üst, alt ve uzun yan yüzeyler dolu ve oluklu kildir. Kamera hareketi yeni bir yüzde delik oluşturmaz.`
   } else if (isCosmeticOrSkincare) {
-    shot1Action = `In front of the bright morning mirror, the user holds the elegant ${subject}, gently unsealing or inspecting the glass dropper bottle with delicate fingertips. No application yet.`
+    shot1Action = `In front of the bright morning mirror, the elegant ${subject} glass dropper bottle rests in pristine lighting.`
   } else if (ontology.offerType === 'food_or_consumable') {
-    shot1Action = `The artisan chef presents the freshly prepared ${subject} onto the rustic serving counter with warm, appetizing motion.`
+    shot1Action = `The freshly prepared ${subject} rests onto the rustic serving counter with warm, appetizing commercial presentation.`
   } else if (ontology.offerType === 'digital_product_or_saas') {
-    shot1Action = `Şık ve rahat giyimli yerel işletme sahibi, aydınlık modern kafe masasında akıllı telefonunda gelen WhatsApp müşteri bildirimini inceler.`
+    shot1Action = `Aydınlık modern ofis masasında akıllı telefonda gelen WhatsApp müşteri bildirimi net biçimde sergilenir.`
   }
 
   const shot1: ShotItem = {
@@ -172,11 +172,11 @@ export function planShots(
     role: 'visual_hook',
     framing: isContinuous
       ? 'Continuous take: wide-medium framing initiating the continuous slow forward push-in route'
-      : (isBrickOrMasonry ? 'Eye-level 3/4 commercial macro glide framing the hero brick resting level on the wall' : 'Front 3/4 low-angle tracking commercial framing facing the subject'),
+      : (isBrickOrMasonry ? 'Eye-level 3/4 commercial macro glide framing the hero brick resting level on the wall' : 'Front 3/4 commercial framing facing the authentic hero product in natural daylight'),
     subjectAction: shot1Action,
     cameraMotion: isContinuous
       ? 'The camera begins a single unbroken slow forward push-in route gliding smoothly toward the active subject'
-      : (isBrickOrMasonry ? 'Smooth commercial tracking camera gliding along the crisp edges and solid grooved front face of the hero brick resting on the wall in morning sun.' : 'Front low-angle camera moving backward ahead of the subject walking forward toward camera, establishing the real environment and human subject before functional action begins.'),
+      : (isBrickOrMasonry ? 'Smooth commercial tracking camera gliding along the crisp edges and solid grooved front face of the hero brick resting on the wall in morning sun.' : 'Smooth commercial tracking camera gliding along the crisp contours and authentic surfaces of the hero product in morning sun.'),
     lightingAndPhysics: 'Natural daylight with soft specular highlights, shallow depth of field (f/1.8)',
   }
 
@@ -186,15 +186,15 @@ export function planShots(
     const foliageDesc = fullContext.match(/(sera|greenhouse)/)
       ? 'crop rows and vibrant green foliage'
       : 'olive tree branches, silver-green leaves and vibrant orchard foliage'
-    shot2Action = `Clear proof of core function: The operator actively directs the spray wand toward ${foliageDesc}; an intense, continuous ultra-fine micronized mist spray coats the leaves with glistening fluid droplets. High-angle tight side view captures the fine aerosol spray mist and leaf surface contact in vivid detail. The ${subject} remains recognizable and firmly worn on the back.`
+    shot2Action = `Clear proof of core function: The spray lance dispenses an intense, continuous ultra-fine micronized mist spray coating the ${foliageDesc} with glistening fluid droplets. High-angle tight macro view captures the fine aerosol spray mist and leaf surface contact in vivid detail without human face depiction. The authentic ${subject} casing, pressure gauge and tank contours remain crisp and recognizable.`
   } else if (isManualPressureSprayer) {
-    shot2Action = `Clear proof of core function: The operator depresses the ergonomic trigger lance, releasing a focused, pressurized fine conical spray mist precisely onto target foliage and flowering shrubs. Tight macro side-profile camera follows the crisp spray pattern and clean nozzle dispersion. The ${subject} cylindrical canister rests steadily nearby.`
+    shot2Action = `Clear proof of core function: The spray lance releases a focused, pressurized fine conical spray mist precisely onto target foliage and flowering shrubs. Tight macro side-profile camera follows the crisp spray pattern and clean nozzle dispersion without human face depiction. The ${subject} cylindrical canister rests steadily nearby.`
   } else if (isBrickOrMasonry) {
-    shot2Action = `Clear proof of core function: Deneyimli inşaat ustası hakiki ${subject} tuğlasını örülmekte olan sağlam dış cephe duvarına nizami yerleştirir ve terazisini kontrol eder; harç ve tuğla birleşimi mimari sağlamlığı kanıtlar. Kesinlikle forklift, plastik sarılı palet veya taşıma aracı yoktur; gerçek duvar örme ustalığı ve yapısal dayanıklılık sergilenir.`
+    shot2Action = `Clear proof of core function: Hakiki ${subject} tuğlası örülmekte olan sağlam dış cephe duvarına nizami oturur; harç ve tuğla birleşimi mimari sağlamlığı ve estetiği kanıtlar. Kesinlikle forklift, plastik sarılı palet veya insan yüzü yoktur; gerçek yapısal dayanıklılık, malzeme kalitesi ve kusursuz terazi sergilenir.`
   } else if (isCosmeticOrSkincare) {
     shot2Action = `Clear proof of core function: The precision glass dropper pipette draws the smooth, translucent fluid and dispenses a single radiant drop onto the skin, gliding smoothly with instant hydrating glow and silky skin absorption. Tight macro beauty camera captures the luminous drop texture and skin glow.`
   } else if (ontology.offerType === 'digital_product_or_saas') {
-    shot2Action = `Clear proof of core function: İşletme sahibi ekranda gelen sipariş ve müşteri mesajını tek tıkla yanıtlar; samimi ve güven dolu bir tebessümle süreci tamamlar. Kesinlikle anlamsız yabancı grafikler veya akrilik masa süsleri yoktur.`
+    shot2Action = `Clear proof of core function: Akıllı telefon arayüzünde gelen müşteri mesajları ve sipariş akışı akıcı biçimde listelenir; temiz, profesyonel SaaS arayüz dinamikleri sergilenir. Kesinlikle yapay insan yüzü veya alakasız nesneler yoktur.`
   } else if (ontology.offerType === 'food_or_consumable') {
     shot2Action = `Clear proof of core function: Tight macro camera captures rich culinary textures, vibrant fresh ingredients, and steam or savory glaze glistening under warm lights.`
   }

@@ -3,8 +3,10 @@
 import { useState, useEffect } from 'react';
 import { MesajifyMark } from './brand/mesajify-mark';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function Navbar() {
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -24,6 +26,8 @@ export function Navbar() {
     { name: 'Çözümler', href: '#cozumler' },
     { name: 'Fiyatlandırma', href: '#fiyatlandirma' },
   ];
+
+  if (pathname === '/' || pathname === '/landing-preview') return null;
 
   return (
     <header

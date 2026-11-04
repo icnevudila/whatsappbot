@@ -220,14 +220,14 @@ services:
       - flow-incidents:/shared/incidents
       # Raw checkpoints must survive worker replacement as well as final outputs.
       - ai-media-workspaces:/shared/jobs
-      - ../services/omnistudio/docker/data/outputs:/shared/gateway_outputs
+      - ${OMNISTUDIO_DATA_DIR:-/home/opc/omnistudio/docker/data}/outputs:/shared/gateway_outputs
     env_file:
       - ../apps/wa-service/.env
     environment:
       NODE_ENV: production
       PORT: '3460'
       GFLOW_ENGINE_URL: 'http://gflow-engine:3461'
-      WORKER_CONTROL_TOKEN: '${WORKER_CONTROL_TOKEN:-}'
+      WORKER_CONTROL_TOKEN: '${WORKER_CONTROL_TOKEN:-omnistudio_control_token_2026}'
       OMNISTUDIO_GATEWAY_URL: 'http://omnistudio-engine:3456'
       SHARED_OUTPUTS_DIR: '/shared/outputs'
       SHARED_INCIDENTS_DIR: '/shared/incidents'
@@ -265,10 +265,11 @@ services:
       # Read-only login sources from the Canlı Takip VNC/CDP slots. The engine
       # copies and verifies a slot under an account lease before replacing a
       # generation profile; it never runs generation directly on these mounts.
-      - ../services/omnistudio/docker/data/profile:/source-profiles/port-9222:ro
-      - ../services/omnistudio/docker/data/profile-2:/source-profiles/port-9223:ro
-      - ../services/omnistudio/docker/data/profile-3:/source-profiles/port-9224:ro
-      - ../services/omnistudio/docker/data/profile-4:/source-profiles/port-9225:ro
+      - ${OMNISTUDIO_DATA_DIR:-/home/opc/omnistudio/docker/data}/profile:/source-profiles/port-9222:ro
+      - ${OMNISTUDIO_DATA_DIR:-/home/opc/omnistudio/docker/data}/profile-2:/source-profiles/port-9223:ro
+      - ${OMNISTUDIO_DATA_DIR:-/home/opc/omnistudio/docker/data}/profile-3:/source-profiles/port-9224:ro
+      - ${OMNISTUDIO_DATA_DIR:-/home/opc/omnistudio/docker/data}/profile-4:/source-profiles/port-9225:ro
+      - ${OMNISTUDIO_DATA_DIR:-/home/opc/omnistudio/docker/data}/profile-flow:/source-profiles/profile-flow:ro
       - flow-outputs:/shared/outputs
       - flow-incidents:/shared/incidents
     shm_size: '1gb'
@@ -283,7 +284,7 @@ services:
       DISPLAY: ':99'
       SUPERVISOR_URL: 'http://omnistudio-engine:3456'
       NODE_ENV: production
-      WORKER_CONTROL_TOKEN: '${WORKER_CONTROL_TOKEN:-}'
+      WORKER_CONTROL_TOKEN: '${WORKER_CONTROL_TOKEN:-omnistudio_control_token_2026}'
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://127.0.0.1:3461/health']
       interval: 30s

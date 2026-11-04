@@ -107,18 +107,14 @@ export class SimpleV5BriefNormalizer {
       cameraMotion = 'tek yönde yavaş, kısa mesafeli ve sarsıntısız kamera yaklaşımı; ürün ve yüzey sabit'
     }
 
-    // 2. One Primary Idea & One Primary Action with Authentic Human Action
+    // 2. One Primary Idea & One Primary Action with Clean Commercial Focus
     let derivedAction = ''
-    if (userIdeaLower.includes('kadın') || userIdeaLower.includes('female') || userIdeaLower.includes('woman')) {
-      if (domainProfile.domain === 'AGRICULTURE_NATURE') {
-        derivedAction = `Doğal açık hava iş kıyafetleri giyen profesyonel kadın tarım çalışanı, ergonomik @HeroProduct akülü sırt pompasını taşırken teleskopik püskürtme borusuyla zeytin ağaçlarının yeşil yapraklarına doğru mikronize ince sisleme uygular.`
-      }
-    } else if (userIdeaLower.includes('zeytin')) {
-      derivedAction = `Doğal açık hava iş kıyafetleri giyen profesyonel tarım çalışanı, ergonomik @HeroProduct akülü sırt pompasını taşırken teleskopik püskürtme borusuyla zeytin ağaçlarının yeşil yapraklarına doğru mikronize ince sisleme uygular.`
+    if (domainProfile.domain === 'AGRICULTURE_NATURE' || userIdeaLower.includes('zeytin')) {
+      derivedAction = `Ergonomik @HeroProduct akülü sırt pompası teleskopik püskürtme borusuyla zeytin ağaçlarının yeşil yapraklarına doğru mikronize ince sisleme uygular; @BrandLogo marka logosu sahneyle uyumlu şık kurumsal biçimde yer alır.`
     } else if (domainProfile.domain === 'CONSTRUCTION_STRUCTURAL' && (userIdeaLower.includes('usta') || userIdeaLower.includes('inşaat') || userIdeaLower.includes('şantiye') || usageStyle)) {
-      derivedAction = `Baret ve reflektörlü güvenlik yeleği giyen deneyimli inşaat ustası, hakiki @HeroProduct pişmiş kil tuğlasını elleriyle kavrayıp inceler ve duvara nizami yerleştirir; malzemenin killi dokusu, delikli yapısı ve geometrik kenarları net biçimde sergilenir.`
+      derivedAction = `Hakiki @HeroProduct pişmiş kil tuğlası şantiye ortamında sağlam mimari yapı duvarında nizami sergilenir; malzemenin killi dokusu, delikli yapısı, geometrik kenarları ve @BrandLogo marka logosu net, şık ve kurumsal biçimde vurgulanır.`
     } else if (domainProfile.domain === 'TECH_DIGITAL' && (userIdeaLower.includes('kafe') || userIdeaLower.includes('whatsapp') || userIdeaLower.includes('sipariş') || userIdeaLower.includes('müşteri'))) {
-      derivedAction = `Şık ve rahat giyimli yerel işletme sahibi, masasında otururken akıllı telefonunda gelen WhatsApp müşteri bildirimini inceler ve güven dolu samimi bir tebessümle tek tıkla yanıtlar.`
+      derivedAction = `Aydınlık modern ofis masasında akıllı telefon ekranında gelen @HeroProduct bildirimleri sergilenir; @BrandLogo marka logosu sahneyle uyumlu şık kurumsal biçimde yer alır.`
     }
 
     const primaryIdea = `${brandName} bünyesindeki ${productName} ürününün referansa sadık tek bir tanıtım anı.`
