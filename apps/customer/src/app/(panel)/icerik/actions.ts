@@ -172,7 +172,7 @@ export async function startCreativeGeneration(
   const authContext = { userId, org, supabase }
   const format = formatFromId(String(draft.formatId ?? 'wa'))
   if (promotionMode(draft.promotionMode) === 'brand' && format.format === 'video') return {error:BRAND_VIDEO_UNAVAILABLE}
-  if (promotionMode(draft.promotionMode) === 'brand' && Array.isArray(draft.referenceImageUrls) && draft.referenceImageUrls.length) {
+  if (draft.imagePromptVersion !== 'BRAND_KIT_V1' && promotionMode(draft.promotionMode) === 'brand' && Array.isArray(draft.referenceImageUrls) && draft.referenceImageUrls.length) {
     return {error:'Marka tanıtımında yalnız işletme logosu kullanılır; ek ürün görseli bağlanmaz.'}
   }
   const kitId = String(draft.brandKitId ?? '').trim() || null
@@ -222,6 +222,7 @@ export async function startCreativeGeneration(
   startOfMonth.setHours(0, 0, 0, 0)
 
   // PARALLEL READS: Collapse all independent DB lookups into a single Promise.all
+  const validProductUuids = productIds.filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
   const tParallelStart = Date.now()
   const [
     existingRes,
@@ -287,14 +288,14 @@ export async function startCreativeGeneration(
           .from('org_products')
           .select('id, name, description, box_contents')
           .eq('org_id', org.id)
-          .in('id', productIds)
+          .in('id', validProductUuids)
       : Promise.resolve({ data: [], error: null }),
     productIds.length > 0
       ? supabase
           .from('org_product_images')
           .select('product_id, public_url, sort_order')
           .eq('org_id', org.id)
-          .in('product_id', productIds)
+          .in('product_id', validProductUuids)
           .order('sort_order', { ascending: true })
       : Promise.resolve({ data: [], error: null }),
     phoneIds.length > 0
@@ -516,20 +517,23 @@ export async function startCreativeGeneration(
   const title = titleFromBrief(String(draft.customHeadline ?? '').trim() || brief)
   const logoSource = String(kitRow?.logo_path || orgLogoPath || '').trim()
   const subjectMode = promotionMode(draft.promotionMode)
+  const compactImage = format.format !== 'video' && draft.imagePromptVersion === 'BRAND_KIT_V1'
+  if (compactImage && !Object.values(asRecord(kitRow?.colors)).some(v => /^#(?:[a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/i.test(v))) return { error: 'Marka kitinde en az bir marka rengi seçin.' }
   // Brand-only is explicit, never inferred from an objective or missing product.
   if (subjectMode === 'brand' || draft.promotionMode === 'offering') {
     const subjectError = promotionPolicyError({ mode: subjectMode, video: format.format === 'video',
       hasLogo: Boolean(logoSource) && draft.useLogo !== false,
-      hasOfferingReference: products.some(product => product.include.image && Boolean(product.imageUrl)),
+      hasOfferingReference: compactImage || products.some(product => product.include.image && Boolean(product.imageUrl)),
       hasOfferingSelection: products.length > 0 || rawProductIds.length > 0 || Boolean(heroProductId),
-      hasBase: Boolean(baseCreativeId) })
+      hasBase: Boolean(baseCreativeId) && !compactImage })
     if (subjectError) return { error: subjectError }
   }
-  if (products.some(product => !product.include.image || !product.imageUrl || product.imageUrl.trim() === logoSource || /^\/?(?:brand|logos)\//i.test(product.imageUrl))) {
+  if (products.some(product => (!compactImage && (!product.include.image || !product.imageUrl)) || (product.imageUrl && (product.imageUrl.trim() === logoSource || /^\/?(?:brand|logos)\//i.test(product.imageUrl))))) {
     return { error: 'Seçilen her ürün için gerçek ürün veya arayüz görseli ekleyin. İşletme logosu ürün referansı yerine kullanılamaz.' }
   }
   const imageAssetGate = requiredImageAssets({
     promotionMode: subjectMode,
+    optionalProductReference: compactImage,
     useLogo: draft.useLogo !== false, hasLogo: Boolean(kitRow?.logo_path || orgLogoPath),
     hasProductReference: products.some((product) => product.include.image && Boolean(product.imageUrl)),
     hasValidBase: Boolean(baseCreativeId),
@@ -573,6 +577,7 @@ export async function startCreativeGeneration(
 
   const tInsertStart = Date.now()
   const snapshot: CreativePayload = {
+    ...(compactImage ? { imagePromptVersion: 'BRAND_KIT_V1' as const } : {}),
     promotionMode: subjectMode,
     offeringKind: offeringKind(draft.offeringKind),
     brief,
@@ -1145,7 +1150,8 @@ export async function quickCreateProduct(
   if (!name) return { error: 'Ürün adı zorunludur.' }
 
   const files = collectImageFiles(formData, 'images')
-  if (!files.length) return { error: 'Ürün referans görseli zorunludur.' }
+  const optionalImage = formData.get('optional_image') === '1'
+  if (!files.length && !optionalImage) return { error: 'Ürün referans görseli zorunludur.' }
   if (files.length > 8) return { error: 'En fazla 8 ürün görseli ekleyin.' }
   for (const file of files) {
     const parsed = await readImageFile(file)
@@ -1203,7 +1209,7 @@ export async function quickCreateProduct(
     }
   }
 
-  if (!images.length) return { error: 'Ürün görseli kaydedilemedi. Görselsiz ürün seçime açılmadı; yeniden yükleyin.' }
+  if (!images.length && (!optionalImage || files.length > 0)) return { error: 'Ürün görseli kaydedilemedi. Görselsiz ürün seçime açılmadı; yeniden yükleyin.' }
   const { error: activateError } = await supabase.from('org_products').update({is_active:true}).eq('id',productId).eq('org_id',org.id)
   if (activateError) return { error: 'Ürün kaydı tamamlanamadı. Görsel yüklemesini tekrar deneyin.' }
 

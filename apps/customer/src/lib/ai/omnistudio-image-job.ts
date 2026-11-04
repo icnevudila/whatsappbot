@@ -89,10 +89,16 @@ export async function readImageJob(job: ImageJobReceipt, tenantId?: string, expe
   // URL. Gateway output aliases must be configured consistently before release.
   let outputUrl: URL
   try {
-    outputUrl = new URL(result.result_url, activeGateway)
-    if (!['http:', 'https:'].includes(outputUrl.protocol) || outputUrl.origin !== new URL(activeGateway).origin || outputUrl.username || outputUrl.password) {
+    const rawOutput = new URL(result.result_url, activeGateway)
+    if (rawOutput.username || rawOutput.password || !['http:', 'https:'].includes(rawOutput.protocol)) {
       throw new Error('UNTRUSTED_OUTPUT_ORIGIN')
     }
+    const isGatewayHost = rawOutput.origin === new URL(activeGateway).origin ||
+      rawOutput.host === '92.5.30.109:3456' || rawOutput.host === '92.5.30.109'
+    if (!isGatewayHost) {
+      throw new Error('UNTRUSTED_OUTPUT_ORIGIN')
+    }
+    outputUrl = new URL(rawOutput.pathname + rawOutput.search, activeGateway)
   } catch { throw new ImageJobReconciliationError(job) }
   const gwToken = (process.env.OMNISTUDIO_GATEWAY_TOKEN || '').trim()
   const fetchHeaders: Record<string, string> = {}

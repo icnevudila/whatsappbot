@@ -15,28 +15,16 @@ export interface StyleModeItem {
 export const STYLE_MODES: readonly StyleModeItem[] = [
   {
     id: 'SMART_CAMPAIGN',
-    label: 'Akıllı Kampanya',
-    description: 'AI marka ve sektöre en uygun reklam hiyerarşisini otomatik seçer.',
+    label: 'Marka & Ürün Tanıtımı',
+    description: 'Logo, marka renkleri ve bilgilerinizle özgün tanıtım. Referans görsel isteğe bağlı.',
     badge: 'Varsayılan',
-    previewUrl: '/style-previews/mesajify_akilli_kampanya.png',
+    previewUrl: '/style-previews/brand-kit-introduction.png',
   },
   {
     id: 'SHOWSTOPPER_CAMPAIGN',
     label: 'Gösterişli Kampanya',
-    description: 'Büyük kabartmalı başlık, zengin katmanlar, ürün odağı ve dikkat çekici CTA.',
-    previewUrl: '/style-previews/mesajify_gosterisli_kampanya.png',
-  },
-  {
-    id: 'REAL_LIFE_CAMPAIGN',
-    label: 'Gerçek Kullanım',
-    description: 'İşletme sahibi veya saha uzmanı ile ürünün gerçek kullanım anı.',
-    previewUrl: '/style-previews/mesajify_gercek_kullanim.png',
-  },
-  {
-    id: 'PREMIUM_SHOWCASE',
-    label: 'Premium Vitrin',
-    description: 'Sinematik ışık, derinlik ve prestijli yüzeylerde minimalist ürün sunumu.',
-    previewUrl: '/style-previews/mesajify_premium_vitrin.png',
+    description: 'Ürün ve teklif odağı, zengin görsel anlatım, güçlü CTA ve iletişim vurgusu.',
+    previewUrl: '/style-previews/brand-kit-campaign.png',
   },
 ] as const
 
@@ -59,24 +47,21 @@ export function styleModeDirective(value: unknown): string {
   let direction = ''
 
   if (mode === 'SHOWSTOPPER_CAMPAIGN') {
-    direction = `Showstopper Grand Commercial Campaign (FIRST-CLASS, HIGH-ENERGY ADVERTISING BILLBOARD):
-- CREATIVE RESET & BOLD ASYMMETRIC COMPOSITION: Do NOT replicate, reuse or decorate an ordinary product catalog photo or simple layout. Completely redesign the visual architecture from scratch with a bold asymmetric composition, heroic camera perspective, dynamic graphic depth layers, and high-energy commercial impact.
-- GIANT ADVERTISING TYPOGRAPHY: Massive, confident commercial headline hierarchy that commands immediate attention and stops social media scrolling.
-- MONUMENTAL PRODUCT HERO PRESENTATION: The product or service is presented with grand, heroic scale, dynamic angle, and monumental depth (occupying 60-70% visual share).
-- DRAMATIC COMMERCIAL LIGHTING & DEPTH: Cinematic lighting, deep dimensional contrast, and rich brand palette accents. Controlled atmospheric lighting, mist, or dynamic rays where commercially impactful.
-- DOMINANT PRIMARY CTA: One massive, high-contrast primary call-to-action button that strongly anchors the conversion focus.
-- 2–4 SUBSTANTIAL, HIGHLY LEGIBLE ACTION CARDS: Meaningful, large, easy-to-read commercial action areas or workflow capability cards embedded as visible design elements of the composition (NOT tiny icon badges).
-  * Mesajify: [Excel Yükle], [Hedef Kitle Seç], [Kampanya Oluştur], [Hemen Gönder] as bold, clearly readable SaaS action cards.
-  * Bofe: [16L Geniş Depo], [Şarjlı Lityum Akü], [Ayarlanabilir Pirinç Nozül] as substantial agricultural capability cards.
-  * Ayvazoğlu: [Toptan Fiyat Teklifi], [Mimari Katalog İste], [Şantiye Adrese Tedarik] as high-impact architectural service areas.
-- NEVER a plain, quiet, minimalist catalog photo, never a brick on a plain pallet, and never an ordinary phone on a desk. Must have the scale, energy, polish, and punch of a world-class advertising agency launch campaign.`
+    direction = `Showstopper Grand Commercial Campaign (HIGH-END EDITORIAL & 3D ARCHITECTURAL POSTER):
+- EDITORIAL CAMPAIGN POSTER ARCHITECTURE (Inspired by Apple, Stripe, and Veriburada):
+  * Upper Canvas (~30-35%): Clean, spacious negative space (crisp white, soft ambient studio gradient, or deep brand tone) featuring the authentic brand logo, a commanding bold modern headline ending with a period (.), and exactly one clean supporting subhead value proposition.
+  * Central Hero (~50%): High-concept 3D / architectural / cinematic environmental staging. The authentic product or software is the focal hero with magnificent depth, dramatic specular highlights, and natural contact shadows.
+  * Lower Canvas (~15-20%): Conversion anchor featuring a sleek rounded pill CTA button with subtle gradient/glass shine and an arrow ([ Hemen Keşfet → ] or [ Ücretsiz Başlayın → ]), accompanied by the clean website domain at the bottom.
+- DRAMATIC COMMERCIAL LIGHTING & DEPTH: Cinematic lighting, deep dimensional contrast, and rich brand palette accents. Controlled atmospheric lighting, mist, or subtle glowing communication arcs where commercially impactful.
+- ZERO VISUAL CLUTTER: Strictly NO boxed 3-badge icon stacks, NO four-card feature grids, NO supermarket discount stickers, NO starburst badges, and NO coupon borders. Commercial power comes from architectural elegance, pristine negative space, and commanding typography.
+- NEVER a plain, quiet, flat catalog photo, never a brick on a plain pallet, and never an ordinary phone on a desk. Must have the scale, energy, polish, and punch of a world-class advertising agency launch campaign.`
   } else if (mode === 'REAL_LIFE_CAMPAIGN') {
-    direction = 'Authentic Real-Life Commercial: Trust and authentic human experience. A natural human subject realistically interacting with the product or software (e.g. business owner or founder managing WhatsApp campaigns on a mobile smartphone or tablet in an authentic cafe/store; agronomist or farmer using the agricultural equipment in an orchard or greenhouse; master mason or contractor checking brickwork on site with safety helmet). Natural ergonomic body posture, credible eye gaze, authentic hand interaction. Natural daylight, realistic depth, zero artificial stock photo feel.'
+    direction = 'Authentic Real-Life Commercial: Trust and authentic human experience. A natural human subject realistically interacting with the product or software (e.g. business owner or founder managing WhatsApp campaigns on a mobile smartphone or tablet in an authentic cafe/store; agronomist or farmer using the agricultural equipment in an orchard or greenhouse; master mason or contractor checking brickwork on site with safety helmet). Natural ergonomic body posture, credible eye gaze, authentic hand interaction. Natural daylight, realistic depth, zero artificial stock photo feel. Clean editorial headline with period, single value subhead, sleek rounded CTA pill.'
   } else if (mode === 'PREMIUM_SHOWCASE') {
     direction = 'Premium Showcase Commercial: Prestige, quiet luxury, and high brand perception. Sophisticated minimalist composition, exquisite typography, refined material surfaces, architectural directional lighting, and generous negative space (breathing room). Elegant, readable CTA. Avoid placing every product on a generic stone or basalt plinth; adapt staging to the product: architectural magazine editorial quality for building materials, refined industrial macro craftsmanship for technical hardware, ultra-thin borderless glass slate in an architectural studio for software.'
   } else {
     // SMART_CAMPAIGN (default)
-    direction = 'Smart Adaptive Commercial Campaign: Conversion and direct sales focused. Clean, highly readable, benefit-driven product presentation. Strong headline, verified benefit, distinct mobile-readable CTA button. For software, clean interface presentation with 1-2 verified workflow pills (original aspect ratio as a flat, front-facing panel or sleek tablet); for hardware, prominent product clarity and clear purchase action. No generic templates, no cluttered badges.'
+    direction = 'Smart Adaptive Commercial Campaign: Conversion and direct sales focused modern campaign poster. Clean negative space, pristine lighting, verified product/offering seamlessly integrated into an authentic environment or clean modern studio. Strong headline, verified benefit, distinct mobile-readable CTA button. For software, clean interface presentation with 1-2 verified workflow pills (original aspect ratio as a flat, front-facing panel or sleek tablet); for hardware, prominent product clarity and clear purchase action. No generic templates, no cluttered badges.'
   }
 
   return `${direction}

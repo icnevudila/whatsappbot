@@ -1,4 +1,5 @@
 import { styleModeDirective } from './style-mode'
+import { buildBrandKitImagePrompt } from './brand-kit-image-prompt'
 import { visualDiversityDirective } from './visual-diversity'
 import { softwarePresentationDirective } from './software-presentation'
 import type { CreativeSnapshot, TemplateFamily } from './types'
@@ -345,12 +346,14 @@ export function deriveVerifiedCampaignData(
 
 const TEMPLATE_FAMILY_INSTRUCTIONS: Record<TemplateFamily, string> = {
   CAMPAIGN_POSTER: [
-    'Design mode: High-impact commercial campaign visual tailored custom-designed for this brand and sector.',
-    '- The physical product is the undisputed hero, occupying 60-70% visual share and physically integrated into the environment with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).',
+    'Design mode: High-end commercial campaign poster (inspired by Apple, Stripe, and Veriburada editorial standards).',
+    '- Balanced campaign poster architecture: ~30-35% clean negative space for authoritative brand logo, headline, and concise value subhead; ~50% central hero visual staging with realistic materials and cinematic lighting; ~15-20% bottom conversion area for sleek CTA pill and domain footer.',
+    '- The physical product or offering is the central focal hero (~45-55% visual share), physically integrated with authentic perspective, natural lighting, and realistic contact shadows (NEVER look like a flat cut-out pasted onto graphics).',
     '- Authentic corporate logo placed with pristine clarity and clean contrast margins.',
-    '- High-contrast Turkish commercial headline with clear mobile readability, styled appropriately for the brand personality.',
-    '- Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers and must always be displayed. Optional extra badges or secondary details must be kept to an absolute minimum (at most 1 concise selling point). Do NOT clutter with repetitive badge packs, fake guarantee seals, or generic footer strips.',
-    '- Avoid repeated Canva template skeletons: allow composition to emerge naturally from product geometry and sector (e.g., dynamic diagonal, large product crop breaking the frame, environmental embedding, or elegant editorial framing).',
+    '- High-contrast Turkish commercial headline ending with a period (.), followed by exactly one crisp value-proposition subhead.',
+    '- Uncompromising commercial sales core: Headline, verified Price/Offer, and CTA are mandatory conversion drivers. When price or offer is supplied, style it with understated luxury/editorial elegance (frosted glass pill badge or clean text in brand accent color—NEVER a neon yellow supermarket discount sticker).',
+    '- Sleek rounded pill CTA button with subtle gradient, clean typography, and an arrow ([ Hemen Keşfet → ]).',
+    '- Avoid repeated Canva template skeletons and cluttered badge packs: strictly NO boxed 3-badge icon stacks, NO four-card feature grids, and NO generic grocery flyer strips.',
   ].join('\n'),
 
   PRODUCT_SHOWCASE: [
@@ -395,7 +398,7 @@ function getSectorArtDirectionHint(
 
   if (/tarım|bahçe|çiftlik|ilaçlama|gübre|tohum|sprayer|tarim/i.test(text)) {
     if (isShowstopper) {
-      return 'Sector art direction (Tarım Showstopper Launch Hero): Monumental agricultural equipment launch poster. Present the authentic Bofe 16L sprayer as a giant, powerful product hero dominating the composition with dramatic cinematic lighting, dynamic mist streams, bold asymmetric layout, high-energy agricultural atmosphere, 2-3 large readable action/benefit cards ([16L Geniş Depo], [Şarjlı Lityum Akü], [Ayarlanabilir Pirinç Nozül]), and a massive primary CTA. Do NOT produce a quiet everyday garden photo.'
+      return 'Sector art direction (Tarım Showstopper Launch Hero): World-class agricultural equipment campaign poster. Present the authentic Bofe 16L sprayer with heroic scale and pristine commercial lighting, set against a sun-drenched modern agricultural backdrop (morning mist catching golden rays, clean orchard depth). Bold editorial headline ending with a period, elegant value subhead, sleek rounded CTA pill ([ Hemen İnceleyin → ]), clean domain footer. Zero cluttered badge packs, zero supermarket flyer clipart.'
     }
     if (styleMode === 'PREMIUM_SHOWCASE' || isStudioOrPodium) {
       return 'Sector art direction (Premium Vitrin & Endüstriyel Tarım): Showcase the equipment as a feat of precision engineering. Place on the requested dark anthracite stone podium / sculpted plinth with dramatic cinematic studio lighting, deep architectural shadows, and refined material reflections. Do NOT force an outdoor orchard, farm field, or foliage background when a premium studio showcase is explicitly requested.'
@@ -404,13 +407,13 @@ function getSectorArtDirectionHint(
   }
   if (/inşaat|yapı|tuğla|klinker|çimento|şantiye|mimari|insaat/i.test(text)) {
     if (isShowstopper) {
-      return 'Sector art direction (İnşaat & Mimari Showstopper): First-class architectural commercial launch billboard. The authentic standard clay brick is featured with PERFECT PHYSICAL REALISM & ACCURATE PROPORTIONS (strict standard rectangular proportions matching reference, exact hole grid, zero elongation, zero vertical stretching, never a surreal giant tower). Presented heroically against a prestigious modern architectural construction project with dramatic golden-hour sunlight and clean architectural shadows. High-impact commercial typography, 3 large readable action areas ([Toptan Fiyat Teklifi], [Mimari Katalog İste], [Şantiye Adrese Tedarik]), and a dominant conversion CTA.'
+      return 'Sector art direction (İnşaat & Mimari Showstopper): Prestigious architectural commercial launch billboard. The authentic standard clay brick is featured with PERFECT PHYSICAL REALISM & ACCURATE PROPORTIONS (strict standard rectangular proportions matching reference, exact hole grid, zero elongation, zero vertical stretching, never a surreal giant tower). Presented heroically against a prestigious modern architectural construction project with dramatic golden-hour sunlight and clean architectural shadows. High-impact commercial typography ending with a period, single value subhead, sleek rounded CTA pill ([ Teklif Alın → ]), clean domain footer. Zero cluttered boxes or flyer badges.'
     }
     return 'Sector art direction (İnşaat & Yapı Malzemeleri): Grounded in authentic construction-site materiality—natural daylight, wooden pallets, raw concrete, and authentic masonry texture. Solid architectural typography; avoid generic red discount-flyer compositions.'
   }
   if (/yazılım|software|saas|uygulama|platform|mesajify/i.test(text)) {
     if (isShowstopper) {
-      return 'Sector art direction (SaaS & WhatsApp Showstopper): Monumental tech launch poster. Feature the clean, verified mobile UI screen floating in a high-energy, dark-emerald dimensional SaaS keynote space with bold graphic layers, dynamic communication arcs, 2-4 large readable action cards ([Excel Yükle], [Hedef Kitle Seç], [Kampanya Oluştur], [Hemen Gönder]), and a massive conversion CTA. Never an ordinary laptop or phone resting quietly on an office desk.'
+      return 'Sector art direction (SaaS & WhatsApp Showstopper): Modern tech launch poster. Feature the clean, verified mobile UI screen floating with subtle 3D translucent frosted-glass depth in a sleek dark-emerald keynote atmosphere, accented by subtle glowing communication arcs and clean negative space. Bold authoritative headline ending with a period, single value subhead, sleek rounded CTA pill with arrow ([ Ücretsiz Başlayın → ]), clean domain footer (mesajify.com). Zero cluttered feature boxes, zero generic office clutter.'
     }
   }
   if (/döner|restoran|yiyecek|gıda|lezzet|menü|kebap|food|doner/i.test(text)) {
@@ -619,7 +622,13 @@ export function buildLegacySimpleCreativePrompt(
     ? [
         'COMMERCIAL CAMPAIGN MANDATE & COMPOSITION CONTRACT:',
         '1. NON-NEGOTIABLE CORE: The Headline, Price/Offer, and CTA are mandatory commercial pillars — they MUST appear legibly on the final creative and must not be omitted.',
-        '2. BESPOKE AGENCY ART DIRECTION (ANTI-CANVA): Integrate the price and CTA naturally with bespoke agency art direction using the Brand Accent color. Avoid generic supermarket flyer stickers, avoid 3-badge vertical/horizontal icon stacks, and avoid bottom footer contact bars. Let the composition emerge dynamically from the product geometry and brand palette.',
+        '2. BESPOKE EDITORIAL ART DIRECTION (ANTI-CANVA): High-end campaign poster grammar inspired by Apple, Stripe, and Veriburada:',
+        '   * Bold, authoritative headline ending with a period (.).',
+        '   * Exactly one crisp supporting value-proposition subhead.',
+        '   * When price or offer is present, style it with understated luxury/editorial elegance (frosted glass pill badge or clean text in brand accent color)—NEVER a neon yellow supermarket sticker or discount starburst.',
+        '   * Sleek rounded pill CTA button with subtle gradient, clean font, and an arrow (→).',
+        '   * Clean website domain centered or aligned at the bottom footer.',
+        '   * Zero visual clutter: Strictly NO boxed 3-badge icon stacks, NO four-card feature grids, and NO supermarket flyer clipart. Let the composition breathe.',
         '3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.',
       ].join('\n')
     : [
@@ -703,6 +712,13 @@ export function buildLegacySimpleCreativePrompt(
   const isShowstopper = snapshot.styleMode === 'SHOWSTOPPER_CAMPAIGN'
 
   const negative = [
+    'no boxed action cards',
+    'no 4-card feature grid',
+    'no supermarket flyer stickers',
+    'no starburst badges',
+    'no crowded badge columns',
+    'no neon price tags',
+    'no cheap coupon borders',
     'no generic Canva template look',
     'no repeated flyer layout',
     ...(isShowstopper ? [
@@ -1006,6 +1022,7 @@ export function buildCreativePrompt(
   prompt: string
   negative: string
 } {
+  if (snapshot.imagePromptVersion === 'BRAND_KIT_V1') return buildBrandKitImagePrompt(snapshot)
   if (snapshot.promotionMode === 'brand' || options?.mode === 'V3') return buildCreativePromptV3(snapshot)
   const compiled = options?.mode === 'OVER_DIRECTED_DESIGNER'
     ? buildOverDirectedCreativePrompt(snapshot, options)

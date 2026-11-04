@@ -36,7 +36,7 @@ export default async function StudioUiFixture({searchParams}:{searchParams:Promi
   const data: WizardBootstrap = {
     org:{id:'00000000-0000-4000-8000-000000000099',name:'Bağımsız Arayüz Test İşletmesi',address:null,about:null,websiteHint:null,
       logoPreview:params.missing==='logo'?null:image, monthlyVideoQuota:0,monthlyVideoUsed:0},
-    kits:[], products:[{id:'fixture-product',name:'Bağımsız test ürününün mobil satır kaydırma ve çok uzun katalog adı kontrolü için kullanılan açıkça etiketli arayüz fixture kaydı',
+    kits:params.missing==='colors'?[]:[{id:'fixture-kit',name:'Test Marka Kiti',tone:'Net',colors:{primary:'#008069',accent:'#C6ED72'},fonts:{heading:'Inter'},samplePreview:image,isDefault:true}], products:[{id:'fixture-product',name:'Bağımsız test ürününün mobil satır kaydırma ve çok uzun katalog adı kontrolü için kullanılan açıkça etiketli arayüz fixture kaydı',
       description:'Bu kayıt gerçek katalog ürünü değildir. Yalnız form ve mobil yerleşim testi.',boxContents:null,
       images:params.missing==='product'?[]:[{id:'fixture-image',url:image}]}],
     phones:[],socials:[],library:[],imageAiEnabled:false,canManage:true,

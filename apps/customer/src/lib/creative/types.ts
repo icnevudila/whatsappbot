@@ -134,6 +134,7 @@ export type CreativeSnapshotProduct = {
 }
 
 export type CreativeSnapshot = {
+  imagePromptVersion?: 'BRAND_KIT_V1'
   promotionMode?: import('./promotion-policy').PromotionMode
   offeringKind?: import('./promotion-policy').OfferingKind
   creativeDirectorVersion?: 'V3'

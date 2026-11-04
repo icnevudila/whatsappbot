@@ -266,7 +266,8 @@ export function CreativeStudioV2({
     ? 'SELECTED'
     : (!rawProductImagePath ? 'INVALID' : (!productImageUrl ? 'INVALID' : 'READY'))
   const hasProduct = productPreflightState === 'READY' && productImageUrl !== canonicalLogoUrl && !/^\/?(?:brand|logos)\//i.test(rawProductImagePath)
-  const allAssetsReady = hasLogo && (brandOnly ? mediaType === 'IMAGE' : hasProduct)
+  const hasBrandColors = Object.values(defaultKit?.colors || {}).some(v => /^#(?:[a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/i.test(v))
+  const allAssetsReady = hasLogo && (mediaType === 'IMAGE' ? hasBrandColors && (brandOnly || Boolean(selectedProduct)) : !brandOnly && hasProduct)
 
   // Quota status
   const quotaUsed = data.org.monthlyVideoUsed ?? 0
@@ -305,7 +306,7 @@ export function CreativeStudioV2({
         setOfferingKind(parseOfferingKind(parsed.offeringKind))
         if (parsed.promotionMode === 'brand') setHeroProductId('')
         setObjective(adapted.objective)
-        setStyleMode(normalizeStyleMode(adapted.styleMode))
+        setStyleMode(normalizeStyleMode(adapted.styleMode) === 'SHOWSTOPPER_CAMPAIGN' ? 'SHOWSTOPPER_CAMPAIGN' : 'SMART_CAMPAIGN')
         setStylePreset(adapted.stylePreset)
         setCampaignDetail(adapted.campaignDetail)
         if (adapted.formatId !== 'STORY_9_16') setImageFormat(adapted.formatId)
@@ -488,7 +489,7 @@ export function CreativeStudioV2({
       const suggestedScene = [plan.scene?.environment, plan.scene?.lighting, plan.scene?.composition]
         .filter(Boolean)
         .join('. ')
-      if (suggestedScene && copyEditsRef.current.scene === editsAtRequest.scene && (forceRefresh || !copyDirtyRef.current.scene)) {
+      if (mediaType === 'VIDEO' && suggestedScene && copyEditsRef.current.scene === editsAtRequest.scene && (forceRefresh || !copyDirtyRef.current.scene)) {
         setVisualScenePrompt(suggestedScene)
         if (forceRefresh) copyDirtyRef.current.scene = false
         if (forceRefresh) setScenePromptDirty(false)
@@ -537,7 +538,7 @@ export function CreativeStudioV2({
     if (mediaType === 'VIDEO' && !spokenVoiceover && !voiceoverDirty) {
       setSpokenVoiceover(local.voiceover)
     }
-    if (!visualScenePrompt && !scenePromptDirty) {
+    if (mediaType === 'VIDEO' && !visualScenePrompt && !scenePromptDirty) {
       setVisualScenePrompt(local.scenePrompt)
     }
 
@@ -648,6 +649,7 @@ export function CreativeStudioV2({
       try {
         const payloadDraft = {
           version: 2,
+          imagePromptVersion: 'BRAND_KIT_V1',
           promotionMode, offeringKind,
           requestKey: '',
           generationType: !brandOnly && initialDerivedCreativeId ? 'derived' : 'new',
@@ -689,7 +691,7 @@ export function CreativeStudioV2({
           creativePlan,
           qualityMode,
           instruction: visualScenePrompt.trim() || undefined,
-          customText: visualScenePrompt.trim() || undefined,
+          customText: undefined,
           templateFamily,
           textDensity,
           sector: sector.trim() || undefined,
@@ -1240,7 +1242,7 @@ export function CreativeStudioV2({
                 <div className="flex flex-col gap-2 pt-2 border-t border-hairline sm:flex-row sm:items-center sm:justify-between">
                   {!allAssetsReady ? (
                     <p className="text-[11.5px] font-medium text-amber-700 bg-amber-50 rounded-lg p-2 border border-amber-200">
-                      {brandOnly ? (mediaType === 'VIDEO' ? BRAND_VIDEO_UNAVAILABLE : 'Marka tanıtımı için işletme logosunu ekleyin.') : !hasLogo && !hasProduct
+                      {mediaType === 'IMAGE' && !hasBrandColors ? 'Devam etmek için marka kitine marka renklerini ekleyin.' : brandOnly ? (mediaType === 'VIDEO' ? BRAND_VIDEO_UNAVAILABLE : 'Marka tanıtımı için logo ve marka renklerini ekleyin.') : !hasLogo && !hasProduct
                         ? 'Devam etmek için önce işletme logonuzu ve en az bir ürününüzü ekleyin.'
                         : !hasLogo
                           ? 'Devam etmek için Ayarlar > Marka Kiti sayfasından işletme logonuzu ekleyin.'
@@ -1775,7 +1777,7 @@ export function CreativeStudioV2({
 
                 {!allAssetsReady && (
                   <Notice tone="danger">
-                    {brandOnly ? (mediaType === 'VIDEO' ? BRAND_VIDEO_UNAVAILABLE : 'Marka tanıtımı için işletme logosu hazır olmalıdır.') : 'İşletme logosu ve gerçek ürün, arayüz veya hizmet görseli hazır olmalıdır.'}
+                    {brandOnly ? (mediaType === 'VIDEO' ? BRAND_VIDEO_UNAVAILABLE : 'Marka tanıtımı için logo ve marka renkleri hazır olmalıdır.') : 'Logo, marka renkleri ve tanıtılacak ürün/hizmet bilgileri hazır olmalıdır. Görsel üretiminde referans isteğe bağlıdır.'}
                   </Notice>
                 )}
 
@@ -1802,6 +1804,7 @@ export function CreativeStudioV2({
       {/* Add Product Modal */}
       <AddProductModal
         open={addProductOpen}
+        optionalImage={mediaType === 'IMAGE'}
         onClose={() => setAddProductOpen(false)}
         onSuccess={(product: ProductCard) => {
           resetProductCopy()

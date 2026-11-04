@@ -669,12 +669,13 @@ export async function processCreativeGeneration(
     const expectedLogo = Boolean(shouldIncludeLogo && expectedLogoPath)
     const identityGate = requiredImageAssets({ useLogo: shouldIncludeLogo, hasLogo: expectedLogo,
       hasProductReference: expectedProducts.length > 0, hasValidBase: expectedBase,
-      promotionMode: snapshot.promotionMode === 'brand' ? 'brand' : 'offering' })
+      promotionMode: snapshot.promotionMode === 'brand' ? 'brand' : 'offering',
+      optionalProductReference: snapshot.imagePromptVersion === 'BRAND_KIT_V1' && creative.format !== 'video' && snapshot.formatId !== 'reels_video' })
     if (!identityGate.ready) throw new Error(`${identityGate.code}: ${identityGate.message}`)
     if (snapshot.promotionMode === 'brand') {
       const subjectError = promotionPolicyError({mode:'brand',video:creative.format === 'video' || snapshot.formatId === 'reels_video',
         hasLogo:expectedLogo,hasOfferingReference:false,hasOfferingSelection:snapshot.products.length > 0,
-        hasBase:expectedBase || Boolean(snapshot.referenceImageUrls?.length)})
+        hasBase:snapshot.imagePromptVersion === 'BRAND_KIT_V1' ? false : expectedBase || Boolean(snapshot.referenceImageUrls?.length)})
       if (subjectError) throw new Error(subjectError)
     }
     const expectedRefUrls = Array.isArray(snapshot.referenceImageUrls) ? snapshot.referenceImageUrls : []
@@ -806,7 +807,9 @@ export async function processCreativeGeneration(
 
     const isSpecialV3Mode = snapshot.promotionMode === 'brand' || snapshot.offeringKind === 'software' || snapshot.offeringKind === 'service'
 
-    const prompt = isSpecialV3Mode
+    const prompt = snapshot.imagePromptVersion === 'BRAND_KIT_V1' && creative.format !== 'video' && snapshot.formatId !== 'reels_video'
+      ? buildCreativePrompt(snapshot).prompt
+      : isSpecialV3Mode
       ? buildCreativePromptV3(snapshot).prompt
       : creative.template === 'ai_send' && payload.quickSendPrompt
         ? payload.quickSendPrompt

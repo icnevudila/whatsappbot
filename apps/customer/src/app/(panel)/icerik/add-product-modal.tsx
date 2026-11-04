@@ -11,10 +11,12 @@ export function AddProductModal({
   open,
   onClose,
   onSuccess,
+  optionalImage = false,
 }: {
   open: boolean
   onClose: () => void
   onSuccess: (product: ProductCard) => void
+  optionalImage?: boolean
 }) {
   const titleId = useId()
   const toast = useToast()
@@ -65,11 +67,12 @@ export function AddProductModal({
       setError('Ürün adı gereklidir.')
       return
     }
-    if (!selectedFile) { setError('Ürün referans görseli zorunludur.'); return }
+    if (!selectedFile && !optionalImage) { setError('Ürün referans görseli zorunludur.'); return }
 
     setError(null)
     const formData = new FormData()
     formData.set('name', name.trim())
+    if (optionalImage) formData.set('optional_image', '1')
     if (description.trim()) formData.set('description', description.trim())
     if (boxContents.trim()) formData.set('box_contents', boxContents.trim())
     if (selectedFile) {
@@ -162,7 +165,7 @@ export function AddProductModal({
             />
           </Field>
 
-          <Field label="Ürün görseli" hint="PNG, JPG veya WEBP (en fazla 5 MB). Kopyalanmış ekran görüntüsünü buraya yapıştırabilirsiniz.">
+          <Field label={optionalImage ? 'Ürün görseli (isteğe bağlı)' : 'Ürün görseli'} hint="PNG, JPG veya WEBP (en fazla 5 MB). Kopyalanmış ekran görüntüsünü buraya yapıştırabilirsiniz.">
             {filePreview ? (
               <div className="flex items-center gap-3 rounded-md border border-hairline bg-canvas p-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
