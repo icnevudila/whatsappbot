@@ -11,7 +11,7 @@ const AUTH_HATA_NOTICES: Record<string, ReactNode> = {
   uye: (
     <>
       Hesabınız henüz bir işletmeye atanmamış. Erişim için{' '}
-      <a href={contactMailto()} className="underline underline-offset-2 font-medium">
+      <a href={contactMailto()} className="underline underline-offset-2 font-medium text-[#008069]">
         iletişime geçin
       </a>
       .
@@ -36,9 +36,9 @@ export function AuthForm() {
 
       {hataNotice ? <Notice tone="danger">{hataNotice}</Notice> : null}
 
-      {/* E-posta */}
+      {/* E-posta Adresi */}
       <div>
-        <label htmlFor="panel-email" className="mb-1.5 block text-[13px] font-semibold text-[#374151]">
+        <label htmlFor="auth-email" className="mb-1.5 block text-[13px] font-semibold text-[#374151]">
           E-posta Adresi
         </label>
         <div className="relative">
@@ -49,13 +49,13 @@ export function AuthForm() {
             </svg>
           </span>
           <input
-            id="panel-email"
+            id="auth-email"
             name="email"
             type="email"
             autoComplete="email"
             required
             placeholder="ornek@sirketiniz.com"
-            className="h-11 w-full rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] pl-10 pr-3.5 text-[14px] text-[#0A0A0A] placeholder:text-[#9CA3AF] transition-all duration-150 focus:border-[#0A0A0A] focus:bg-white focus:outline-none focus:ring-4 focus:ring-black/[0.04]"
+            className="h-11 w-full rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] pl-10 pr-3.5 text-[14px] text-[#0A0A0A] placeholder:text-[#9CA3AF] transition-all duration-150 focus:border-[#008069] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#008069]/10"
           />
         </div>
       </div>
@@ -63,12 +63,12 @@ export function AuthForm() {
       {/* Şifre */}
       <div>
         <div className="mb-1.5 flex items-center justify-between">
-          <label htmlFor="panel-password" className="text-[13px] font-semibold text-[#374151]">
+          <label htmlFor="auth-password" className="text-[13px] font-semibold text-[#374151]">
             Şifre
           </label>
           <a
             href="/sifremi-unuttum"
-            className="text-[12.5px] font-medium text-[#6B7280] transition-colors hover:text-[#0A0A0A]"
+            className="text-[12.5px] font-medium text-[#6B7280] transition-colors hover:text-[#008069]"
           >
             Şifremi unuttum
           </a>
@@ -84,19 +84,19 @@ export function AuthForm() {
             </svg>
           </span>
           <input
-            id="panel-password"
+            id="auth-password"
             name="password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             required
             minLength={8}
             placeholder="••••••••"
-            className="h-11 w-full rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] pl-10 pr-10 text-[14px] text-[#0A0A0A] placeholder:text-[#9CA3AF] transition-all duration-150 focus:border-[#0A0A0A] focus:bg-white focus:outline-none focus:ring-4 focus:ring-black/[0.04]"
+            className="h-11 w-full rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] pl-10 pr-10 text-[14px] text-[#0A0A0A] placeholder:text-[#9CA3AF] transition-all duration-150 focus:border-[#008069] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#008069]/10"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#9CA3AF] transition-colors hover:text-[#0A0A0A]"
+            className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#9CA3AF] transition-colors hover:text-[#008069]"
             aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
           >
             {showPassword ? (
@@ -125,12 +125,12 @@ export function AuthForm() {
       {state?.error ? <Notice tone="danger">{state.error}</Notice> : null}
       {state?.ok ? <Notice tone="accent">{state.ok}</Notice> : null}
 
-      {/* Giriş Yap Butonu */}
+      {/* Giriş Yap Butonu — Sitenin kurumsal WhatsApp yeşili (#008069) */}
       <div className="pt-1">
         <button
           type="submit"
           disabled={pending}
-          className="group relative flex h-11 w-full items-center justify-center gap-2 rounded-[12px] bg-[#0A0A0A] px-5 text-[14.5px] font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#1F2937] hover:shadow-md active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          className="group relative flex h-11 w-full items-center justify-center gap-2 rounded-[12px] bg-[#008069] px-5 text-[14.5px] font-semibold text-white shadow-sm transition-all duration-200 hover:bg-[#00a884] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? (
             <>
@@ -150,7 +150,7 @@ export function AuthForm() {
         Hesabınız yok mu?{' '}
         <a
           href={contactMailto()}
-          className="font-semibold text-[#0A0A0A] transition-colors hover:underline underline-offset-2"
+          className="font-semibold text-[#008069] transition-colors hover:underline underline-offset-2"
         >
           İletişime geçin
         </a>

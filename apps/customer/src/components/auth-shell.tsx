@@ -25,15 +25,15 @@ export function AuthShell({
 }) {
   return (
     <div className="grid min-h-dvh bg-[#F8FAFC] md:grid-cols-2">
-      {/* Sol Hero / Marka Alanı (Sadece Desktop) */}
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-[#0A0A0A] border-r border-black/[0.08] px-10 py-12 text-white md:flex lg:px-14 lg:py-14">
-        {/* Zarif radyal arka plan ışığı (Monochrome & Premium) */}
+      {/* Sol Hero / Marka Alanı (Sadece Desktop) — Sitenin kurumsal WhatsApp yeşili (#008069) */}
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-b from-[#008069] to-[#005c4b] px-10 py-12 text-white md:flex lg:px-14 lg:py-14">
+        {/* Zarif hafif aydınlatma */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.035),transparent_70%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.08),transparent_70%)]"
         />
 
-        {/* Üst: Tek Yetkili Logo (Beyaz) */}
+        {/* Üst: Logo ve Başlık (Gereksiz rozet ve kartlar temizlendi) */}
         <div className="relative z-10">
           <Link href="/" className="inline-flex items-center transition-opacity hover:opacity-90">
             <img
@@ -43,66 +43,32 @@ export function AuthShell({
             />
           </Link>
 
-          {/* Canlı Sistem Rozeti */}
-          <div className="mt-12 inline-flex items-center gap-2 rounded-full border border-white/[0.08] bg-white/[0.03] px-3 py-1 text-[12px] font-medium text-zinc-300">
-            <span className="size-1.5 rounded-full bg-emerald-500" />
-            <span>Kurumsal WhatsApp Kampanya Altyapısı</span>
-          </div>
-
-          <h2 className="mt-5 max-w-[15ch] text-[clamp(28px,3.5vw,42px)] font-bold leading-[1.15] tracking-[-0.035em] text-white">
+          <h2 className="mt-12 max-w-[15ch] text-[clamp(28px,3.5vw,42px)] font-bold leading-[1.15] tracking-[-0.035em] text-white">
             {asideTitle}
           </h2>
-          <p className="mt-5 max-w-[40ch] text-[15px] leading-relaxed text-zinc-400">{asideLead}</p>
-
-          {/* Özellik ve Güven Kartları */}
-          <div className="mt-10 space-y-3 border-t border-white/[0.08] pt-8 text-[13px]">
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-300">
-                <svg viewBox="0 0 16 16" fill="none" className="size-3 stroke-current stroke-2" aria-hidden>
-                  <path d="M3.5 8.5L6.5 11.5L12.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span><strong className="font-semibold text-white">Akıllı Hat Yönetimi & Isındırma</strong><span className="text-zinc-400"> — Hat sağlığını koruyan akıllı dağıtım</span></span>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-300">
-                <svg viewBox="0 0 16 16" fill="none" className="size-3 stroke-current stroke-2" aria-hidden>
-                  <path d="M3.5 8.5L6.5 11.5L12.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span><strong className="font-semibold text-white">Yapay Zeka Destekli Kreatif Stüdyo</strong><span className="text-zinc-400"> — Marka kitine özel görsel & video</span></span>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3.5 py-2.5">
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-zinc-300">
-                <svg viewBox="0 0 16 16" fill="none" className="size-3 stroke-current stroke-2" aria-hidden>
-                  <path d="M3.5 8.5L6.5 11.5L12.5 4.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </span>
-              <span><strong className="font-semibold text-white">Ortak Gelen Kutusu & Canlı İletim</strong><span className="text-zinc-400"> — Anlık yanıt ve müşteri etkileşimi</span></span>
-            </div>
-          </div>
+          <p className="mt-4 max-w-[42ch] text-[15px] leading-relaxed text-white/80">{asideLead}</p>
         </div>
 
         {/* Alt Bilgi */}
-        <div className="relative z-10 flex items-center justify-between border-t border-white/[0.08] pt-5 text-[12px] font-medium text-zinc-500">
+        <div className="relative z-10 flex items-center justify-between border-t border-white/15 pt-5 text-[12px] font-medium text-white/70">
           <span>{footerLabel}</span>
-          <span className="font-mono text-[11px] text-zinc-600">app.mesajify.com</span>
+          <span className="font-mono text-[11px] text-white/60">app.mesajify.com</span>
         </div>
       </aside>
 
       {/* Sağ Form Alanı */}
       <main className="relative flex min-h-dvh flex-col justify-between px-5 py-6 sm:px-8 md:px-10 lg:px-14">
-        {/* Mobil Header: Tek yetkili logo (Masaüstünde sol aside'da olduğu için burada gizlenir) */}
+        {/* Mobil Header */}
         <header className="flex items-center justify-between md:hidden">
           <Link href="/" className="inline-flex items-center">
             <Wordmark className="h-7 w-auto" />
           </Link>
-          <span className="rounded-full border border-black/[0.08] bg-white px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">
+          <span className="rounded-full border border-[#008069]/20 bg-[#008069]/5 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#008069]">
             Panel Girişi
           </span>
         </header>
 
-        {/* Form Alanı (Masaüstünde ikinci logo YOKTUR; doğrudan form gelir) */}
+        {/* Form Alanı */}
         <div className="flex flex-1 items-center justify-center py-6 sm:py-10">
           <div className="w-full max-w-[420px]">
             <div className="rounded-[24px] border border-black/[0.08] bg-white p-7 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.05),0_1px_2px_rgba(0,0,0,0.03)] sm:p-9">
@@ -111,11 +77,11 @@ export function AuthShell({
 
             {/* Alt Menü Linkleri */}
             <div className="mt-6 flex justify-center items-center gap-5 text-[12px] text-[#6B7280]">
-              <Link href="/kvkk" className="transition-colors hover:text-[#0A0A0A]">
+              <Link href="/kvkk" className="transition-colors hover:text-[#008069]">
                 {privacyLabel}
               </Link>
               <span className="text-black/20">·</span>
-              <Link href="/kosullar" className="transition-colors hover:text-[#0A0A0A]">
+              <Link href="/kosullar" className="transition-colors hover:text-[#008069]">
                 {termsLabel}
               </Link>
             </div>
