@@ -23,7 +23,7 @@ export const STYLE_MODES: readonly StyleModeItem[] = [
   {
     id: 'SHOWSTOPPER_CAMPAIGN',
     label: 'Gösterişli Kampanya',
-    description: 'Ürün ve teklif odağı, zengin görsel anlatım, güçlü CTA ve iletişim vurgusu.',
+    description: 'Cesur kampanya tipografisi, dinamik ürün sunumu, teklif vurguları ve güçlü aksiyon alanları.',
     previewUrl: '/style-previews/brand-kit-campaign.png',
   },
 ] as const

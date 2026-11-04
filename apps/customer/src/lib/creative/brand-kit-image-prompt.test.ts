@@ -23,6 +23,10 @@ test('campaign emphasizes actions and retains offering price, promotion and deta
   const product={id:'p',name:'Pompa',description:'10 litre',boxContents:'Lans',imageUrl:null,price:'999 TL',oldPrice:'1200 TL',promo:'Sezon fırsatı',extra:'Bilgi alın',include:{name:true,image:true,description:true,boxContents:true,price:true,promo:true}}
   const result=buildBrandKitImagePrompt({...sample,promotionMode:'offering',styleMode:'SHOWSTOPPER_CAMPAIGN',products:[product]})
   for(const text of ['product campaign','CTA hierarchy','999 TL','1200 TL','Sezon fırsatı','10 litre','Lans','Bilgi alın']) assert.ok(result.prompt.includes(text),text)
+  assert.match(result.prompt,/energetic retail campaign/)
+  assert.match(result.prompt,/dimensional\/extruded lettering/)
+  assert.match(result.prompt,/Never add fake discount badges/)
+  assert.doesNotMatch(result.prompt,/No default desk\/coffee\/plant/)
   assert.equal(requiredImageAssets({useLogo:true,hasLogo:true,hasProductReference:false,hasValidBase:false,optionalProductReference:true}).ready,true)
   assert.equal(requiredImageAssets({useLogo:true,hasLogo:false,hasProductReference:false,hasValidBase:false,optionalProductReference:true}).ready,false)
 })
@@ -35,4 +39,10 @@ test('the production compiler selects the compact brief even when old director m
   assert.deepEqual(compiled,buildBrandKitImagePrompt(sample))
   assert.match(compiled.prompt,/Logo swapping must NOT/)
   assert.doesNotMatch(compiled.prompt,/Upper Canvas|Central Hero|SCENE & COLLABORATION/)
+})
+test('identical brief and headline are sent only once without dropping distinct copy',()=>{
+  const same=buildBrandKitImagePrompt({...sample,brief:sample.customHeadline!}).prompt
+  assert.equal(same.split(sample.customHeadline!).length-1,1)
+  const different=buildBrandKitImagePrompt({...sample,brief:'Yeni sezon ürünleri'}).prompt
+  assert.ok(different.includes('Yeni sezon ürünleri'))
 })

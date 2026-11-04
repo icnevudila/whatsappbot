@@ -33,3 +33,21 @@ Latest Veri Burada depicts city selection becoming rows of businesses, with the 
 
 Examples are provider/compiled-prompt tests with recorded inputs, not new customer-library records. No production deployment or video generation was performed for this change. Multiple same-brand variations, user acceptance, and live wizard-to-library behavior remain separate acceptance checks.
 
+## Campaign direction correction after user feedback
+
+The user rejected the restrained product-poster interpretation of showstopper. Research references were visually inspected, including:
+
+- [KaBuM Black Friday](https://www.behance.net/gallery/93912591/Black-Friday-KaBuM/modules/542624541): dimensional campaign lettering interacting with product layers.
+- [Jafar Ekbal product campaigns](https://dribbble.com/shots/26458694-Social-Media-Post-Design): contrasting type treatments, offer badges, feature/action zones and energetic product staging.
+- [Product Social Media Post Design](https://www.behance.net/gallery/211318339/Product-Social-Media-Post-Design): explicit product/offer/CTA hierarchy.
+
+Campaign compilation now has its own energetic retail art direction, while introduction retains the brand-world direction. 3D, controlled glow, overlap and offer/feature callouts are allowed for campaigns. No price, discount, deadline or contact is invented when it was not supplied. A fixed top-headline/center-product/bottom-pill scaffold is explicitly avoided.
+
+23 relevant tests and customer production build passed after this correction. A first live test (job_5ddd4551cc584c03) failed at chat navigation before reference attachment or provider wait; its evidence is retained under `.codex_runtime/bofe-showstopper-retail-v2`. One replacement attempt was submitted after checking the terminal failure, null reference receipt, null provider wait and current healthy/idle engine. Its result must be inspected separately before claiming visual acceptance.
+
+
+The replacement job job_90934b86b5f7757c completed with two confirmed physical references and a verified 1122x1402 PNG. It demonstrated dimensional type and feature callouts but repeated the headline. Duplicate brief/headline content is now deduplicated before serialization; distinct brief copy remains preserved, with a regression test.
+
+A subsequent real variation, job_b3d475f334fbb29d, requested the pump on the left and type/features on the right. It completed with two confirmed references at 1122x1402. Visual inspection confirmed the requested left-product/right-features composition, a single headline, the logo and actual brand colors, supplied feature copy, and CTA; no price or discount was invented. This demonstrates response to one explicit composition instruction, not a guarantee that arbitrary repeated generations always differ. The generated scene and product are not pixel-identical to the reference photograph. Evidence is in .codex_runtime/bofe-showstopper-retail-v3; the desktop file is 05_Bofe_Gosterisli_Kampanya_Yeni_Yerlesim.png.
+
+The final prompt/receipt/variation suite contains 24 passing tests. These outputs remain prompt/provider examples, not deployed wizard-to-library tests. User acceptance of the revised visual style is still distinct from technical completion.
