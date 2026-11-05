@@ -56,7 +56,10 @@ export const DENSITY_HINT: Record<string, string> = {
   detailed: 'Text density guidance: Headline, core offer, and concise contact details. Never fill the image with paragraphs.',
 }
 
-export function formatUserSceneInstruction(instruction?: string | null): string | null {
+export function formatUserSceneInstruction(
+  instruction?: string | null,
+  isRevision?: boolean,
+): string | null {
   if (!instruction || !instruction.trim()) return null
   const trimmed = instruction.trim()
 
@@ -76,7 +79,14 @@ export function formatUserSceneInstruction(instruction?: string | null): string 
 
   const parts: string[] = []
   if (cleanInstruction) {
-    parts.push(`USER SCENE ART DIRECTION (Environmental staging, camera framing, lighting and models ONLY): "${cleanInstruction}". STRICT COPY SEPARATION RULE: This scene direction must ONLY be used to stage the physical environment, models, and camera. NEVER print, render, or transcribe this scene description text anywhere on the visual image. Advertising copy is governed strictly by the Verified Commercial Core below.`)
+    if (isRevision) {
+      parts.push(`USER REVISION REQUEST: "${cleanInstruction}".
+- If this specifies typography, headline, 3-feature highlights, offer, or button changes, execute those text modifications cleanly and legibly.
+- If this specifies staging, lighting, or background changes, adapt the environment accordingly while keeping brand identity intact.
+- Never render user instructional phrasing literally as decorative text.`)
+    } else {
+      parts.push(`USER SCENE ART DIRECTION (Environmental staging, camera framing, lighting and models ONLY): "${cleanInstruction}". STRICT COPY SEPARATION RULE: This scene direction must ONLY be used to stage the physical environment, models, and camera. NEVER print, render, or transcribe this scene description text anywhere on the visual image. Advertising copy is governed strictly by the Verified Commercial Core below.`)
+    }
   }
   if (layoutGuidance) {
     parts.push(layoutGuidance)
@@ -582,10 +592,10 @@ export function buildLegacySimpleCreativePrompt(
     commercialCoreLines.push(`- Mandatory Call-to-Action (CTA): ${verified.cta}`)
   }
 
-  // OPTIONAL SUPPORTING SIGNALS (At most 1-2 concise facts, only if verified):
+  // OPTIONAL SUPPORTING SIGNALS (Up to 3 concise features/facts, only if verified):
   const supportingLines: string[] = []
   if (verified.primaryBenefits.length) {
-    const cleanedBenefits = verified.primaryBenefits.slice(0, 2).map((b) => {
+    const cleanedBenefits = verified.primaryBenefits.slice(0, 3).map((b) => {
       let text = b.trim()
       if (verified.brandName && (verified.headline === verified.brandName || verified.headline?.includes(verified.brandName))) {
         const brandRegex = new RegExp(`^${verified.brandName}\\s*(—|-|:)?\\s*`, 'i')
@@ -628,7 +638,7 @@ export function buildLegacySimpleCreativePrompt(
         '   * When price or offer is present, style it with understated luxury/editorial elegance (frosted glass pill badge or clean text in brand accent color)—NEVER a neon yellow supermarket sticker or discount starburst.',
         '   * Sleek rounded pill CTA button with subtle gradient, clean font, and an arrow (→).',
         '   * Clean website domain centered or aligned at the bottom footer.',
-        '   * Zero visual clutter: Strictly NO boxed 3-badge icon stacks, NO four-card feature grids, and NO supermarket flyer clipart. Let the composition breathe.',
+        '   * Clean horizontal linear feature bar: If key selling points are present, format them as a sleek horizontal linear bar with understated minimalist outline icons (e.g., [İkon] Özellik 1 | [İkon] Özellik 2 | [İkon] Özellik 3)—NEVER vertical boxed icon stacks, four-card grids, or supermarket discount clipart.',
         '3. NO HALLUCINATIONS: Do not invent unverified warranty claims, fake guarantee seals, unverified technical certifications, or fabricated dates/specs.',
       ].join('\n')
     : [
@@ -691,7 +701,7 @@ export function buildLegacySimpleCreativePrompt(
     snapshot.style && snapshot.style !== 'auto'
       ? `Visual style preset: ${styleLabel(snapshot.style)}. ${STYLE_HINT[snapshot.style] || ''}`
       : null,
-    formatUserSceneInstruction(snapshot.instruction),
+    formatUserSceneInstruction(snapshot.instruction, snapshot.generationType === 'revision'),
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${snapshot.brief}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',
@@ -938,7 +948,7 @@ export function buildOverDirectedCreativePrompt(
         : options?.verifiedRefs?.base || snapshot.baseCreativeId
           ? 'A base/reference campaign image is attached. Keep the exact same product and brand identity; apply the requested change.'
           : null,
-    formatUserSceneInstruction(snapshot.instruction),
+    formatUserSceneInstruction(snapshot.instruction, snapshot.generationType === 'revision'),
     variation ? `Variation direction: ${variation}. Same offer, different composition.` : null,
     `Campaign brief from the advertiser: ${briefText || 'Özel Kampanya'}`,
     productBlocks.length ? `Products:\n${productBlocks.join('\n')}` : 'No specific product catalog items.',

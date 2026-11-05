@@ -339,7 +339,7 @@ export function CreativeDetail({
   }
 
   const [reviseOpen, setReviseOpen] = useState(Boolean(openRevise))
-  const [revisionCopy, setRevisionCopy] = useState({ headline: '', supporting: '', cta: '' })
+  const [revisionCopy, setRevisionCopy] = useState({ headline: '', supporting: '', cta: '', features: '' })
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const confirm = useConfirm()
   const toast = useToast()
@@ -849,7 +849,10 @@ export function CreativeDetail({
             previewUrl={displayPublicUrl}
             onClose={() => setReviseOpen(false)}
             onInstruction={setInstruction}
-            onSubmit={({ keepBaseScene }) =>
+            onSubmit={({ keepBaseScene }) => {
+              const customFeatures = revisionCopy.features?.trim()
+                ? revisionCopy.features.split(/[|,\n•]/).map(s => s.trim()).filter(Boolean).slice(0, 3)
+                : []
               spawn({
                 requestKey: crypto.randomUUID(),
                 brief: creative.brief || instruction.trim(),
@@ -860,18 +863,18 @@ export function CreativeDetail({
                 productIds: creative.heroProductId ? [creative.heroProductId] : [],
                 phoneIds: [],
                 socialIds: [],
-                labels: [],
+                labels: customFeatures,
                 parentId: creative.id,
                 baseCreativeId: keepBaseScene ? creative.id : null,
                 keepBaseScene,
                 lockCopyOverlay: keepBaseScene,
                 generationType: 'revision',
                 instruction: instruction.trim() || 'Yalnız onaylı reklam metinlerini değiştir; mevcut sahne, kadraj, ışık, insan, ürün ve logo aynen korunsun.',
-                ...(revisionCopy.headline.trim() ? {customHeadline: revisionCopy.headline.trim()} : {}),
-                ...(revisionCopy.supporting.trim() ? {customSupporting: revisionCopy.supporting.trim()} : {}),
-                ...(revisionCopy.cta.trim() ? {cta: revisionCopy.cta.trim()} : {}),
+                ...(revisionCopy.headline.trim() ? { customHeadline: revisionCopy.headline.trim() } : {}),
+                ...(revisionCopy.supporting.trim() ? { customSupporting: revisionCopy.supporting.trim() } : {}),
+                ...(revisionCopy.cta.trim() ? { cta: revisionCopy.cta.trim() } : {}),
               })
-            }
+            }}
           />
         </>
       ) : null}
@@ -1220,6 +1223,14 @@ function DetailImageMenu({ creativeId }: { creativeId: string }) {
   )
 }
 
+const REVISION_PRESETS = [
+  { icon: '✍️', label: 'Başlığı Güncelle', prompt: 'Başlığı daha net ve vurucu 2 satır yap; logoyu ve ürünü koru.' },
+  { icon: '🏷️', label: 'Kampanya / İndirim', prompt: 'Görsele şık bir indirim veya özel kampanya vurgusu ekle; ürün ve renkleri koru.' },
+  { icon: '⭐', label: '3 Özellik Güncelle', prompt: 'Alt kısımdaki yatay 3 simgeli özelliği güncelle: Hızlı Teslimat | Yüksek Dayanım | Pratik Kullanım.' },
+  { icon: '🔘', label: 'Buton Metni', prompt: 'En alttaki eylem butonunu "Hemen İnceleyin →" olarak güncelle.' },
+  { icon: '🌅', label: 'Sahne & Işığı İyileştir', prompt: 'Sahneyi daha aydınlık, ferah ve prestijli doğal ışıkla kurgula; ürünü koru.' },
+]
+
 function ReviseModal({
   open,
   pending,
@@ -1234,8 +1245,8 @@ function ReviseModal({
   open: boolean
   pending: boolean
   instruction: string
-  copy: { headline: string; supporting: string; cta: string }
-  onCopy: (field: 'headline' | 'supporting' | 'cta', value: string) => void
+  copy: { headline: string; supporting: string; cta: string; features?: string }
+  onCopy: (field: 'headline' | 'supporting' | 'cta' | 'features', value: string) => void
   previewUrl: string | null
   onClose: () => void
   onInstruction: (value: string) => void
@@ -1323,9 +1334,26 @@ function ReviseModal({
               rows={3}
               value={instruction}
               onChange={(event) => onInstruction(event.target.value)}
-              placeholder="Başlığı kısalt; sahneyi, insanı, ürünü ve orijinal logoyu koru."
+              placeholder="Örn: Başlığı kısalt, alt kısma 3 özellik ekle; sahneyi, ürünü ve logoyu koru."
               autoFocus
             />
+            <div className="flex flex-wrap gap-1.5 pt-2">
+              {REVISION_PRESETS.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-full border border-[#d1d7db] bg-white px-2.5 py-1 text-[11px] font-medium text-[#111b21] hover:border-[#00a884] hover:bg-[#f0fbf7] hover:text-[#008069] transition-colors"
+                  onClick={() => {
+                    const current = instruction.trim()
+                    const next = current ? `${current}. ${preset.prompt}` : preset.prompt
+                    onInstruction(next)
+                  }}
+                >
+                  <span>{preset.icon}</span>
+                  <span>{preset.label}</span>
+                </button>
+              ))}
+            </div>
           </Field>
 
           <div className="rounded-lg border border-hairline bg-canvas/60 p-2.5 space-y-1.5">
@@ -1367,6 +1395,15 @@ function ReviseModal({
               </Field>
               <Field label="Yeni kısa açıklama">
                 <Input value={copy.supporting} onChange={event => onCopy('supporting',event.target.value)} disabled={pending} maxLength={300} />
+              </Field>
+              <Field label="3 Öne Çıkan Özellik (Yatay Bar)" hint="Dikey çizgilerle ayırın (Örn: Hızlı Teslimat | Yüksek Dayanım | Pratik Kullanım)">
+                <Input
+                  value={copy.features || ''}
+                  onChange={event => onCopy('features', event.target.value)}
+                  disabled={pending}
+                  placeholder="Hızlı Teslimat | Yüksek Dayanım | Pratik Kullanım"
+                  maxLength={140}
+                />
               </Field>
               <Field label="Yeni buton yazısı">
                 <Input value={copy.cta} onChange={event => onCopy('cta',event.target.value)} disabled={pending} maxLength={60} />
