@@ -704,11 +704,7 @@ export async function processCreativeGeneration(
     for (const product of snapshot.products) {
       if (!product.include?.image) continue
       if (!product.imageUrl) throw new Error(`REFERENCE_RESOLUTION_FAILED: Seçilen ürünün görseli eksik: ${product.name}`)
-      let prodAsset = await resolveAssetSource(product.imageUrl, { tenantId: creative.org_id, supabase })
-      if (!prodAsset) {
-        console.warn(`[process] Product image resolution failed for ${product.name} (${product.imageUrl}), attempting fallback to brand style asset...`)
-        prodAsset = await resolveAssetSource('/style-previews/mesajify_akilli_kampanya.png', { tenantId: creative.org_id, supabase })
-      }
+      const prodAsset = await resolveAssetSource(product.imageUrl, { tenantId: creative.org_id, supabase })
       if (!prodAsset) {
         throw new Error(`REFERENCE_RESOLUTION_FAILED: Seçilen ürün görseli indirilemedi (${product.name}: ${product.imageUrl}); referanssız üretim başlatılmadı.`)
       }
@@ -717,11 +713,7 @@ export async function processCreativeGeneration(
 
     // 3. Logo Referansı:
     if (expectedLogo && expectedLogoPath) {
-      let logoAsset = await resolveAssetSource(expectedLogoPath, { tenantId: creative.org_id, supabase })
-      if (!logoAsset) {
-        console.warn(`[process] Brand logo resolution failed for ${expectedLogoPath}, attempting fallback to official logo...`)
-        logoAsset = await resolveAssetSource('/brand/mesajify-official-logo.png', { tenantId: creative.org_id, supabase })
-      }
+      const logoAsset = await resolveAssetSource(expectedLogoPath, { tenantId: creative.org_id, supabase })
       if (!logoAsset) {
         throw new Error(`REFERENCE_RESOLUTION_FAILED: Marka logosu indirilemedi (${expectedLogoPath}); logosuz üretim başlatılmadı.`)
       }

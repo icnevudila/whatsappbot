@@ -1,11 +1,12 @@
 import { normalizeStyleMode } from '@/lib/creative/style-mode'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireActiveOrg } from '@/lib/org'
-import { generateCreativePlan } from '@/lib/creative/v2/ai-planner'
+import { generateAgencyPlan } from '@/lib/creative/v2/agency-planner'
 import type { CampaignObjective, CreativeStylePreset, MediaType } from '@/lib/creative/v2/types'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+export const maxDuration = 240
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     const campaignDetail = String(body.campaignDetail || '').trim()
     const campaignCopy = body.campaignCopy || {}
 
-    const plan = await generateCreativePlan({
+    const plan = await generateAgencyPlan({
       tenantId: org.id,
       brandName,
       brandTone: kit?.tone || null,

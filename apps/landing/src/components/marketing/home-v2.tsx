@@ -1,0 +1,30 @@
+'use client';
+import Link from 'next/link';
+import Image from 'next/image';
+import {ArrowRight,ArrowUpRight,CalendarDays,Check,MessageCircle,Send,Users} from 'lucide-react';
+import {Shell,Film} from './site';
+import {CampaignOpening} from './campaign-opening';
+import {AudiencePaths} from './audience-paths';
+import {CampaignClosing} from './campaign-closing';
+import {BrandProof} from './brand-proof';
+import {MotionGrid} from './motion-grid';
+import {features,solutions} from './content';
+import './home-v2.css';
+import './legibility.css';
+import './motion-first.css';
+import './premium-layout.css';
+
+const login='https://app.mesajify.com/giris';
+const gallery=[{brand:'Liora',src:'liora-campaign.webp',label:'Konsept Reklam',text:'Bir ürünün etrafında, markasına ait bir dünya.'},{brand:'Novi Ev',src:'novi-campaign-v2.webp',label:'Kampanya Afişi',text:'Ürün, teklif ve mesaj aynı tasarımda buluşsun.'},{brand:'Rota Adım',src:'rota-campaign-v2.webp',label:'Marka ve Ürün',text:'Markanıza ve ürününüze uygun bir tanıtım hazırlayın.'}];
+const questions=[['Mesajify tam olarak ne yapıyor?','Mesajify ile kişi gruplarınızı hazırlayıp toplu WhatsApp kampanyaları oluşturabilir, gönderimlerinizi planlayabilir ve gelen yanıtları aynı panelden takip edebilirsiniz. Kreatif Stüdyo ise kampanyanıza eklemek istediğiniz görsel ve videoları hazırlamanıza yardımcı olur.'],['Mesajları ileri bir tarih için planlayabilir miyim?','Evet. Kampanyanızı hazırladıktan sonra Yayınla adımında Planla seçeneğini seçip tarih ve saat belirleyebilirsiniz. İsterseniz taslak olarak kaydedebilir veya son kontrolün ardından hemen gönderime başlayabilirsiniz.'],['Mevcut müşteri listemi kullanabilir miyim?','Evet. Kişilerinizi Excel’den veya bağlı hattınızın adres defterinden aktarabilir, gruplar halinde düzenleyebilir ve kampanyanızda iletişime uygun kişileri seçebilirsiniz.'],['Kampanya için görsel üretmek zorunda mıyım?','Hayır. Mesajınızı hazırlayıp ilerleyebilirsiniz. Medya eklemek isterseniz kendi görsel veya videonuzu yükleyebilir, kütüphanenizden seçebilir ya da Kreatif Stüdyo’da yeni içerik hazırlayabilirsiniz.'],['Gönderim için ne gerekiyor?','Hesabınıza bağlı bir WhatsApp hattı ve iletişime uygun alıcılar gerekir. Mesajınızı, alıcı grubunuzu ve gönderen hattınızı önizlemede kontrol ederek ilerlersiniz. Paket ve kullanım haklarınızı panelden görebilirsiniz.']];
+
+export function HomeV2(){return <Shell><main id="icerik" className="hv-home"><CampaignOpening/><BrandProof/>
+ <section className="hv-section hv-container" id="kampanya-akisi"><div className="hv-heading"><span>01 / KAMPANYA HAZIRLIĞI</span><h2>Bir mesaj hazırlayın.<br/><em>Zamanını siz seçin.</em></h2><p>Kişilerinizi hazırlayın. Mesajınızı yazın.<br/>Gönderimden önce son kontrolü yapın.</p></div><div className="hv-product-film"><Film name="campaign"/></div><div className="hv-process">{[{icon:<Users/>,title:'Alıcı grubunu seçin.',text:'Kayıtlı kişilerinizi veya aktardığınız listenizi kullanın. Kampanyanızın alıcılarını belirleyin.'},{icon:<Send/>,title:'Mesajınızı hazırlayın.',text:'Mesajı kendiniz yazın veya AI desteği alın. Görsel ve video eklemek isteğe bağlı.'},{icon:<CalendarDays/>,title:'Zamanını belirleyin.',text:'Taslak kaydedin, ileri bir tarih için planlayın veya önizlemenin ardından gönderime başlayın.'}].map((item,i)=><article key={item.title}><div><span>0{i+1}</span>{item.icon}</div><h3>{item.title}</h3><p>{item.text}</p></article>)}</div><Link className="hv-link" href="/whatsapp-kampanyalari">Kampanyaları ayrıntılı incele<ArrowUpRight size={17}/></Link></section>
+ <section className="hv-discovery"><div className="hv-container"><div className="hv-heading"><h2>Listeniz hazır mı?<br/><em>Buradan başlayın.</em></h2><p>Excel’den aktarın, WhatsApp rehberinizden çekin<br/>veya bölgenize göre yeni bir liste talep edin.</p></div><AudiencePaths/><Link className="hv-link" href="/isletme-listeleri">İşletme listelerini keşfet<ArrowUpRight size={17}/></Link></div></section>
+ <section className="hv-section hv-container"><div className="hv-heading"><span>03 / MESAJLAR</span><h2>Mesajınız ulaşsın.<br/><em>Konuşma sizde kalsın.</em></h2><p>Gelen ve giden mesajları birlikte görün.<br/>AI önerilerini inceleyerek yanıtınızı hazırlayın.</p></div><div className="hv-inbox-film"><Film name="inbox"/></div><div className="hv-inbox-bottom"><p><MessageCircle size={19}/>Yanıt önerisi hazır. Son karar sizde.</p><Link className="hv-link" href="/ortak-gelen-kutusu">Mesajlar ekranını incele<ArrowUpRight size={17}/></Link></div></section>
+ <section className="hv-studio-intro"><div className="hv-container"><div className="hv-heading"><span>04 / KAMPANYANIZA İÇERİK DESTEĞİ</span><h2>Ürününüzü gösterin.<br/><em>Farkını ortaya çıkarın.</em></h2><p>Kendi medyanızı yükleyin veya Kreatif Stüdyo’da<br/>markanıza uygun görsel ve video hazırlayın.</p></div><div className="hv-studio-film"><Film name="showcase"/></div><div className="hv-gallery">{gallery.map((item,i)=><article key={item.brand}><div className="hv-gallery-top"><span>0{i+1} / {item.label}</span><ArrowUpRight size={15}/></div><Link href="/ornekler"><Image src={`/landing/studio/${item.src}`} alt={`${item.brand} için bağımsız üretilmiş kurgusal reklam örneği`} width={1400} height={1750} unoptimized/></Link><h3>{item.brand}</h3><p>{item.text}</p></article>)}</div><div className="hv-gallery-foot"><p>Markalar, ürünler ve fiyatlar bu anlatım için kurgulandı. Örnekler bağımsız üretildi.</p><Link className="hv-link" href="/kreatif-studyo">Kreatif Stüdyo’yu keşfet<ArrowUpRight size={17}/></Link></div></div></section>
+ <section className="hv-section hv-container hv-index"><div className="hv-heading"><h2>Bir panel.<br/><em>Birbirini tamamlayan dört güç.</em></h2></div><MotionGrid/></section>
+ 
+ <section className="hv-section hv-container hv-faq" id="sorular"><div><span className="hv-label">BAŞLAMADAN ÖNCE</span><h2>Aklınızdaki<br/>sorular.</h2></div><div>{questions.map(([question,answer])=><details key={question}><summary>{question}<span>+</span></summary><p>{answer}</p></details>)}</div></section>
+ <CampaignClosing/>
+ </main></Shell>}

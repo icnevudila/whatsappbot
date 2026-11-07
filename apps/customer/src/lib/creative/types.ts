@@ -134,6 +134,7 @@ export type CreativeSnapshotProduct = {
 }
 
 export type CreativeSnapshot = {
+  heroProductId?:string|null
   imagePromptVersion?: 'BRAND_KIT_V1'
   promotionMode?: import('./promotion-policy').PromotionMode
   offeringKind?: import('./promotion-policy').OfferingKind
@@ -178,6 +179,7 @@ export type CreativeSnapshot = {
   customVoiceover?: string | null
   voiceoverScript?: string | null
   referenceImageUrls?: string[] | null
+  creativePlan?: { source?: string; scene?: { environment?: string; composition?: string; lighting?: string; background?: string; product_interaction?: string; camera_feel?: string } }
   templateFamily?: TemplateFamily | null
   sector?: string | null
   deliveryInfo?: string | null

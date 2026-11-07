@@ -26,7 +26,7 @@ export function CreativeStylePicker({
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
         {STYLE_MODES.map((mode) => {
           const isSelected = value === mode.id
           const badge = mode.badge
@@ -39,6 +39,7 @@ export function CreativeStylePicker({
               tabIndex={0}
               aria-pressed={isSelected}
               onKeyDown={(e) => {
+                if (e.target !== e.currentTarget) return
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault()
                   onChange(mode.id)
@@ -68,6 +69,7 @@ export function CreativeStylePicker({
                     type="button"
                     onClick={(e) => handleOpenPreview(e, mode)}
                     title={`${mode.label} örneğini incele`}
+                    aria-label={`${mode.label} örneğini incele`}
                     className="flex items-center justify-center w-7 h-7 rounded-lg text-[#54656f] hover:text-[#008069] hover:bg-[#008069]/10 transition-colors shrink-0 -mr-1"
                   >
                     <svg

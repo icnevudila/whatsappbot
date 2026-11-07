@@ -3,7 +3,6 @@ import { Outfit, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import '@/components/brand/mesajify-mark.css';
 import { PerformanceAudit } from '@/components/performance-audit';
-import { Navbar } from '@/components/navbar';
 
 const outfit = Outfit({
   subsets: ['latin'],
@@ -17,13 +16,13 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: '#FFFFFF',
+  themeColor: '#f4f7fc',
   width: 'device-width',
   initialScale: 1,
 };
 
 export const metadata: Metadata = {
-  title: 'Mesajify',
+  title: 'Mesajify | İşletmenizi tanıtın, WhatsApp’tan ulaştırın',
   icons: {
     icon: [
       { url: '/icon.png?v=mesajify2', sizes: '512x512', type: 'image/png' },
@@ -69,12 +68,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="tr">
+    <html lang="tr" data-scroll-behavior="smooth">
       <body
         className={`${outfit.variable} ${jetbrainsMono.variable} bg-canvas text-ink antialiased selection:bg-brand-soft selection:text-brand`}
       >
         <PerformanceAudit />
-        <Navbar />
         {children}
       </body>
     </html>

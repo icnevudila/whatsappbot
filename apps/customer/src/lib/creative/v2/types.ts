@@ -98,6 +98,12 @@ export const VIDEO_FORMATS_V2: {
 ]
 
 export type CreativePlanV2 = {
+  conceptReview?: {
+    version:'AGENCY_PLAN_V1'
+    status:'selected'|'single_candidate'|'selection_unavailable'
+    candidates:Array<{id:number;plan:CreativePlanV2}>
+    selection:{selectedId:number;reason:string;risks:string[]}|null
+  }
   source?: 'AI' | 'DETERMINISTIC_FALLBACK'
   objective: CampaignObjective
   creative_style: CreativeStylePreset

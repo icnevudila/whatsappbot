@@ -1,0 +1,9 @@
+/* The restrained palette still needs readable body copy at phone size. */
+.ms-site .hv-heading>p,.ms-site .hv-process p,.ms-site .hv-feature-copy>p,.ms-site .hv-gallery p,.ms-site .hv-index-list a>p,.ms-site .hv-solutions p,.ms-site .hv-faq details p,.ms-site .hv-final p{color:#4f6255}
+.hv-heading>span,.hv-label,.hv-feature-copy ul,.hv-gallery-top,.hv-gallery-foot>p,.hv-final .hv-container>span{color:#526a59}
+.ms-site .cp-copy>p{color:#4d6256}.cp-eyebrow,.cp-assurances,.cp-demo-controls button,.ms-site .cp-demo-caption{color:#516b5b}
+.cp-window-title>span,.cp-small-label,.cp-wizard,.cp-recipient small,.cp-publish-option small,.cp-status-metrics span,.cp-track-note{color:#536957}
+.cp-panel h3,.cp-window-title>b,.cp-status-metrics b{color:#244d39!important}.cp-reply-toast small{color:#4e6856}
+.cp-demo-controls button{min-height:40px}.cp-demo-controls .cp-play{min-width:40px;min-height:40px}
+.hv-home a:focus-visible,.hv-home button:focus-visible,.hv-home summary:focus-visible{outline:3px solid #436f56;outline-offset:5px}
+.ms-site .ms-breadcrumb{font-size:14px;line-height:1.5}.ms-site .ms-demo-note{font-size:14px;line-height:1.7}

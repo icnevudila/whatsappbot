@@ -65,7 +65,7 @@ Görevin:
 İşletmenin sunduğu ürünün gerçek değerini, kullanım faydasını ve kampanya teklifini anlayan; sektöre ve kitleye özel, yüksek yaratıcılıkta, ikna edici ve özgün Türkçe WhatsApp kampanya mesajları yazmaktır.
 
 Yaratıcı Reklam İlkeleri:
-1. Sektörel Dil:
+1. Sektörel Dil (bunlar iddia listesi DEĞİLDİR; yalnızca kullanıcı doğruladıysa kullan):
    - Tarım/Makine: Pratik kullanım rahatlığı, dayanıklılık, iş gücü tasarrufu ve gerçek teknik ölçüler.
    - İnşaat/Malzeme: Yapı güvenliği, doğrudan fabrika/şantiye teslimi, tır bazlı avantaj, kurumsal tedarik.
    - B2B Yazılım/SaaS: Müşteri iletişimi, operasyonel hız, çoklu hat yönetimi, somut iş verimliliği.
@@ -76,7 +76,13 @@ Yaratıcı Reklam İlkeleri:
 3. Ticari Bilgi Koruma:
    - Kullanıcının girdiği fiyatları, eski fiyatları, indirim oranlarını, telefon ve adres bilgilerini harfiyen koru.
    - Kullanıcının vermediği fiyat, son gün/saat tarihi, sahte stok adedi, doğrulanmamış garanti veya sertifika UYDURMA.
-4. WhatsApp Formatı:
+4. Mesajı bir konuşma başlatacak şekilde tasarla:
+   - İlk cümle o işletmeye ve kampanyaya ait somut bir giriş olsun; her markaya takılabilen övgü olmasın.
+   - Görselin başlığını ve bütün özellik listesini tekrar etme. Mesaj görseli tamamlasın; karar için gereken teklif ve koşulları korusun.
+   - Önce asıl ihtiyacı/teklifi, sonra gerekli kanıt ve koşulu, sonunda tek kolay yanıt adımını ver.
+   - Daha verimli, en dayanıklı, garantili sonuç, ücretsiz teslim gibi karşılaştırma ve vaatler de doğrulama gerektirir.
+   - Sabit Kampanya Detayları / Fırsat / Avantaj şablonları yerine akıcı cümleler yaz. Liste yalnızca çok sayıda gerçek koşulu okumayı kolaylaştırıyorsa kullan.
+5. WhatsApp Formatı:
    - Okuması kolay, nefes alan kısa paragraflar (1-3 satır) kullan.
    - Aşırı emoji kirliliği yapma; amaca uygun 1-3 kaliteli emoji yeterlidir.
    - Mesajın sonunda net, yönlendirici ve tek bir eylem çağrısı (CTA) yer almalıdır.
@@ -209,77 +215,31 @@ export function formatPriceText(raw: string | null | undefined): string {
 
 export function generateCampaignWhatsAppMessage(verified: import('../creative/prompt').VerifiedCampaignData): string {
   const parts: string[] = []
-
-  // 1. Header with brand and campaign headline
-  const brandTitle = verified.brandName && verified.brandName !== 'İşletmemiz' ? verified.brandName : ''
-  if (brandTitle && verified.headline) {
-    parts.push(`*${brandTitle} — ${verified.headline}*`)
-  } else if (verified.headline) {
-    parts.push(`*${verified.headline}*`)
-  } else if (brandTitle) {
-    parts.push(`*${brandTitle} Kampanyası*`)
-  }
-
-  // 2. Offer & Price highlight
-  const offerLines: string[] = []
-  if (verified.offer) {
-    offerLines.push(`• *Fırsat:* ${verified.offer}`)
-  }
+  const headline = verified.headline?.trim()
+  const brand = verified.brandName && verified.brandName !== 'İşletmemiz' ? verified.brandName.trim() : ''
+  if (headline) parts.push('*' + headline + '*')
+  const offer: string[] = []
+  if (verified.offer?.trim()) offer.push(verified.offer.trim())
   if (verified.price) {
-    const formattedPrice = formatPriceText(verified.price)
-    const formattedOldPrice = verified.oldPrice ? formatPriceText(verified.oldPrice) : null
-    const oldPricePart = formattedOldPrice ? ` _(Önceki: ${formattedOldPrice})_` : ''
-    offerLines.push(`• *Fiyat:* ${formattedPrice}${oldPricePart}`)
+    const previous = verified.oldPrice ? ' ~' + formatPriceText(verified.oldPrice) + '~' : ''
+    offer.push('*' + formatPriceText(verified.price) + '*' + previous)
+  } else if (verified.oldPrice) offer.push('Önceki fiyat: ' + formatPriceText(verified.oldPrice))
+  if (verified.discount && !verified.offer?.includes(verified.discount)) offer.push(verified.discount)
+  if (offer.length) parts.push(offer.join(' · '))
+  const facts: string[] = []
+  const normalized = (text: string) => text.toLocaleLowerCase('tr-TR').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+  const containsFact = (text: string, fact: string) => (' ' + normalized(text) + ' ').includes(' ' + normalized(fact) + ' ')
+  for (const raw of [verified.quantityTiers, ...verified.primaryBenefits, verified.deliveryFact, verified.stockFact, verified.urgencyFact, verified.campaignDate]) {
+    const fact = raw?.trim()
+    if (!fact) continue
+    if (facts.some(existing => containsFact(existing, fact))) continue
+    for (let i = facts.length - 1; i >= 0; i--) if (containsFact(fact, facts[i])) facts.splice(i, 1)
+    facts.push(fact)
   }
-  if (verified.discount && !verified.offer?.includes(verified.discount)) {
-    offerLines.push(`• *İndirim:* ${verified.discount}`)
-  }
-  if (verified.deliveryFact) {
-    const fact = verified.deliveryFact.trim()
-    const lower = fact.toLowerCase()
-    let label = 'Teslimat'
-    if (lower.includes('taksit') || lower.includes('kredi kart') || lower.includes('kart') || lower.includes('peşin') || lower.includes('havale') || lower.includes('ödeme')) {
-      label = 'Ödeme/Taksit'
-    } else if (lower.includes('teslim') || lower.includes('kargo') || lower.includes('sevkiyat') || lower.includes('nakliye') || lower.includes('şantiye') || lower.includes('adrese')) {
-      label = 'Teslimat'
-    } else {
-      label = 'Avantaj'
-    }
-    offerLines.push(`• *${label}:* ${fact}`)
-  }
-  if (verified.stockFact) {
-    offerLines.push(`• *Stok:* ${verified.stockFact}`)
-  }
-  if (verified.urgencyFact) {
-    offerLines.push(`• *Geçerlilik:* ${verified.urgencyFact}`)
-  }
-  if (verified.primaryBenefits.length) {
-    for (const b of verified.primaryBenefits) {
-      if (!offerLines.some((l) => l.includes(b))) {
-        offerLines.push(`• ${b}`)
-      }
-    }
-  }
-
-  if (offerLines.length) {
-    parts.push(`*Kampanya Detayları:*\n${offerLines.join('\n')}`)
-  }
-
-  // 3. CTA & Contact
-  const ctaLine = verified.cta ? `${verified.cta}` : 'Detaylı bilgi ve sipariş için bize hemen yazabilirsiniz.'
-  parts.push(ctaLine)
-
-  const contactList: string[] = []
-  if (verified.contactLines.length) {
-    contactList.push(`${verified.contactLines[0]}`)
-  }
-  if (verified.website) {
-    contactList.push(`${verified.website}`)
-  }
-  if (contactList.length) {
-    parts.push(contactList.join(' · '))
-  }
-
+  if (facts.length) parts.push(facts.length > 2 ? facts.map(fact => '• ' + fact).join('\n') : facts.join('\n'))
+  parts.push(verified.cta?.trim() || 'Ayrıntıları konuşmak için bu mesajı yanıtlayabilirsiniz.')
+  const contact = [brand && !headline?.toLocaleLowerCase('tr-TR').includes(brand.toLocaleLowerCase('tr-TR')) ? brand : '', ...verified.contactLines, verified.website || ''].map(value => value.trim()).filter(Boolean)
+  if (contact.length) parts.push([...new Set(contact)].join(' · '))
   return parts.join('\n\n')
 }
 

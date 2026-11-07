@@ -1,0 +1,34 @@
+'use client';
+import {AccountTrigger} from './account-modal';
+import Image from 'next/image';
+import Link from 'next/link';
+import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
+import {ArrowDown,ArrowRight,ArrowUpRight,CalendarDays,Check,CheckCheck,Clock3,FileSpreadsheet,MessageCircle,Pause,Play,Send,Users} from 'lucide-react';
+import {MesajifyMark} from '../brand/mesajify-mark';
+import './campaign-opening.css';
+import {Film} from './site';
+import './hero-motion.css';
+
+const subscribe=(notify:()=>void)=>{const m=matchMedia('(prefers-reduced-motion: reduce)');m.addEventListener('change',notify);return()=>m.removeEventListener('change',notify)};
+const read=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
+const stages=['Alıcı grubu','Gönderim planı','Gelen yanıt'];
+
+export function CampaignDemo(){
+ const root=useRef<HTMLDivElement>(null);
+ const [stage,setStage]=useState(1),[mode,setMode]=useState<'auto'|'play'|'pause'>('auto');
+ const reduced=useSyncExternalStore(subscribe,read,()=>true);
+ const playing=mode==='play'||(mode==='auto'&&!reduced);
+ useEffect(()=>{let visible=false;const observer=new IntersectionObserver(([entry])=>{visible=entry.isIntersecting},{threshold:.15});if(root.current)observer.observe(root.current);const timer=playing?setInterval(()=>{if(visible&&!document.hidden)setStage(s=>(s+1)%3)},7000):undefined;return()=>{observer.disconnect();if(timer)clearInterval(timer)}},[playing]);
+ return <div className="cp-demo" ref={root}><div className={`cp-scene cp-stage-${stage}`} role="group" aria-label={`Temsili WhatsApp kampanyası: ${stages[stage]}`}><div className="cp-scene-background"/>
+  <div className="cp-window"><header><MesajifyMark variant="full" size="xs"/><span>Kampanyalar</span><i>Örnek akış</i></header><div className="cp-window-inner"><div className="cp-window-title"><span>Yeni ürün duyurusu</span><b>{stage===2?'Gönderim takibi':'Yeni kampanya'}</b></div><div className="cp-wizard"><span className={stage===0?'on':''}>1 Alıcılar</span><span>2 Mesaj</span><span className={stage===1?'on':''}>3 Yayınla</span></div>
+  <div className={`cp-panel ${stage===0?'on':''}`} aria-hidden={stage!==0}><span className="cp-small-label">ALICILAR</span><h3>Kime ulaşmak istersiniz?</h3><div className="cp-recipient selected"><span className="cp-check"><Check size={13}/></span><div><b>Yeni ürün duyuruları</b><small>İletişim izni bulunan kişiler</small></div><span>3 kişi</span></div><div className="cp-recipient"><span className="cp-check"/><div><b>Mevcut müşterilerim</b><small>Kayıtlı kişi grubunuz</small></div></div><div className="cp-import"><FileSpreadsheet size={17}/><span>Kişilerinizi Excel’den aktarın.</span></div><div className="cp-action">Mesajı hazırlayın<ArrowRight size={15}/></div></div>
+  <div className={`cp-panel ${stage===1?'on':''}`} aria-hidden={stage!==1}><span className="cp-small-label">GÖNDERİM ZAMANI</span><h3>Ne zaman başlasın?</h3><div className="cp-publish-option"><span className="cp-radio"/><div><b>Taslak olarak kaydet</b><small>Daha sonra düzenleyin.</small></div></div><div className="cp-publish-option selected"><span className="cp-radio"/><div><b>Planla</b><small>Seçtiğiniz tarih ve saatte başlasın.</small><div className="cp-datetime"><CalendarDays size={14}/><span>12 Kasım · 10:00</span><Clock3 size={13}/></div></div></div><div className="cp-publish-option"><span className="cp-radio"/><div><b>Hemen gönderime başla</b><small>Son kontrolün ardından gönderin.</small></div></div><div className="cp-action"><CalendarDays size={14}/>Kampanyayı planla<ArrowRight size={15}/></div></div>
+  <div className={`cp-panel ${stage===2?'on':''}`} aria-hidden={stage!==2}><span className="cp-small-label">GÖNDERİM TAKİBİ</span><h3>Durumları birlikte görün.</h3><div className="cp-status-metrics"><div><b>3</b><span>Alıcı</span></div><div><b>2</b><span>İletildi</span></div><div><b>1</b><span>Yanıt</span></div></div><div className="cp-status-row"><span>Deniz A.</span><b><CheckCheck size={13}/>İletildi</b></div><div className="cp-status-row"><span>Ece B.</span><b><MessageCircle size={13}/>Yanıt geldi</b></div><div className="cp-status-row"><span>Mert C.</span><b className="waiting"><Clock3 size={12}/>Bekliyor</b></div><div className="cp-track-note">Kurgusal kayıtlarla temsili durumlar.</div></div>
+  </div></div>
+  <div className="cp-phone"><header><span>n.</span><div><b>Novi Ev</b><small>Örnek işletme hesabı</small></div><MessageCircle size={16}/></header><div className="cp-phone-body"><div className="cp-phone-sent"><Image src="/landing/studio/novi-campaign-v2.webp" alt="Novi Ev kurgusal ürün duyurusu" width={400} height={500} unoptimized/><p>Yeni ürünümüzü keşfedin.<br/>Bilgi almak için bize yazın.</p><small>10:00 <CheckCheck size={11}/></small></div><div className="cp-phone-answer">Merhaba, ürün hakkında bilgi alabilir miyim?<small>10:02</small></div></div></div>
+  <div className="cp-reply-toast"><span><MessageCircle size={19}/></span><div><b>Bir yanıtınız var.</b><small>Konuşmayı Mesajlar’da sürdürün.</small></div><ArrowUpRight size={16}/></div>
+ </div><div className="cp-demo-controls"><div aria-label="Kampanya aşamasını seçin">{stages.map((s,i)=><button type="button" key={s} aria-pressed={stage===i} onClick={()=>{setStage(i);setMode('pause')}}><span>0{i+1}</span>{s}</button>)}</div><button type="button" className="cp-play" aria-label={playing?'Kampanya anlatımını duraklat':'Kampanya anlatımını oynat'} onClick={()=>setMode(playing?'pause':'play')}>{playing?<Pause size={14}/>:<Play size={14}/>}</button></div><p className="cp-demo-caption">Temsili ürün akışı. Marka, kayıtlar ve konuşmalar kurgusaldır.</p></div>
+}
+
+function HeroPhrase(){const root=useRef<HTMLElement>(null),[index,setIndex]=useState(0);useEffect(()=>{const reduced=matchMedia('(prefers-reduced-motion: reduce)');let visible=false;const observer=new IntersectionObserver(([entry])=>{visible=entry.isIntersecting});if(root.current)observer.observe(root.current);const timer=setInterval(()=>{if(visible&&!document.hidden&&!reduced.matches)setIndex(value=>(value+1)%3)},5700);return()=>{observer.disconnect();clearInterval(timer)}},[]);return <em ref={root}><span key={index} className="rotating-phrase" aria-hidden="true">{['Yeni konuşmalar.','Planlı mesajlar.','Tek bir merkez.'][index]}</span></em>}
+export function CampaignOpening(){return <section className="cp-opening"><div className="cp-opening-inner"><div className="cp-copy"><h1 aria-label="Toplu mesajlar. Yeni konuşmalar.">Toplu mesajlar.<br/><HeroPhrase/></h1><p>WhatsApp kampanyanızı hazırlayın, hemen gönderin veya planlayın. Listelerinizi ve gelen yanıtları tek panelden yönetin.</p><AccountTrigger className="cp-primary">İlk kampanyamı hazırla<ArrowUpRight size={18}/></AccountTrigger><Link className="cp-learn" href="#kampanya-akisi">Nasıl çalışır?<ArrowDown size={17}/></Link></div><div className="hero-motion"><Film name="launch" priority/></div></div></section>}

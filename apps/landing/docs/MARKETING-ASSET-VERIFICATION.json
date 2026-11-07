@@ -1,0 +1,645 @@
+{
+  "date": "2026-11-07T10:46:05.850Z",
+  "scope": "Current marketing home and detail pages",
+  "pending": [],
+  "assets": [
+    {
+      "file": "/brand/mesajify-logo-full.png",
+      "bytes": 205778,
+      "sha256": "e383102bc1be7a58e2a37b8f9c2a5a426a5898d7f41b59611f3d5b0972ab797a"
+    },
+    {
+      "file": "/brand/mesajify-symbol.png",
+      "bytes": 119380,
+      "sha256": "c12a76fb32dd992ec19f58a0ce1f2f04f11badf9a0aaa4f92850f199251ff885"
+    },
+    {
+      "file": "/og-image.png",
+      "bytes": 60584,
+      "sha256": "e77bbbb4faf90aec5cb048419b7118ec5d395047f62d8d07b13cb2dbf271afe5"
+    },
+    {
+      "file": "/landing/studio/scene.html",
+      "bytes": 9535,
+      "sha256": "81f53b00fbf2a8fef146c8ff8824c4329b8b2ce7bb5afb268fe7a773f86b7cad"
+    },
+    {
+      "file": "/landing/studio/scene.css",
+      "bytes": 35261,
+      "sha256": "66147364016ec8beb37fcffa579810b4af5a1ae5e8d78fcc361117215730d3d9"
+    },
+    {
+      "file": "/landing/studio/scene.js",
+      "bytes": 10194,
+      "sha256": "6b11d5e5ffc6809361299e99a468772acf112241864d556c20b7a21edf572091"
+    },
+    {
+      "file": "/landing/studio/istanbul-map.webp",
+      "bytes": 156562,
+      "sha256": "00053c600e74ffc9137a7cc8c0e9dd7bbafe9aab25e6b7c350d7aec89639e552"
+    },
+    {
+      "file": "/landing/studio/motion-film.html",
+      "bytes": 11450,
+      "sha256": "18e6d09952b7d5b5d93966af6646955b22c5c56bfc8c973b5de7f2a9bb5c2bd5"
+    },
+    {
+      "file": "/landing/studio/motion-film.css",
+      "bytes": 42111,
+      "sha256": "879b1eb50a338a92c20a7bc530b4b78deb85cfeea9826a963ef9694cc3520bce"
+    },
+    {
+      "file": "/landing/studio/motion-film.js",
+      "bytes": 16622,
+      "sha256": "980f8666fa900ea9754c62b8e0776a6f1ffb58b5c702a1e46a66e0e5884c34c8"
+    },
+    {
+      "file": "/landing/studio/scene-mobile-refinement.css",
+      "bytes": 2837,
+      "sha256": "ebc9e18c2e7723b77f64f2c6c7547cab30c7e032845da0bdb5b8e812344ca1bf"
+    },
+    {
+      "file": "/landing/studio/film-system.css",
+      "bytes": 3088,
+      "sha256": "50b50fa7decf9e8d1180edd3c2a59cd6ea06a906aef1f4adb3e27e32c4511341"
+    },
+    {
+      "file": "/landing/studio/liora-source.webp",
+      "bytes": 112994,
+      "sha256": "c74bd291b638ab826ebdb51200543168a22cedfe1ef387c01c68f0657fbb65ad"
+    },
+    {
+      "file": "/landing/studio/liora-campaign.webp",
+      "bytes": 225326,
+      "sha256": "a85976c12a00f05ca955ce5cdfe1a485d9743cc81cfbbe2dda1bc4672da6fa9d"
+    },
+    {
+      "file": "/landing/studio/mori-craft-v3.webp",
+      "bytes": 313486,
+      "sha256": "dd5605ac6ac782531417a0ec013cc928202346f76776e2043a9d661cec8b36ea"
+    },
+    {
+      "file": "/fonts/line-seed-latin-400.woff2",
+      "bytes": 33352,
+      "sha256": "a1588f6e49ac5a69983023386b544dff42863c8cb4927598bd38047220a4020f"
+    },
+    {
+      "file": "/fonts/line-seed-latin-ext-400.woff2",
+      "bytes": 8096,
+      "sha256": "294feb9f3315198d9067d909ba88f9623765ebf4a2246340f51bd9be2c9f446e"
+    },
+    {
+      "file": "/fonts/line-seed-latin-700.woff2",
+      "bytes": 34760,
+      "sha256": "df119099d7ec78daf62013fa8748bf61f18f8496ccfef22945392707fbffaa99"
+    },
+    {
+      "file": "/fonts/line-seed-latin-ext-700.woff2",
+      "bytes": 8408,
+      "sha256": "ab5bb11371bcc00ecbd59955aa0cc1fb46f4b3b9dfe3e4fc38d21618126de804"
+    },
+    {
+      "file": "/fonts/LINE-SEED-OFL.txt",
+      "bytes": 4322,
+      "sha256": "1cfc3752ddd076bc7d461b6680e42a345f2579f91319fa04192b754b3b993f65"
+    },
+    {
+      "file": "/fonts/INTER-LICENSE.txt",
+      "bytes": 4380,
+      "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a"
+    },
+    {
+      "file": "/fonts/inter-latin.woff2",
+      "bytes": 48256,
+      "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62"
+    },
+    {
+      "file": "/fonts/inter-turkish.woff2",
+      "bytes": 3276,
+      "sha256": "774f7bbf74f669ae28c5b3872fa15a61abd08c51b0fd9c3f892393c608e1a0c9"
+    },
+    {
+      "file": "/fonts/inter-latin-ext.woff2",
+      "bytes": 85068,
+      "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956"
+    },
+    {
+      "file": "/landing/brands/antic.webp",
+      "bytes": 6504,
+      "sha256": "1c86ed48149c6acd58fa9ef3a7c4d8e44e36ee36017fa5606b265d1478e803fc"
+    },
+    {
+      "file": "/landing/brands/ayvazoglu.webp",
+      "bytes": 38722,
+      "sha256": "520ad2d439581a9482338123e7ea6ed6ba6dd43515dde0dfee81dc2f3bb536de"
+    },
+    {
+      "file": "/landing/brands/bofe.webp",
+      "bytes": 2018,
+      "sha256": "517e17c688ffe877a9e8f9feb946e63dc37969523592c62b07a24224a0d669bb"
+    },
+    {
+      "file": "/landing/brands/cilingir.webp",
+      "bytes": 5688,
+      "sha256": "1c97d86f3f9cc7d2450ee98ead001dffbc7c15475beedd0abde218a259dfb907"
+    },
+    {
+      "file": "/landing/brands/momora.webp",
+      "bytes": 7876,
+      "sha256": "b87f0dd9c32b66c134080d72820cd0225701bb9af5ac5bb36b738f9d0a39e00f"
+    },
+    {
+      "file": "/landing/brands/veriburada.webp",
+      "bytes": 57576,
+      "sha256": "03620ce0c83991f5951292238fb37e3614b73a563c132ae45cb11b49b6dd658c"
+    },
+    {
+      "file": "/landing/studio/mori-source.webp",
+      "bytes": 142804,
+      "sha256": "6195a61074f04fc3dfa05b8427ee1d5b2f9ecb6651cb35ea0c4135b590101484"
+    },
+    {
+      "file": "/landing/studio/mori-campaign.webp",
+      "bytes": 326778,
+      "sha256": "67de13633d9893f4e518ddf7caa6fa809b903c520ce553038cd003f4ff375ac1"
+    },
+    {
+      "file": "/landing/studio/novi-source.webp",
+      "bytes": 204464,
+      "sha256": "c7ee9f71713bcf03dc459e416e417eef424fb4b7a99b037ce4d4e668a17a1ce1"
+    },
+    {
+      "file": "/landing/studio/novi-campaign.webp",
+      "bytes": 154036,
+      "sha256": "dc3b733099501f907dbf1b3f6e773f79ab33ec2d714370c8fc8169e7f76c0684"
+    },
+    {
+      "file": "/landing/studio/rota-source.webp",
+      "bytes": 202296,
+      "sha256": "de012550d50397a7a70b9994731e0bd4bb53a616472a27800b4b80ed5a4197c7"
+    },
+    {
+      "file": "/landing/studio/rota-campaign.webp",
+      "bytes": 385692,
+      "sha256": "20124a0b21d447797b664f450eeebbdaa0ffe12a2258615a35b390dcb789cd5e"
+    },
+    {
+      "file": "/landing/studio/discovery.mp4",
+      "bytes": 2751551,
+      "sha256": "e727f4144a35eb9b40b3cd0a54f743c8e77e5b73b95bfce54f1c9e7f2ee9db56",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1400,
+            "height": 700,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/discovery-poster.jpg",
+      "bytes": 301570,
+      "sha256": "ec4fe29c3f47288ef4e4bf31babf2122ac0cb7a11612ac32e7365f2f97dcdd01"
+    },
+    {
+      "file": "/landing/studio/discovery-mobile.mp4",
+      "bytes": 2021645,
+      "sha256": "a9929cab5081016be57a85a846f11212d9bcff3436dc34efbb63c78abd74e8bf",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 900,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/discovery-mobile-poster.jpg",
+      "bytes": 139669,
+      "sha256": "1892bb6ce4ec9a43f17be12423f28c6a065b06ca3350b5a1a8a19c613f89f055"
+    },
+    {
+      "file": "/landing/studio/creative.mp4",
+      "bytes": 1009267,
+      "sha256": "eb19b0e5624aab4b8337368f0ca6b2ca542d3e6abda64e418e019ad78b0ef680",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1400,
+            "height": 700,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/creative-poster.jpg",
+      "bytes": 280451,
+      "sha256": "6acecf26b5d8cf7e3ea75ef7d045df3874f3e281c355762ba0d9e33071349ccb"
+    },
+    {
+      "file": "/landing/studio/creative-mobile.mp4",
+      "bytes": 966100,
+      "sha256": "0978e98dd0844aaf77ec0f540945ff86c20db72fe6f117744aca47fe5d5aab20",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 1080,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/creative-mobile-poster.jpg",
+      "bytes": 177601,
+      "sha256": "d084bd63417e4ad0644f2a5e5c9cecf3857194e6d604b65072962c11fe4d8ec5"
+    },
+    {
+      "file": "/landing/studio/campaign.mp4",
+      "bytes": 645447,
+      "sha256": "2fafdc5b40501b648c039d8075df1034070ed28778db4bd24409efc7e8a8b197",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1400,
+            "height": 700,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/campaign-poster.jpg",
+      "bytes": 170620,
+      "sha256": "ef04f9e535419b62287a9514016c7776f659e453c3e96346b7cd3e74d4de591d"
+    },
+    {
+      "file": "/landing/studio/campaign-mobile.mp4",
+      "bytes": 1049127,
+      "sha256": "ec8cb28041e8c0af4741802b3322a9e48dad2e02324cc83339769eeb5b835b20",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 1080,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/campaign-mobile-poster.jpg",
+      "bytes": 93805,
+      "sha256": "b5569478af499bd0dc0d7ac546595f920f7cac506dc56996444e300d08de812d"
+    },
+    {
+      "file": "/landing/studio/inbox.mp4",
+      "bytes": 456968,
+      "sha256": "e61bda765cf6a56f612fc1fcd7235d49234f2e650e2f6fecfb7f168ff88af60e",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1400,
+            "height": 700,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/inbox-poster.jpg",
+      "bytes": 166255,
+      "sha256": "a9eac91f4c0fcb96f64f48b7fef291747d4f266fd5e8755abda7fd3e95df4b9d"
+    },
+    {
+      "file": "/landing/studio/inbox-mobile.mp4",
+      "bytes": 641477,
+      "sha256": "5b1c99e2166fc188f6120172ad649e5becab3d2a55acbaed700310a732c9cd79",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 920,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/inbox-mobile-poster.jpg",
+      "bytes": 106115,
+      "sha256": "60d550d3c07e88b448136f3568c88c85b55fc89b7da2b6cd24b470ee1fd61d2b"
+    },
+    {
+      "file": "/landing/studio/showcase.mp4",
+      "bytes": 1900384,
+      "sha256": "cac3a72c6717e898535e441185f93d3b59684beb69bf792736b0670b8fdb5954",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1400,
+            "height": 700,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/showcase-poster.jpg",
+      "bytes": 284290,
+      "sha256": "690c839368d85b6450a885d5080b35a7caec76c716dc70152f8f212d81320df4"
+    },
+    {
+      "file": "/landing/studio/showcase-mobile.mp4",
+      "bytes": 2437244,
+      "sha256": "3bde61d3468f596ca62a5ccbb3d66eeb8ddbaec62bdc15e76e9735bd5a038c74",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 920,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/showcase-mobile-poster.jpg",
+      "bytes": 202720,
+      "sha256": "47d94c3bee40b58cd45af156a2e27ea7aa0dd3ca385c482588e5e2517ab572b1"
+    },
+    {
+      "file": "/landing/studio/launch.mp4",
+      "bytes": 1172271,
+      "sha256": "24fb566dabfd0100c0eda064321529ffb10141d0d597ad0fe501ea7ec4c72fba",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1000,
+            "height": 720,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "26.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/launch-poster.jpg",
+      "bytes": 122573,
+      "sha256": "286536759db8b1dbca634eddac7334fce4a0172f6742b6d6ef8a94b2e19af9f7"
+    },
+    {
+      "file": "/landing/studio/launch-mobile.mp4",
+      "bytes": 1731080,
+      "sha256": "120b74a634105d473a59f75b67441e76d3ff3c0b0de4120dcb1707cb2788c09c",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 720,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "26.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/launch-mobile-poster.jpg",
+      "bytes": 128929,
+      "sha256": "596e2783cb359a7029a98634e67c0acf7bdc8c9ca524fce82afe6c3831a332a1"
+    },
+    {
+      "file": "/landing/studio/import.mp4",
+      "bytes": 511593,
+      "sha256": "11f95f723b65b9e0439c90c618b97e5b85a55bd2b086cbdc9bf081dffb578f59",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1400,
+            "height": 700,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/import-poster.jpg",
+      "bytes": 143094,
+      "sha256": "895202bc0163c2c2d626af52146d03e1713335e2a610e6214a21ee44361b6df5"
+    },
+    {
+      "file": "/landing/studio/import-mobile.mp4",
+      "bytes": 656884,
+      "sha256": "67a6c1ac8b83f186fe833411e1261812d8a2dff8b9f0b8071069672ded45824a",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 900,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/import-mobile-poster.jpg",
+      "bytes": 95711,
+      "sha256": "a656c80eaee82032abdafc9d336f09a3d3061df18b83cc8c45b6dbee80946bab"
+    },
+    {
+      "file": "/landing/studio/contacts.mp4",
+      "bytes": 382173,
+      "sha256": "ea401f32ce3d846c18c39e27c2450979d3c3b32e6b9a29f960f52f9882b74fc4",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 1400,
+            "height": 700,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/contacts-poster.jpg",
+      "bytes": 133686,
+      "sha256": "3acd52c23e5a6b6e01b1f9740c7298d33bab86dc34696c533c575f11fc2f5453"
+    },
+    {
+      "file": "/landing/studio/contacts-mobile.mp4",
+      "bytes": 391753,
+      "sha256": "36999b17e81899fa066ebf8756c200504d7b98db99dada920c0e606ca51bbc38",
+      "probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "h264",
+            "width": 900,
+            "height": 900,
+            "r_frame_rate": "30/1",
+            "side_data_list": [
+              {}
+            ]
+          }
+        ],
+        "format": {
+          "duration": "20.000000"
+        }
+      }
+    },
+    {
+      "file": "/landing/studio/contacts-mobile-poster.jpg",
+      "bytes": 82216,
+      "sha256": "7486fe6ea4427925d0cd960649d0b26be0cb108ea26ad8681a02b7bc940fd1f9"
+    },
+    {
+      "file": "/landing/studio/novi-campaign-v2.webp",
+      "bytes": 294972,
+      "sha256": "642582fb85ff31f33c5699c9ab0e07c70b4cc6fc9fdf4064487c96824943b62b"
+    },
+    {
+      "file": "/landing/studio/rota-campaign-v2.webp",
+      "bytes": 618036,
+      "sha256": "60c7a58ce970407a4c5eb51d7d5131d7846430e61d5015679e056b0f2ba23eb6"
+    }
+  ]
+}

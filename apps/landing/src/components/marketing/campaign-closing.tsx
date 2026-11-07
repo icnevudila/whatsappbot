@@ -1,0 +1,10 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+import {ArrowUpRight,CheckCheck,MessageCircle,Send} from 'lucide-react';
+import {AccountTrigger} from './account-modal';
+import './campaign-closing.css';
+export function CampaignClosing(){
+ const root=useRef<HTMLElement>(null),[playing,setPlaying]=useState(false);
+ useEffect(()=>{let visible=false;const reduced=matchMedia('(prefers-reduced-motion: reduce)'),sync=()=>setPlaying(visible&&!document.hidden&&!reduced.matches),observer=new IntersectionObserver(([entry])=>{visible=entry.isIntersecting;sync()},{threshold:.1});if(root.current)observer.observe(root.current);document.addEventListener('visibilitychange',sync);reduced.addEventListener('change',sync);return()=>{observer.disconnect();document.removeEventListener('visibilitychange',sync);reduced.removeEventListener('change',sync)}},[]);
+ return <section ref={root} className="cc-section cc-dark" data-playing={playing}><div className="cc-atmosphere" aria-hidden="true"><svg viewBox="0 0 1200 560" preserveAspectRatio="xMidYMid slice"><g className="cc-route-lines"><path d="M-80 420C210 520 250 80 620 170S1030 440 1290 270"/><path d="M-90 150C270 40 270 510 650 400S1010 50 1290 150"/><path d="M150-70C20 180 600 240 450 630"/><path d="M1040-70C850 140 1140 360 830 630"/></g><g className="cc-route-traces"><path d="M-80 420C210 520 250 80 620 170S1030 440 1290 270"/><path d="M-90 150C270 40 270 510 650 400S1010 50 1290 150"/></g></svg><span className="cc-back-message cc-back-a"><MessageCircle/><CheckCheck size={16}/></span><span className="cc-back-message cc-back-b"><Send/><CheckCheck size={16}/></span><span className="cc-back-message cc-back-c"><MessageCircle/><CheckCheck size={16}/></span></div><div className="cc-content"><h2><span>Mesajınız <br className="cc-mobile-break"/>ulaşsın.</span><em>Konuşma başlasın.</em></h2><p>Listenizi hazırlayın, ilk WhatsApp<br className="cc-mobile-break"/> kampanyanızı başlatın.</p><AccountTrigger className="cc-action">İlk kampanyamı hazırla<ArrowUpRight size={18}/></AccountTrigger></div></section>;
+}

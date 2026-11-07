@@ -1,5 +1,2 @@
-import { PremiumLanding } from '@/components/premium-landing/premium-landing';
-
-export default function Home() {
-  return <PremiumLanding />;
-}
+import {HomeV3} from '@/components/marketing/home-v3';
+export default function Page(){return <HomeV3/>}

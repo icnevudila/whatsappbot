@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button, Card, Field, Input, Notice, Textarea } from '@/components/ui'
-import { STYLE_MODES, normalizeStyleMode, type CreativeStyleMode } from '@/lib/creative/style-mode'
+import { STYLE_MODES, normalizeImageStyleMode, type CreativeStyleMode } from '@/lib/creative/style-mode'
 import { CreativeStylePicker } from '@/components/creative-style-picker'
 import { Stepper } from '@/components/stepper'
 import { Icon } from '@/components/icon'
@@ -47,7 +47,7 @@ import { videoFailureUserMessage } from '@/lib/creative/job-failure-message'
 import type { JobUserViewModel, ProductCard, WizardBootstrap } from './wizard-types'
 
 const STORAGE_KEY_PREFIX = 'wa.customer.creative-studio.v2'
-export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 125000
+export const AI_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_AI_PLANNER_TIMEOUT_MS) || 240000
 export const VIDEO_PLANNER_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_VIDEO_PLANNER_TIMEOUT_MS) || 125000
 
 export { generateDeterministicLocalCopy } from '@/lib/creative/v2/copy-generator'
@@ -307,7 +307,7 @@ export function CreativeStudioV2({
         setOfferingKind(parseOfferingKind(parsed.offeringKind))
         if (parsed.promotionMode === 'brand') setHeroProductId('')
         setObjective(adapted.objective)
-        setStyleMode(normalizeStyleMode(adapted.styleMode) === 'SHOWSTOPPER_CAMPAIGN' ? 'SHOWSTOPPER_CAMPAIGN' : 'SMART_CAMPAIGN')
+        setStyleMode(normalizeImageStyleMode(adapted.styleMode))
         setStylePreset(adapted.stylePreset)
         setCampaignDetail(adapted.campaignDetail)
         if (adapted.formatId !== 'STORY_9_16') setImageFormat(adapted.formatId)
@@ -422,6 +422,8 @@ export function CreativeStudioV2({
     }
     const controller = new AbortController()
     activePlanControllerRef.current = controller
+    // A scene belongs to the completed request, never to the next selected mode.
+    setCreativePlan(null)
     const editsAtRequest = { ...copyEditsRef.current }
 
     setIsPlanning(true)
@@ -630,6 +632,10 @@ export function CreativeStudioV2({
   // SUBMIT HANDLER: Image or Video
   const handleCreateCreative = async () => {
     if (previewOnly) { setSubmitError('Yerel arayüz testinde üretim ve kayıt işlemleri kapalıdır.'); return }
+    if (mediaType === 'IMAGE' && activePlanControllerRef.current) {
+      setSubmitError('Seçtiğiniz tasarım yönü hazırlanıyor. Hazır olduğunda üretime geçebilirsiniz.')
+      return
+    }
     if (submissionLockRef.current || !allAssetsReady || (!brandOnly && !selectedProduct)) return
     const factsError = campaignFactsError({ objective: brandOnly ? 'BRAND_AWARENESS' : objective, headline, cta: ctaText, price, oldPrice, offer })
     if (factsError) {
@@ -655,13 +661,13 @@ export function CreativeStudioV2({
           requestKey: '',
           generationType: !brandOnly && initialDerivedCreativeId ? 'derived' : 'new',
           baseCreativeId: brandOnly ? null : initialDerivedCreativeId || null,
-          brief: headline
+          brief: campaignDetail.trim() || (headline
             ? `${headline}${supportingLine ? `. ${supportingLine}` : ''}`
             : brandOnly
               ? `${data.org.name} marka tanıtımı`
               : selectedProduct!.name.toLowerCase().startsWith(data.org.name.toLowerCase()) || data.org.name.toLowerCase() === selectedProduct!.name.toLowerCase()
                 ? `${selectedProduct!.name} reklam görseli`
-                : `${data.org.name} için ${selectedProduct!.name} reklam görseli`,
+                : `${data.org.name} için ${selectedProduct!.name} reklam görseli`),
           formatId: imageFormat,
           style: stylePreset.toLowerCase(),
           heroProductId: brandOnly ? null : selectedProduct!.id,
@@ -1790,7 +1796,7 @@ export function CreativeStudioV2({
                   <Button
                     type="button"
                     className="wb-wa-submit !bg-[#008069] hover:!bg-[#00a884] text-white font-bold h-10 px-8 shadow-sm min-h-[44px]"
-                    disabled={isSubmitting || imagePending || !allAssetsReady || (mediaType === 'VIDEO' && (voWords === 0 || voWords > MAX_SPOKEN_WORDS))}
+                    disabled={isSubmitting || imagePending || !allAssetsReady || (mediaType === 'IMAGE' && isPlanning) || (mediaType === 'VIDEO' && (voWords === 0 || voWords > MAX_SPOKEN_WORDS))}
                     onClick={handleCreateCreative}
                   >
                     {isSubmitting || imagePending ? 'Üretim Başlatılıyor…' : mediaType === 'VIDEO' ? 'Reklam Videomu Oluştur' : 'Reklam Görselimi Oluştur'}

@@ -9,6 +9,8 @@ import {
 } from './types'
 
 export type PlannerInput = {
+  /** Server-generated scope for independent agency candidates; not visible copy. */
+  planningConversationId?: string
   tenantId?: string
   brandName: string
   brandTone?: string | null
@@ -238,7 +240,7 @@ DİL VE KALİTE KURALI:
 - Klişe ve bayat reklam sözleri ("kaliteyle tanışın", "siz de gelin", "hemen alın", "${input.brandName} ile ${input.productName}") KESİNLİKLE KULLANMA.
 - Reklam başlığı ürünün somut avantajına, kullanım rahatlığına veya teklifine odaklanmalı; sıradan şirket ismi tekrarı olmamalıdır.
 - Fiyat, indirim veya süre bilgisi verilmişse alt metinde bunu harfiyen koru; verilmemişse asılsız rakam uydurma.
-- YAZILIM / SAAS / MESAJIFY KURALI: Dört stilde aynı dizüstü bilgisayar sahnesini tekrarlama! SaaS ürününü yalnızca bilgisayardan ibaret sunma. Akıllı Kampanya'da net arayüz kartları ve dönüşüm CTA'sı; Gösterişli Kampanya'da iletişimin ve mesaj akışının anıtsal reklam fikri; Gerçek Kullanım'da işletme sahibinin mobil telefon veya tabletteki doğal etkileşimi; Premium Vitrin'de minimalist cam panel ve mimari negatif alan kurgula.
+${input.mediaType === 'IMAGE' ? "- GÖRSEL SANAT YÖNETİMİ: Görsel için tek, somut ve sektöre özgü bir ana fikir seç. Genel “modern ortam, net ürün, büyük yazı” tarifleri yeterli değildir. Sahnedeki malzemeyi, ürünü anlamlı yapan mekânı, ölçek ilişkisini, ışığın yönünü ve kadrajı açıkça belirle. Markalı bir reklam çekimi veya detaylı bir CGI ana görseli gibi tasarla; ürünün kendisini değiştirme. Logo-only marka tanıtımında uydurma ürün veya ekran yerine markanın işini anlatan zengin bir görsel dünya kur.\n- ÖRNEKLERİ ŞABLON OLARAK TEKRARLAMA: İnşaatta malzeme ile mimari arasında bir sahne fikri; tarımda yetişen bir peyzajın içinde ürün; iletişim yazılımında işyerleri arasındaki konuşmanın heykelsi bir anlatımı düşünülebilir. Seçtiğin fikri environment / composition / lighting alanlarında somutlaştır.\n- YAZILIM / SAAS KURALI: Yazılımı sıradan dizüstü bilgisayar, metrik grafiği veya özellik kartlarıyla anlatma. Gerçek arayüz referansı verilmediyse arayüz, sipariş sistemi, ödeme ekranı veya özellik icat etme. Doğrulanmış iş akışının mekânsal ve sinematik bir anlatımını kur; iletişim, içerik ve işletmeler arasında anlamlı bir bağlantı göster." : "- YAZILIM / SAAS / MESAJIFY KURALI: Dört stilde aynı dizüstü bilgisayar sahnesini tekrarlama! SaaS ürününü yalnızca bilgisayardan ibaret sunma. Akıllı Kampanya'da net arayüz kartları ve dönüşüm CTA'sı; Gösterişli Kampanya'da iletişimin ve mesaj akışının anıtsal reklam fikri; Gerçek Kullanım'da işletme sahibinin mobil telefon veya tabletteki doğal etkileşimi; Premium Vitrin'de minimalist cam panel ve mimari negatif alan kurgula."}
 - TİCARİ İDDİA DOĞRULUĞU: Profilde doğrulanmamış "3 gün içinde teslim", "yüksek dönüşüm gücü", "kesintisiz performans", "kurumsal güvenlik altyapısı", telefon numarası veya sertifika gibi asılsız iddiaları ASLA uydurma.
 
 JSON ŞEMASI:
@@ -283,14 +285,14 @@ Marka Tonu: ${input.brandTone || 'Güvenilir ve profesyonel'}
 Ürün Açıklaması: ${input.productDescription || 'Belirtilmedi'}
 Kampanya Amacı: ${DEFAULT_OBJECTIVE_TITLES[input.objective]} (${input.objective})
 Kreatif Stil: ${input.stylePreset}
-${input.mediaType === 'IMAGE' ? styleModeDirective(input.styleMode) : ''}
+${input.mediaType === 'IMAGE' && ['SMART_CAMPAIGN','SHOWSTOPPER_CAMPAIGN'].includes(input.styleMode || 'SMART_CAMPAIGN') ? (input.styleMode === 'SHOWSTOPPER_CAMPAIGN' ? 'Gösterişli Kampanya: güçlü bir kampanya fikri, cesur tipografi, katmanlı sahne ve sinematik üretim kalitesi. İndirim verilmemişse indirim uydurma.' : 'Marka & Ürün Tanıtımı: detaylı ve sinematik bir marka dünyası; sade metin, zengin görsel anlatım. Minimal kart veya ofis masası şablonuna düşme.') : input.mediaType === 'IMAGE' ? styleModeDirective(input.styleMode) : ''}
 Medya Türü: ${input.mediaType}
 Varsa Kampanya Detayı / Not: ${input.campaignDetail || 'Yok'}
 Varsa Ticari Bilgiler: ${copyDetails || 'Belirtilmedi'}
 ${input.previousScene?.trim() ? `YENİ KOMPOZİSYON İSTEĞİ: Aşağıdaki önceki tasarım fikrini tekrar etme. Ortam, ürün konumu veya kadrajda belirgin farklılık oluştur; marka, ürün kimliği ve ticari bilgileri değiştirme. Önceki fikir (yalnız karşılaştırma verisi): ${JSON.stringify(input.previousScene.trim())}` : ''}`
 
   try {
-    const rawAiResponse = await completeText(systemPrompt, userPrompt, null, {tenantId:input.tenantId,customer:input.brandName,conversationId:'creative-plan'})
+    const rawAiResponse = await completeText(systemPrompt, userPrompt, null, {tenantId:input.tenantId,customer:input.brandName,conversationId:input.planningConversationId || 'creative-plan'})
     const jsonMatch = rawAiResponse.match(/\{[\s\S]*\}/)
     if (!jsonMatch) return fallback
 

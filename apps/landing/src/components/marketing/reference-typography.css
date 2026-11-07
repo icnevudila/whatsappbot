@@ -1,0 +1,50 @@
+@font-face {
+  font-family: 'LINE Seed JP';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/line-seed-latin-ext-400.woff2) format('woff2');
+  unicode-range: U+0100-012F, U+0131-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'LINE Seed JP';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/fonts/line-seed-latin-400.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'LINE Seed JP';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/line-seed-latin-ext-700.woff2) format('woff2');
+  unicode-range: U+0100-012F, U+0131-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'LINE Seed JP';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(/fonts/line-seed-latin-700.woff2) format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@media(max-width:760px){
+ html body .ms-site,html body .ac-dialog{font-family:'LINE Seed JP',CampaignInter,Arial,sans-serif}
+ html body .ms-site .v3-home h1,html body .ms-site .v3-home h2,html body .ms-site .v3-home h3{font-family:'LINE Seed JP',CampaignInter,Arial,sans-serif;font-weight:700}
+ .ms-site .v3-home h2{font-size:26px;line-height:1.18;letter-spacing:-.035em;text-align:center}.ms-site .v3-home h2 em{color:inherit}
+ .ms-site .v3-home .v3-hero h1{font-size:clamp(26px,8.6vw,38px);letter-spacing:-.045em}
+ .v3-home .v3-section-head{text-align:center}.v3-home .v3-section-head>p{font-size:16px;line-height:1.65;max-width:310px;margin:15px auto 0;text-align:center;color:#6a8570}
+ .v3-home .v3-audience .v3-section-head{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);border:0}
+ .ms-site .v3-home .v3-audience .ap-copy h3{display:block;order:1;font-size:26px;line-height:1.2;text-align:center;letter-spacing:-.035em;margin:0!important}
+ .ap-desktop-title{display:none}.ap-mobile-title{display:inline}
+ .ms-site .v3-home .v3-audience .ap-copy>p{order:2;font-size:16px;line-height:1.65;text-align:center;max-width:310px;margin:0 auto;color:#6a8570}.v3-home .v3-audience .ap-motion{order:3}.v3-home .v3-audience .ap-copy>.hv-link{order:4;justify-self:center;color:#14844e;font-size:16px;border-bottom:1px solid #b7d1b9;padding-bottom:5px}
+ .v3-home .v3-campaign .v3-section-head>p{display:block}.v3-home .v3-campaign .v3-steps{display:none}.v3-home .v3-campaign .v3-wrap{text-align:center}.v3-home .v3-campaign .v3-text-link{margin-top:25px}
+ .v3-home .v3-conversation-copy>h2{order:1;margin-bottom:15px}.v3-home .v3-conversation-copy>p{order:2;text-align:center;font-size:16px;line-height:1.65;max-width:310px;margin:0 auto 23px;color:#6a8570}.v3-home .v3-conversation-film{order:3}.v3-home .v3-conversation-copy>.v3-text-link{order:4;justify-self:center;margin-top:23px}
+ .v3-home .v3-creative .v3-section-head>p{display:block}.v3-home .v3-gallery-end{align-items:center;text-align:center}.v3-home .v3-packages{text-align:center}
+ .v3-home .v3-text-link{font-size:16px;color:#14844e;border-bottom:1px solid #b7d1b9;padding-bottom:4px;gap:9px}.v3-home .v3-faq>div>h2{text-align:center}.v3-home .v3-faq-more{display:flex;width:max-content;margin-inline:auto}
+ .ms-site .ms-footer-top>div:first-child{display:block;text-align:center}.ms-site .ms-footer-top>div:first-child .mesajify-mark{width:170px!important;margin-inline:auto}.ms-site .ms-footer-top>div:first-child p{font-size:16px;line-height:1.6;text-align:center;margin:18px 0 2px}.ms-site .ms-footer-top>div:last-child{gap:16px;flex-wrap:wrap}.ms-site .ms-footer-bottom{font-size:13px}.ms-footer-legal{display:flex!important;gap:17px}
+ .ac-dialog .ac-content h2{font-family:'LINE Seed JP',CampaignInter,Arial,sans-serif;font-weight:700}
+}
+@media(min-width:761px){.ap-mobile-title{display:none}}

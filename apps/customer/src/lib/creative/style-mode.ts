@@ -1,6 +1,7 @@
 export type CreativeStyleMode =
   | 'SMART_CAMPAIGN'
   | 'SHOWSTOPPER_CAMPAIGN'
+  | 'CONCEPT_CAMPAIGN'
   | 'REAL_LIFE_CAMPAIGN'
   | 'PREMIUM_SHOWCASE'
 
@@ -15,20 +16,27 @@ export interface StyleModeItem {
 export const STYLE_MODES: readonly StyleModeItem[] = [
   {
     id: 'SMART_CAMPAIGN',
-    label: 'Marka & Ürün Tanıtımı',
-    description: 'Logo, marka renkleri ve bilgilerinizle özgün tanıtım. Referans görsel isteğe bağlı.',
+    label: 'Marka ve Ürün',
+    description: 'Markanızı ve ürününüzü güçlü bir ana görsel ve kısa bir mesajla tanıtın.',
     badge: 'Varsayılan',
-    previewUrl: '/style-previews/brand-kit-introduction.png',
+    previewUrl: '/style-previews/brand-product-v2.webp',
   },
   {
     id: 'SHOWSTOPPER_CAMPAIGN',
-    label: 'Gösterişli Kampanya',
-    description: 'Cesur kampanya tipografisi, dinamik ürün sunumu, teklif vurguları ve güçlü aksiyon alanları.',
-    previewUrl: '/style-previews/brand-kit-campaign.png',
+    label: 'Kampanya Afişi',
+    description: 'Ürününüzü, fiyatınızı veya teklifinizi net bir satış afişinde bir araya getirin.',
+    previewUrl: '/style-previews/campaign-poster-v2.webp',
+  },
+  {
+    id: 'CONCEPT_CAMPAIGN',
+    label: 'Konsept Reklam',
+    description: 'Ürününüzü detaylı bir sahne, katmanlı kompozisyon ve sahneye işlenmiş tipografiyle anlatın.',
+    previewUrl: '/style-previews/concept-ad-v2.webp',
   },
 ] as const
 
 export function normalizeStyleMode(value: unknown): CreativeStyleMode {
+  if (value === 'CONCEPT_CAMPAIGN' || value === 'concept_ad') return 'CONCEPT_CAMPAIGN'
   if (value === 'SHOWSTOPPER_CAMPAIGN' || value === 'grand_campaign' || value === 'showy' || value === 'bold_spectacle') {
     return 'SHOWSTOPPER_CAMPAIGN'
   }
@@ -42,11 +50,19 @@ export function normalizeStyleMode(value: unknown): CreativeStyleMode {
   return 'SMART_CAMPAIGN'
 }
 
+/** Restore current image styles without silently resetting the concept mode. */
+export function normalizeImageStyleMode(value: unknown): CreativeStyleMode {
+  const mode=normalizeStyleMode(value)
+  return STYLE_MODES.some(item=>item.id===mode) ? mode : 'SMART_CAMPAIGN'
+}
+
 export function styleModeDirective(value: unknown): string {
   const mode = normalizeStyleMode(value)
   let direction = ''
 
-  if (mode === 'SHOWSTOPPER_CAMPAIGN') {
+  if (mode === 'CONCEPT_CAMPAIGN') {
+    direction = 'Concept Advertising: One coherent, richly layered scene built around the real product and brand. Compose tactile foreground, a dominant truthful product hero and a meaningful background. Use scene-integrated lettering with optical readability and a clear closing action. Every prop, material and verified supporting fact belongs to the same concept; no arbitrary fantasy objects, fake certifications, glowing clutter or generic miniature-city template. A small number of verified fact medallions is allowed when it helps the composition. Preserve all selected product and logo references; invent no packaging, claims or variants.'
+  } else if (mode === 'SHOWSTOPPER_CAMPAIGN') {
     direction = `Showstopper Grand Commercial Campaign (HIGH-END EDITORIAL & 3D ARCHITECTURAL POSTER):
 - EDITORIAL CAMPAIGN POSTER ARCHITECTURE (Inspired by Apple, Stripe, and Veriburada):
   * Upper Canvas (~30-35%): Clean, spacious negative space (crisp white, soft ambient studio gradient, or deep brand tone) featuring the authentic brand logo, a commanding bold modern headline ending with a period (.), and exactly one clean supporting subhead value proposition.
