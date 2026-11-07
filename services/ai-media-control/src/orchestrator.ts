@@ -11,6 +11,7 @@ import { supabase, gflowEngineUrl } from './index.js'
 import { JobState, transitionJob } from './state-machine.js'
 import { fetchNextJob, leaseJob } from './queue.js'
 import { scopeJobQuery, parseJobScope } from './job-scope.js'
+import { requiresProviderAccess } from './provider-access-error.js'
 import { isSubmissionPublished, expireUnpublishedSubmissions, repairSubmissionExpiryAudits } from './submission-ready.js'
 import { createNonOverlappingTick } from './non-overlapping-tick.js'
 import { waitForHeavyCapacity, deferCapacityJob, claimCapacityPreparation } from './capacity-backpressure.js'
@@ -651,7 +652,7 @@ async function runJobExecution(job: any, accountId: string) {
       err.message?.includes('FLOW_AUTH_REQUIRED') ||
       err.message?.includes('AUTH_REQUIRED') ||
       err.message?.includes('FlowAccountChooserError') ||
-      err.message?.includes('AuthExpiredError')
+      err.message?.includes('AuthExpiredError') || requiresProviderAccess(String(err.message || ''))
     const isCreditOrRateLimit =
       err.message?.includes('CREDIT_LIMIT_REACHED') ||
       err.message?.includes('return code 37') ||
@@ -664,11 +665,13 @@ async function runJobExecution(job: any, accountId: string) {
         .from('flow_accounts')
         .update({ status: 'needs_reauth', current_job_id: null, updated_at: new Date().toISOString() })
         .eq('id', accountId)
+        .eq('current_job_id', job.id)
     } else if (isCreditOrRateLimit) {
       await supabase
         .from('flow_accounts')
         .update({ status: 'rate_limited', current_job_id: null, updated_at: new Date().toISOString() })
         .eq('id', accountId)
+        .eq('current_job_id', job.id)
     }
   } finally {
     // Release Heavy Mutex Lock
