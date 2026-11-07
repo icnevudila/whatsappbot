@@ -1,4 +1,5 @@
 import { normalizeStyleMode } from '@/lib/creative/style-mode'
+import { recoverableImageReceipt } from '@/lib/creative/image-recovery'
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { PageHeader } from '@/components/ui'
@@ -79,7 +80,7 @@ export default async function CreativeDetailPage({
         ? payload.thumbnailUrl
         : null,
     cleanPublicUrl: payload?.cleanPublicUrl ?? null,
-    recoverableImageJob: Boolean(payload?.imageJob && payload?.imageReconciliationRequired),
+    recoverableImageJob: Boolean(recoverableImageReceipt(payload) && payload?.imageReconciliationRequired),
     imageReconciliationRequired: Boolean(payload?.imageReconciliationRequired),
     campaignMessage: payload?.campaignMessage ?? null,
     artDirectionSource: payload?.art_direction_source || payload?.submissionMetrics?.art_direction_source || null,

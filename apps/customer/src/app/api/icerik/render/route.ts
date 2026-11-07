@@ -1,6 +1,7 @@
 import { isApprovedFinalVideoOutput } from '@/lib/creative/video-output-approval'
 import { NextResponse } from 'next/server'
 import { processCreativeGeneration } from '@/lib/creative/process'
+import { recoverableImageReceipt } from '@/lib/creative/image-recovery'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 
 export const runtime = 'nodejs'
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Yalnızca AI üretimleri.' }, { status: 400 })
   }
   const payload = (data.payload ?? {}) as Record<string, unknown>
-  if (data.format !== 'video' && data.status === 'failed' && !payload.imageJob && !payload.imageSubmitIntent && !payload.imageDirectIntent) {
+  if (data.format !== 'video' && data.status === 'failed' && !recoverableImageReceipt(payload) && !payload.imageSubmitIntent && !payload.imageDirectIntent) {
     // A polling request is observation, not permission to retry a paid failed job.
     return NextResponse.json({ error: data.error || 'Görsel üretimi başarısız oldu.' }, { status: 502 })
   }

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { DirectImageReconciliationError, generateImage, type ReferenceImage } from '@/lib/ai/image'
 import { inspectImageOutput, assertImageAspect, ImageOutputInvalidError } from '@/lib/ai/image-output'
-import { verifyPersistedImageBytes } from '@/lib/ai/image-storage-contract'
+import { verifyPersistedImageBytes, persistGeneratedImage } from '@/lib/ai/image-storage-contract'
 import { ImageJobFailedError, ImageJobPendingError, ImageJobReconciliationError, ImageSubmissionUncertainError, readImageJob } from '@/lib/ai/omnistudio-image-job'
 import { createHash } from 'node:crypto'
 import type { AiKeyBag } from '@/lib/ai/config'
@@ -373,11 +373,7 @@ export async function processCreativeGeneration(
       const ext = image.mimeType === 'image/jpeg' ? 'jpg' : image.mimeType === 'image/webp' ? 'webp' : 'png'
       // Stable storage identity: concurrent polls and upload retries reuse the same bytes, never another render.
       const storagePath = `${creative.org_id}/${creative.id}/${activeImageJob.id}.${ext}`
-      const upload = await supabase.storage.from('creatives').upload(storagePath, image.data, { contentType: image.mimeType, upsert: true })
-      if (upload.error) return { ok: true, pending: true, retryAfterSeconds: 10, error: upload.error.message }
-      const readback = await supabase.storage.from('creatives').download(storagePath)
-      if (readback.error || !readback.data || readback.data.size > 32 * 1024 * 1024) return { ok: true, pending: true, retryAfterSeconds: 10 }
-      const storedReceipt = await verifyPersistedImageBytes(image.data, Buffer.from(await readback.data.arrayBuffer()))
+      const storedReceipt = await persistGeneratedImage(supabase.storage.from('creatives'), storagePath, image.data, image.mimeType)
       const { data: url } = supabase.storage.from('creatives').getPublicUrl(storagePath)
       const update = await supabase.from('creatives').update({
         status: imagePublicationStatus(payload), error: null, storage_path: storagePath, public_url: url.publicUrl,
