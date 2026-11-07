@@ -36,3 +36,9 @@ body.mobile.launch .hero-product-app{left:30px;top:48px;width:840px;height:570px
 .mobile .inbox-app{height:820px}.mobile .chat-history{overflow:hidden}.mobile .chat-window>header{position:relative;z-index:3}.mobile .inbox-note{bottom:27px;font-size:24px}
 .mobile .map-collected{top:480px;height:auto;padding:24px}.mobile .map-collected h2{font-size:30px}.mobile .map-collected>header{padding-bottom:18px}.mobile .map-collected>div{padding:15px 0}.mobile .map-collected strong{font-size:27px}.mobile .map-collected footer{padding-top:17px;font-size:22px}
 .mobile .art-source{left:35px;top:145px;width:250px;height:310px}.mobile .art-source>img{height:270px;object-fit:contain}.mobile .art-workbench{left:330px;top:140px;width:500px;height:625px}.mobile .art-layers{left:35px;top:475px;width:250px}.mobile .art-layers>div{font-size:24px;padding:18px 0}.mobile .art-share{left:330px;top:810px;width:500px;padding:20px}.mobile .art-share strong{font-size:25px}.mobile .art-camera{left:285px;top:340px;width:45px}
+
+/* Keep operation labels; omit production notes and repeated narration. */
+.art-layers,.art-share,.inbox-note,.import-file>p,.contacts-group>footer,.map-research,.map-collected>footer,.creative-product>span,.creative-check{display:none!important}
+.art-source{left:190px;top:180px;width:280px;height:355px}.art-source>img{height:313px}.art-workbench{left:740px;top:100px;width:420px;height:525px}.art-camera{left:500px;top:350px;width:180px}
+.mobile .art-source{left:35px;top:285px;width:250px;height:310px}.mobile .art-source>img{height:270px}.mobile .art-workbench{left:330px;top:140px;width:500px;height:625px}.mobile .art-camera{left:285px;top:440px;width:45px}
+.mobile .chat-response{bottom:8px}

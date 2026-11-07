@@ -6,7 +6,8 @@ const { once } = require('node:events');
 const { chromium } = require('C:/Users/TP2/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const root = path.resolve(__dirname, '../../apps/landing/public');
 const output = path.join(root, 'landing/studio');
-const port = process.argv.includes('--posters-only') ? 4192 : 4191;
+const customPort=process.argv.find(arg=>arg.startsWith('--port='));
+const port=customPort?Number(customPort.split('=')[1]):process.argv.includes('--posters-only')?4192:4191;
 const evidence = path.resolve(__dirname, '../../artifacts/landing-studio-2026-11-06');
 fs.mkdirSync(evidence, { recursive: true });
 const types = { '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript', '.webp': 'image/webp', '.jpg': 'image/jpeg', '.png': 'image/png', '.woff2': 'font/woff2' };
@@ -22,7 +23,7 @@ const server = http.createServer((req, res) => {
   const selected = process.argv.filter(arg => ['discovery', 'creative', 'campaign', 'inbox', 'overview', 'hero', 'showcase', 'launch', 'import', 'contacts'].includes(arg));
   const modes = selected.length ? selected : ['discovery', 'creative', 'campaign', 'inbox', 'overview'];
   try {
-    for (const mobile of (process.argv.includes('--mobile-only') ? [true] : [false, true])) {
+    for (const mobile of (process.argv.includes('--mobile-only') ? [true] : process.argv.includes('--desktop-only') ? [false] : [false, true])) {
       for (const mode of modes) {
         const suffix = mobile ? '-mobile' : '';
         const page = await browser.newPage({ viewport: mobile ? { width: 900, height: ({launch:720,import:900,contacts:900,discovery:900,inbox:920,showcase:920,creative:1080})[mode] || 1080 } : mode === 'hero' ? { width: 900, height: 540 } : mode === 'launch' ? {width:1000,height:720} : { width: 1400, height: 700 }, deviceScaleFactor: mobile || mode === 'hero' || mode === 'launch' ? 1 : 1920 / 1400 });
@@ -46,6 +47,10 @@ const server = http.createServer((req, res) => {
 
         }
         await page.evaluate(t => seek(t), mode === 'overview' ? 12 : mode === 'launch' ? 30.5 : 15);
+        const captionAudit=await page.evaluate(()=>{const forbidden=['Işık ve atmosfer','Tipografi','Kampanya tasarımı','Kampanyanıza ekleyin.','Son karar sizde. Yanıtı inceleyip gönderin.','Mevcut listenizle başlayın.','Grubunuz hazır.','Kişi grubunuzda kullanın','Markanız, ürününüz, kısa isteğiniz.','Ürününüzden başlayan bir anlatım.','Kontrol sizde.'];const visible=document.body.innerText;const credit=document.querySelector('.map-credit');return {unexpected:forbidden.filter(text=>visible.includes(text)),visibleText:visible,mapAttributionVisible:credit?credit.getClientRects().length>0:null}});
+        if(captionAudit.unexpected.length)throw Error('Redundant film copy still visible: '+captionAudit.unexpected.join(', '));
+        if(mode==='discovery'&&!captionAudit.mapAttributionVisible)throw Error('Map attribution must remain visible');
+        fs.writeFileSync(path.join(evidence,mode+suffix+'-caption-audit.json'),JSON.stringify(captionAudit,null,2));
         await page.screenshot({ path: path.join(output, mode + suffix + '-poster.jpg'), type: 'jpeg', quality: 95 });
         for (const second of (mode === 'launch' ? [2,5,8,12,15,18,22.8,26,30.5] : [2,7,12,17])) {
           await page.evaluate(t => seek(t), second);
@@ -54,7 +59,8 @@ const server = http.createServer((req, res) => {
         if (errors.length) throw Error(errors.join('\n'));
         console.log(mode + suffix, 'poster and keyframes ready');
         if (!process.argv.includes('--posters-only')) {
-          const target = path.join(output, mode + suffix + '.mp4');
+          const finalTarget=path.join(output,mode+suffix+'.mp4');
+          const target=path.join(output,mode+suffix+'.rendering.mp4');
           const ff = spawn('ffmpeg', ['-hide_banner', '-loglevel', 'error', '-y', '-f', 'image2pipe', '-framerate', '30', '-vcodec', 'mjpeg', '-i', 'pipe:0', '-an', '-c:v', 'libx264', '-preset', 'fast', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', target], { stdio: ['pipe', 'ignore', 'pipe'] });
           let ffErrors = ''; ff.stderr.on('data', data => ffErrors += data);
           const completion = once(ff, 'close');
@@ -68,7 +74,8 @@ const server = http.createServer((req, res) => {
           }
           ff.stdin.end(); const [code] = await completion;
           if (code) throw Error(ffErrors);
-          console.log(mode + suffix, 'MP4 complete', fs.statSync(target).size);
+          fs.renameSync(target,finalTarget);
+          console.log(mode+suffix,'MP4 complete',fs.statSync(finalTarget).size);
         }
         await page.close();
       }

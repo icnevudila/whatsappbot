@@ -14,7 +14,7 @@ Aktif hero kaynakları:
 - apps/landing/public/landing/studio/launch.mp4 + launch-mobile.mp4
 - aynı isimli -poster.jpg dosyaları
 - scripts/landing-studio/render.cjs (`node scripts/landing-studio/render.cjs launch`)
-- apps/landing/src/components/marketing/looping-film.tsx: cache sürümü 20261107-hero-fixed-v7
+- apps/landing/src/components/marketing/looping-film.tsx: cache sürümü 20261107-clean-copy-v8
 - apps/landing/scripts/verify-marketing-assets.cjs: hero 34 saniye, kaynak dosyalar zorunlu manifestte.
 Eski motion-film.js launch fonksiyonu arşiv kaynakta kalıyor; renderer artık launch için hero-clarity.html kullanıyor. Eski 26 saniyelik karmaşık heroyu geri getirme. Kullanıcının beğendiği alt kampanya filmi değiştirilmedi.
 
@@ -65,3 +65,15 @@ Kullanıcı genel tasarımı olumlu buldu; arkadaşının bazı yerleri karış�
 - Gerçektarayıcı:desktop1280/document1265hero34s1.5×playing/looptrue/controlsfalse;mobile320taşmasız;showcase20s1.8×playing. Tümmedyalar73aktifmanifest/16tamdecodekanıtıkorunur; sondeğişikliklerCSSveoynatımhızıdır. final-browser-check.json içindeki mobileheroilkölçümündekidurationnull,videooandaoffscreen/lazyolduğuiçindir; aynıoturumshowcaseproofheroRate1.5vedesktopproofnativeoynatımıdoğrular.
 - Funnel: kampanyavaadi→listeseçimi→mesaj/planlama→gelenyanıt→isteğebağlıkreatif→paket→sorular→başlangıçCTA. Gereksiztekrargeri eklenmedi. Dönüşümoranı veya evrensel10/10görselkabülüölçülmüşdeğildir.
 - Önizleme3018yerelnextstartaçık. Push/deploy/Oraclemüdahalesiyok. Kullanıcıgüncelgeribildirimverdiğiiçinbilgisayarkapatılmadı.
+
+## Son takip — video içi açıklama temizliği (v8)
+Kullanıcı arkadaşının gereksiz animasyon açıklaması eleştirisini onaylayıp temizliği istedi.
+-7konunun desktop+mobil14MP4veposteriyenidenüretildi:showcase,creative,campaign,inbox,import,contacts,discovery. HeroayrıntılıakışıveMP4'üdeğiştirilmedi.
+-Gizlenipvideodan çıkarılanlar:Ürün/Işıkveatmosfer/Tipografi/Kampanyatasarımıtekniklistesi,showcase“Kampanyanızaekleyin”,inbox“Sonkararsizde”altcümlesi,Excel“Mevcutlistenizlebaşlayın”,rehbertekrarfooterı,haritatalebitekraranlatımı,stüdyo“Markanızürününüzkısaisteğiniz”ve“Ürününüzdenbaşlayananlatım”,kampanyafooter“Kontrolsizde”vebenzertekrarlar.
+-Korunanlar:gerçekişlemiadlandıranalan/buton/durumlar,modisimleri,mesajmetinleri,örnekreklamınkendifiyat/CTA'sıveOSMharitaatıfı. Heronun1.5×,showcase1.8×ve4istatistiktercihikorumalıdır.
+-Showcasekaynakürün/sonuçikilisiböşalantekniklistsütunuolmadanyenidendengelendi. Mobilinboxtayanıtbalonundakiküçükçakışmabottom8pxiledüzeltildi.
+-Aktifstyles:public/landing/studio/motion-film.css;onaylanmışkampanyafilmininyalnızmetinfooterlarınısaklayanscene.csskuralı. HTMLanimasyonselectorlarıstabilkalsındiyeauthoringDOM'dakorunuyor;renderedMP4'lerdeçıkmıyorlar.
+-Rendererscriptineayrıport/desktop-onlyseçeneği,MP4'üönce.rendering.mp4üretiptamamlanıncaatomikyenidenadlandırmavegörünürmetindenbaşarısızsayılacakcaptiondenetimieklendi. Tümrenderlerbitti;geçici.rendering.mp4kalmadı.
+-Kanıt:caption-cleanup-check.json14sürüm/0kalanistenmeyenetiket. Perfilmcaption-audit.jsondosyalarıartifacts/landing-studio-2026-11-06altında;discovery2varyantındaOSMatıfgörünürlüğütrue.
+-Metadata+tamdecode:73aktifasset/16geçerliH264film. Buildbaşarılı33statikçıktı. Gerçektarayıcıdesktopshowcase20s1.8×oynuyor;mobile390/document375,showcase-mobilev8oynuyor,hatasız. Screenshotlarclean-copy-desktop.pngveclean-copy-mobile.png.
+-Buajanpush/deploy/Oracleişlemiyapmadı. Yerel3018önizlemegüncelbuildleyerelolarakyenidenbaşlatıldı.

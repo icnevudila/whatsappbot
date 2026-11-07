@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from 'react';
 import Image from 'next/image';
 const base='/landing/studio/';
-const revision='20261107-hero-fixed-v7';
+const revision='20261107-clean-copy-v8';
 const playbackRates:Record<string,number>={launch:1.5,showcase:1.8};
 export function LoopingFilm({name,label,priority=false}:{name:string;label:string;priority?:boolean}){
  const box=useRef<HTMLDivElement>(null),movie=useRef<HTMLVideoElement>(null),source=useRef('');
