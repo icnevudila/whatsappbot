@@ -11,7 +11,7 @@ const AUTH_HATA_NOTICES: Record<string, ReactNode> = {
   uye: (
     <>
       Hesabınız henüz bir işletmeye atanmamış. Erişim için{' '}
-      <a href={contactMailto()} className="underline underline-offset-2 font-medium text-[#008069]">
+      <a href={contactMailto('Mesajify erişim talebi')} className="underline underline-offset-2 font-medium text-[#008069]">
         iletişime geçin
       </a>
       .
@@ -29,7 +29,7 @@ export function AuthForm() {
   const hataNotice = hata ? AUTH_HATA_NOTICES[hata] : null
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="auth-form space-y-5" aria-busy={pending}>
       {searchParams.get('devam') ? (
         <input type="hidden" name="devam" value={searchParams.get('devam') ?? ''} />
       ) : null}
@@ -53,6 +53,9 @@ export function AuthForm() {
             name="email"
             type="email"
             autoComplete="email"
+            inputMode="email"
+            autoCapitalize="none"
+            spellCheck={false}
             required
             placeholder="ornek@sirketiniz.com"
             className="h-11 w-full rounded-[12px] border border-[#E5E7EB] bg-[#F9FAFB] pl-10 pr-3.5 text-[14px] text-[#0A0A0A] placeholder:text-[#9CA3AF] transition-all duration-150 focus:border-[#008069] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#008069]/10"
@@ -98,6 +101,7 @@ export function AuthForm() {
             onClick={() => setShowPassword(!showPassword)}
             className="absolute inset-y-0 right-0 flex items-center pr-3 text-[#9CA3AF] transition-colors hover:text-[#008069]"
             aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+            aria-pressed={showPassword}
           >
             {showPassword ? (
               <svg viewBox="0 0 20 20" fill="currentColor" className="size-4" aria-hidden>
@@ -147,12 +151,12 @@ export function AuthForm() {
       </div>
 
       <p className="pt-2 text-center text-[13px] leading-relaxed text-[#6B7280]">
-        Hesabınız yok mu?{' '}
+        İşletmeniz için erişim mi gerekiyor?{' '}
         <a
-          href={contactMailto()}
+          href={contactMailto('Mesajify erişim talebi')}
           className="font-semibold text-[#008069] transition-colors hover:underline underline-offset-2"
         >
-          İletişime geçin
+          Erişim isteyin
         </a>
       </p>
     </form>

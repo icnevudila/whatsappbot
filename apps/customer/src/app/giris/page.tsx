@@ -3,40 +3,5 @@ import { Suspense } from 'react'
 import { AuthShell } from '@/components/auth-shell'
 import { AuthForm } from './auth-form'
 import { AuthModeCopy } from './auth-mode-copy'
-
-export const metadata: Metadata = {
-  title: 'Giriş Yap · Mesajify',
-  description: 'Mesajify WhatsApp Kampanya Platformu müşteri paneline giriş yapın.',
-}
-
-export default function LoginPage() {
-  return (
-    <AuthShell
-      asideTitle={
-        <>
-          WhatsApp ile
-          <br />
-          <span className="text-white">
-            satışlarınızı büyütün.
-          </span>
-        </>
-      }
-      asideLead="WhatsApp hatlarınızı bağlayın, hedef kitlenizi hazırlayın, kişiselleştirilmiş kampanyalarınızı güvenle gönderin."
-    >
-      <Suspense
-        fallback={
-          <div className="mb-6">
-            <h1 className="text-[24px] font-bold tracking-[-0.03em] text-[#0A0A0A]">Panele Giriş Yap</h1>
-          </div>
-        }
-      >
-        <div className="mb-6">
-          <AuthModeCopy />
-        </div>
-      </Suspense>
-      <Suspense fallback={<div className="h-[260px]" aria-hidden />}>
-        <AuthForm />
-      </Suspense>
-    </AuthShell>
-  )
-}
+export const metadata:Metadata={title:'Giriş Yap',description:'Mesajify hesabınıza giriş yapın; listelerinizi, WhatsApp kampanyalarınızı ve konuşmalarınızı yönetin.',robots:{index:false,follow:false}}
+export default function LoginPage(){return <AuthShell><AuthModeCopy/><Suspense fallback={<div className="h-[320px]" aria-hidden/>}><AuthForm/></Suspense></AuthShell>}

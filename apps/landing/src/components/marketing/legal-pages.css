@@ -1,0 +1,256 @@
+/* Mesajify Legal Pages Styling - Editorial, Trust & Compliance */
+.ms-legal-main {
+  padding-top: clamp(32px, 5vw, 64px);
+  padding-bottom: clamp(64px, 8vw, 112px);
+  background: #ffffff;
+  color: #121a2d;
+}
+
+.ms-legal-header {
+  margin-bottom: clamp(36px, 5vw, 64px);
+  max-width: 840px;
+}
+
+.ms-legal-header h1 {
+  font-size: clamp(32px, 4.5vw, 48px);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #121a2d;
+  margin: 14px 0 16px;
+}
+
+.ms-legal-header p.ms-legal-lead {
+  font-size: clamp(16px, 2vw, 19px);
+  line-height: 1.6;
+  color: #4b5563;
+  margin: 0 0 16px;
+}
+
+.ms-legal-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: #6b7280;
+  background: #f4f7f5;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid #e2ebe4;
+}
+
+.ms-legal-meta strong {
+  color: #007854;
+  font-weight: 600;
+}
+
+.ms-legal-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 60px;
+  align-items: start;
+}
+
+/* Sidebar navigation */
+.ms-legal-sidebar {
+  position: sticky;
+  top: 106px;
+  background: #fbfdfc;
+  border: 1px solid #e5ede7;
+  border-radius: 14px;
+  padding: 22px 18px;
+}
+
+.ms-legal-sidebar-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #007854;
+  margin-bottom: 14px;
+  display: block;
+}
+
+.ms-legal-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ms-legal-nav a {
+  font-size: 13.5px;
+  color: #4b5563;
+  line-height: 1.4;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  text-decoration: none;
+}
+
+.ms-legal-nav a:hover {
+  color: #007854;
+  background: #eef6f1;
+}
+
+.ms-legal-switch {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e5ede7;
+}
+
+.ms-legal-switch-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #007854;
+  text-decoration: none;
+}
+
+.ms-legal-switch-link:hover {
+  text-decoration: underline;
+}
+
+/* Content Sections */
+.ms-legal-content {
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+.ms-legal-section {
+  scroll-margin-top: 110px;
+}
+
+.ms-legal-section h2 {
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #121a2d;
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf2ee;
+}
+
+.ms-legal-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a2721;
+  margin: 20px 0 10px;
+}
+
+.ms-legal-section p {
+  font-size: 15px;
+  line-height: 1.7;
+  color: #374151;
+  margin: 0 0 14px;
+}
+
+.ms-legal-section p:last-child {
+  margin-bottom: 0;
+}
+
+.ms-legal-section ul {
+  margin: 12px 0 16px 20px;
+  padding: 0;
+}
+
+.ms-legal-section li {
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.ms-legal-callout {
+  background: #f3f8f5;
+  border-left: 4px solid #007854;
+  border-radius: 0 10px 10px 0;
+  padding: 16px 20px;
+  margin: 18px 0;
+}
+
+.ms-legal-callout p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1b3829;
+  margin: 0;
+}
+
+.ms-legal-callout strong {
+  color: #007854;
+}
+
+/* Table styling for data categories */
+.ms-legal-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 20px 0;
+  border: 1px solid #e5ede7;
+  border-radius: 10px;
+}
+
+.ms-legal-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.ms-legal-table th {
+  background: #f7faf8;
+  color: #121a2d;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5ede7;
+  white-space: nowrap;
+}
+
+.ms-legal-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f4f1;
+  color: #374151;
+  vertical-align: top;
+}
+
+.ms-legal-table tr:last-child td {
+  border-bottom: none;
+}
+
+.ms-legal-table td strong {
+  color: #121a2d;
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .ms-legal-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  
+  .ms-legal-sidebar {
+    position: static;
+  }
+  
+  .ms-legal-nav {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+}
+
+@media (max-width: 600px) {
+  .ms-legal-nav {
+    grid-template-columns: 1fr;
+  }
+  
+  .ms-legal-table th,
+  .ms-legal-table td {
+    padding: 10px 12px;
+    font-size: 12.5px;
+  }
+}

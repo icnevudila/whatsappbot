@@ -224,8 +224,8 @@ export const resources=[
     "sections": [
       {
         "title": "Bize e-posta gönderin",
-        "text": "Sorunuzu veya işletmeniz için erişim talebinizi destek@filo.app adresine iletebilirsiniz. Parolanızı paylaşmayın.",
-        "href": "mailto:destek@filo.app"
+        "text": "Sorunuzu veya işletmeniz için erişim talebinizi destek@mesajify.com adresine iletebilirsiniz. Parolanızı paylaşmayın.",
+        "href": "mailto:destek@mesajify.com"
       },
       {
         "title": "Hesabınız varsa",
