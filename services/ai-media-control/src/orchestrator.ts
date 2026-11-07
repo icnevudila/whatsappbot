@@ -10,6 +10,7 @@
 import { supabase, gflowEngineUrl } from './index.js'
 import { JobState, transitionJob } from './state-machine.js'
 import { fetchNextJob, leaseJob } from './queue.js'
+import { scopeJobQuery, parseJobScope } from './job-scope.js'
 import { isSubmissionPublished, expireUnpublishedSubmissions, repairSubmissionExpiryAudits } from './submission-ready.js'
 import { createNonOverlappingTick } from './non-overlapping-tick.js'
 import { waitForHeavyCapacity, deferCapacityJob, claimCapacityPreparation } from './capacity-backpressure.js'
@@ -34,8 +35,11 @@ import {
 let orchestratorRunning = false
 let pollInterval: NodeJS.Timeout | null = null
 const orchestratorTick = createNonOverlappingTick(async () => {
-  await repairSubmissionExpiryAudits(supabase)
-  await expireUnpublishedSubmissions(supabase)
+  // During an isolated release test, leave unrelated historical records untouched.
+  if (parseJobScope(process.env.AI_MEDIA_JOB_ALLOWLIST) === null) {
+    await repairSubmissionExpiryAudits(supabase)
+    await expireUnpublishedSubmissions(supabase)
+  }
   await processPendingJobs()
   await processQueuedJobs()
 }, (error: any) => console.error('[orchestrator] Error during tick:', error))
@@ -89,11 +93,11 @@ export function stopOrchestrator() {
  * Validates inputs for PENDING jobs and moves them to QUEUED.
  */
 async function processPendingJobs() {
-  const { data: pendingJobs } = await supabase
+  const { data: pendingJobs } = await scopeJobQuery(supabase
     .from('ai_media_jobs')
     .select('*')
     .eq('state', JobState.PENDING)
-    .or('metadata->>video_submission_ready.is.null,metadata->>video_submission_ready.eq.true')
+    .or('metadata->>video_submission_ready.is.null,metadata->>video_submission_ready.eq.true'))
     .limit(10)
 
   if (!pendingJobs || pendingJobs.length === 0) return

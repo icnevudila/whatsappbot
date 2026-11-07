@@ -1179,6 +1179,8 @@ const queue = new AdvancedJobQueue(
     : null
 );
 
+const { estimateQueue } = require('./queue_estimate');
+
 class VideoJobQueue {
   constructor(maxConcurrent = 1, store = null) {
     this.maxConcurrent = maxConcurrent;
@@ -1300,15 +1302,10 @@ class VideoJobQueue {
     if (this.storageError) throw typedError('VIDEO_DURABLE_STORAGE_UNAVAILABLE', 503);
     const job = this.jobs.get(id) || this.store?.read(id);
     if (!job) return null;
-    let position = 0;
-    if (job.status === 'queued') {
-      const idx = this.queue.findIndex(item => item.jobId === id);
-      position = idx >= 0 ? idx + 1 : 1;
-    }
     return {
       ...job,
-      queue_position: position,
-      estimated_wait_seconds: position * 110,
+      ...estimateQueue({ jobs: this.jobs, pendingIds: this.queue.map(item => item.jobId),
+        jobId: id, capacity: this.maxConcurrent }),
       elapsed_seconds: Math.round((Date.now() - job.enqueuedAt) / 1000),
     };
   }
@@ -2192,8 +2189,9 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 202, {
             job_id: jobId,
             status: 'queued',
-            queue_position: jobInfo?.queue_position || 1,
-            estimated_wait_seconds: jobInfo?.estimated_wait_seconds || 110,
+            queue_position: jobInfo?.queue_position ?? null,
+            estimated_wait_seconds: jobInfo?.estimated_wait_seconds ?? null,
+            estimated_completion_seconds: jobInfo?.estimated_completion_seconds ?? null,
             status_url: `/v1/videos/status/${jobId}`,
             message: 'Video başarıyla kuyruğa alındı. Durumunu status_url üzerinden takip edebilirsiniz.',
           });

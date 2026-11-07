@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { JobState } from './state-machine.js'
+import { scopeJobQuery } from './job-scope.js'
 
 export interface QueuedJob {
   id: string
@@ -37,10 +38,10 @@ export async function fetchNextJob(supabase: SupabaseClient): Promise<QueuedJob 
 
   // Use raw SQL via RPC for the FOR UPDATE SKIP LOCKED pattern
   // Fallback: simple priority-based fetch from Supabase client
-  const { data: queuedJobs, error } = await supabase
+  const { data: queuedJobs, error } = await scopeJobQuery(supabase
     .from('ai_media_jobs')
     .select('*')
-    .eq('state', JobState.QUEUED)
+    .eq('state', JobState.QUEUED))
     .order('priority', { ascending: false })
     .order('created_at', { ascending: true })
     .limit(10)

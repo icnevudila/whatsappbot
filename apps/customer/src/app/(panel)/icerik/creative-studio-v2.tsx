@@ -301,7 +301,8 @@ export function CreativeStudioV2({
         if (adapted.heroProductId && productsList.some((p) => p.id === adapted.heroProductId)) {
           setHeroProductId(adapted.heroProductId)
         }
-        setMediaType(adapted.mediaType)
+        // An explicit video entry must not silently restore an image draft.
+        setMediaType(initialMediaType === 'VIDEO' ? 'VIDEO' : adapted.mediaType)
         setPromotionMode(parsePromotionMode(parsed.promotionMode))
         setOfferingKind(parseOfferingKind(parsed.offeringKind))
         if (parsed.promotionMode === 'brand') setHeroProductId('')
