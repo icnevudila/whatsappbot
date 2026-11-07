@@ -77,3 +77,27 @@ Kullanıcı arkadaşının gereksiz animasyon açıklaması eleştirisini onayla
 -Kanıt:caption-cleanup-check.json14sürüm/0kalanistenmeyenetiket. Perfilmcaption-audit.jsondosyalarıartifacts/landing-studio-2026-11-06altında;discovery2varyantındaOSMatıfgörünürlüğütrue.
 -Metadata+tamdecode:73aktifasset/16geçerliH264film. Buildbaşarılı33statikçıktı. Gerçektarayıcıdesktopshowcase20s1.8×oynuyor;mobile390/document375,showcase-mobilev8oynuyor,hatasız. Screenshotlarclean-copy-desktop.pngveclean-copy-mobile.png.
 -Buajanpush/deploy/Oracleişlemiyapmadı. Yerel3018önizlemegüncelbuildleyerelolarakyenidenbaşlatıldı.
+
+
+## Auth entry redesign — 7 November 2026 (customer app, separate from landing)
+User asked to redesign app.mesajify.com/giris for desktop and mobile, using the established Mesajify visual quality.
+
+Changed files:
+- apps/customer/src/components/auth-shell.tsx
+- apps/customer/src/components/auth-shell.css (new, scoped to auth shell)
+- apps/customer/src/app/giris/page.tsx
+- apps/customer/src/app/giris/auth-mode-copy.tsx
+- apps/customer/src/app/giris/auth-form.tsx
+- apps/customer/public/fonts/inter-latin.woff2, inter-turkish.woff2, INTER-LICENSE.txt (local licensed assets copied from owned landing)
+
+Design: neutral light page, real green/black logo, editorial desktop split, compact illustrative campaign conversation and unboxed login form; no large green slab. Mobile hides the aside, prioritizes fields and uses 52px controls with a 48px password toggle. The shared AuthShell also styles existing forgot/reset password pages. Removed redundant illustrative footnotes before final delivery. Legal links and public site return remain available. Updated auth contact subject to Mesajify while preserving the existing support address. Metadata no longer duplicates the brand in the title.
+
+Function boundary: existing signIn/server actions, provider configuration, session/auth redirects and password reset logic were NOT edited. actions.ts SHA256:4EFEA4A120135ACEB28D38B175E36F8E7A7DD7F47D9F1A528E144F550D2CF91C. Form field names, action binding, minLength, pending state, autocomplete, hidden devam and hata notices remain. Password toggle gained aria-pressed; email gained mobile input hints. No registration backend or OAuth buttons added.
+
+Evidence:
+- Final npm.cmd run build --workspace=@wa/customer succeeded (62 static generation entries plus dynamic routes/typecheck).
+- /giris, /giris?hata=uye&devam=%2Fmesajlar, /sifremi-unuttum, /sifre-yenile, /kvkk, /kosullar all returned200 locally.
+- Actual browser:1440×900 desktop and390×844 mobile; mobile aside display:none,52px inputs/submit, no horizontal overflow.320×568 also checked; form remains usable with natural vertical scrolling. Password reveal/hide and aria state verified with synthetic input then cleared. Membership notice renders and input[name=devam][value="/mesajlar"] remains present in browser DOM. No real credentials submitted; successful provider login and password-reset email delivery were not tested by this design task.
+- Artifacts: artifacts/auth-redesign-2026-11-07/{DIRECTION.md,route-check.json,browser-check.json,desktop.png,mobile.png,SOURCE-CHECKPOINT.json}.
+- Local review URL:http://localhost:3019/giris (customer next start). Landing review remains3018. A landing-only deploy will NOT publish this auth redesign: the publishing bot must include the CUSTOMER app and its public/fonts assets when authorized.
+- This agent did not push, deploy, restart Oracle or modify production settings. NO_PUSH_HELD remains. Scope is local UI implementation and validation.
