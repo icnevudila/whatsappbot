@@ -276,8 +276,7 @@ export const db = {
       return { data: result.rows[0]?.result, error: null }
     } catch (error: any) { return { data: null, error } }
   },
-  async query(sql: string, params?: any[]) {
-    if (!pool) throw new Error('PostgreSQL pool not initialized')
-    return pool.query(sql, params)
-  }
+  // Consumers use the presence of query to choose the direct-SQL backend.
+  // Do not advertise it when this instance only has a Supabase HTTP client.
+  query: pool ? async (sql: string, params?: any[]) => pool!.query(sql, params) : undefined,
 }
