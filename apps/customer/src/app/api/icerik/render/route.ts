@@ -2,6 +2,7 @@ import { isApprovedFinalVideoOutput } from '@/lib/creative/video-output-approval
 import { NextResponse } from 'next/server'
 import { processCreativeGeneration } from '@/lib/creative/process'
 import { recoverableImageReceipt } from '@/lib/creative/image-recovery'
+import { createSupabaseServiceClient } from '@/lib/supabase/service'
 import { isOrgAdminRole, requireActiveOrg } from '@/lib/org'
 
 export const runtime = 'nodejs'
@@ -131,7 +132,8 @@ export async function POST(request: Request) {
     }
   }
 
-  const result = await processCreativeGeneration(id, supabase)
+  // Authorization/tenant ownership above precedes any privileged artifact write.
+  const result = await processCreativeGeneration(id, createSupabaseServiceClient() || supabase, org.id)
   if (result.pending || result.busy) {
     // busy da pending olarak dön — poll loop devam etsin, spinner durmasın.
     return NextResponse.json(

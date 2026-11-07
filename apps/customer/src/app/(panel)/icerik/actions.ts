@@ -842,7 +842,7 @@ export async function reconcileCreative(id: string): Promise<CreativeActionState
               .maybeSingle()
             if (restoreError || !restored) return { error: 'İşin durumu değişti; sayfayı yenileyip mevcut sonucu kontrol edin.' }
 
-            const processRes = await processCreativeGeneration(trimmed, supabase)
+            const processRes = await processCreativeGeneration(trimmed, createSupabaseServiceClient() || supabase, org.id)
             if (processRes.ready || processRes.needsReview) {
               revalidateLibrary(trimmed)
               return { ok: 'Üretim tamamlanmış olarak kurtarıldı.' }

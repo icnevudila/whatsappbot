@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { DirectImageReconciliationError, generateImage, type ReferenceImage } from '@/lib/ai/image'
 import { inspectImageOutput, assertImageAspect, ImageOutputInvalidError } from '@/lib/ai/image-output'
 import { verifyPersistedImageBytes, persistGeneratedImage } from '@/lib/ai/image-storage-contract'
+import { recoverableImageReceipt } from './image-recovery'
 import { ImageJobFailedError, ImageJobPendingError, ImageJobReconciliationError, ImageSubmissionUncertainError, readImageJob } from '@/lib/ai/omnistudio-image-job'
 import { createHash } from 'node:crypto'
 import type { AiKeyBag } from '@/lib/ai/config'
@@ -228,6 +229,7 @@ function readVideoResult(value: unknown): {
 export async function processCreativeGeneration(
   creativeId: string,
   client?: SupabaseClient | null,
+  authorizedOrgId?: string,
 ): Promise<{
   ok: boolean
   skipped?: boolean
@@ -258,7 +260,9 @@ export async function processCreativeGeneration(
     .eq('id', creativeId)
     .maybeSingle()
 
-  if (!creative) return { ok: false, error: 'Kayıt bulunamadı.' }
+  if (!creative || (authorizedOrgId && creative.org_id !== authorizedOrgId)) {
+    return { ok: false, error: 'Kayıt bulunamadı.' }
+  }
 
   const snapshot = asSnapshot(creative.payload)
   if (!snapshot) {
@@ -274,7 +278,7 @@ export async function processCreativeGeneration(
 
   const payload = snapshot as CreativePayload
   const isVideo = creative.format === 'video' || snapshot.formatId === 'reels_video'
-  if (!isVideo && creative.status === 'failed' && !payload.imageJob && !payload.imageSubmitIntent && !payload.imageDirectIntent) {
+  if (!isVideo && creative.status === 'failed' && !recoverableImageReceipt(payload) && !payload.imageSubmitIntent && !payload.imageDirectIntent) {
     return { ok: false, error: creative.error || 'Önceki üretim başarısız; takip isteği yeni ücretli üretim başlatmaz.' }
   }
 
