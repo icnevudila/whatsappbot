@@ -6,7 +6,7 @@ const app = path.resolve(__dirname, '..');
 const root = path.join(app, 'public');
 const media = '/landing/studio/';
 const files = new Set(['/brand/mesajify-logo-full.png', '/brand/mesajify-symbol.png', '/og-image.png', media + 'scene.html', media + 'scene.css', media + 'scene.js', media + 'istanbul-map.webp']);
-for (const file of ['motion-film.html','motion-film.css','motion-film.js','scene-mobile-refinement.css','film-system.css','liora-source.webp','liora-campaign.webp']) files.add(media+file);
+for (const file of ['hero-clarity.html','hero-clarity.css','hero-clarity.js','motion-film.html','motion-film.css','motion-film.js','scene-mobile-refinement.css','film-system.css','liora-source.webp','liora-campaign.webp']) files.add(media+file);
 files.add(media+'mori-craft-v3.webp');
 for(const name of ['line-seed-latin-400.woff2','line-seed-latin-ext-400.woff2','line-seed-latin-700.woff2','line-seed-latin-ext-700.woff2','LINE-SEED-OFL.txt','INTER-LICENSE.txt','inter-latin.woff2','inter-turkish.woff2','inter-latin-ext.woff2']) files.add('/fonts/'+name);
 for(const name of fs.readdirSync(path.join(root,'landing/brands'))) files.add('/landing/brands/'+name);
@@ -32,7 +32,7 @@ for (const file of files) {
     const mode=path.basename(file).replace('-mobile','').replace('.mp4','');
     const mobileHeight=({launch:720,import:900,contacts:900,discovery:900,inbox:920,showcase:920,creative:1080,campaign:1080})[mode];
     if (!stream || stream.width !== (mobile ? 900 : launch ? 1000 : 1400) || stream.height !== (mobile ? mobileHeight : launch ? 720 : 700)) throw Error('Unexpected video encoding: ' + file);
-    const expectedDuration=launch?26:20;
+    const expectedDuration=launch?34:20;
     if (Math.abs(Number(row.probe.format?.duration)-expectedDuration)>.15) throw Error('Incomplete video duration: '+file);
     execFileSync('ffmpeg', ['-v', 'error', '-i', absolute, '-f', 'null', '-'], { stdio: ['ignore', 'ignore', 'pipe'] });
   }

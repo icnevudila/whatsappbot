@@ -6,9 +6,9 @@ import './audience-paths.css';
 import {Film} from './site';
 
 const paths=[
- {id:'excel',icon:FileSpreadsheet,label:'Listem hazır',title:'Elinizdeki listeyle başlayın.',text:'Kişilerinizi Excel’den aktarın. Grubunuzu düzenleyin, kampanyanızın alıcılarını seçin.',steps:['Excel dosyanızı aktarın','Kişi grubunuzu düzenleyin','Kampanyada grubunuzu seçin'],visual:'Müşteri listeniz',rows:['Deniz A.','Ece B.','Mert C.'],status:'Kişi grubunuz'},
- {id:'rehber',icon:Smartphone,label:'Rehberimden çekeyim',title:'Bağlı hattınızdaki kişileri alın.',text:'WhatsApp hattınızı bağlayın. Rehberdeki kişi ve sohbet numaralarını panelinize aktarın.',steps:['WhatsApp hattınızı bağlayın','Rehberden çek seçeneğini açın','Aktarılan kişileri inceleyin'],visual:'WhatsApp rehberi',rows:['Kişiler','Sohbet numaraları','Kişi grubunuz'],status:'Bağlı hat gerekir'},
- {id:'talep',icon:MapPin,label:'Yeni liste istiyorum',title:'Bölgenizi seçin. Listenizi talep edin.',text:'Kategori ve il-ilçe seçin veya adres ve mesafeyi belirleyin. Talebinizin hazırlık durumunu izleyin.',steps:['Kategori ve konumu belirleyin','Liste talebinizi gönderin','Hazırlanan listeyi inceleyin'],visual:'Yeni liste talep',rows:['Kategori · Ev ürünleri','Konum · Bursa / Nilüfer','Durum · Hazırlanıyor'],status:'Talep takibi'},
+ {id:'excel',icon:FileSpreadsheet,label:'Excel listem',title:'Elinizdeki listeyle başlayın.',text:'Kişilerinizi Excel’den aktarın. Grubunuzu düzenleyin, kampanyanızın alıcılarını seçin.',steps:['Excel dosyanızı aktarın','Kişi grubunuzu düzenleyin','Kampanyada grubunuzu seçin'],visual:'Müşteri listeniz',rows:['Deniz A.','Ece B.','Mert C.'],status:'Kişi grubunuz'},
+ {id:'rehber',icon:Smartphone,label:'WhatsApp rehberim',title:'Bağlı hattınızdaki kişileri alın.',text:'WhatsApp hattınızı bağlayın. Rehberdeki kişi ve sohbet numaralarını panelinize aktarın.',steps:['WhatsApp hattınızı bağlayın','Rehberden çek seçeneğini açın','Aktarılan kişileri inceleyin'],visual:'WhatsApp rehberi',rows:['Kişiler','Sohbet numaraları','Kişi grubunuz'],status:'Bağlı hat gerekir'},
+ {id:'talep',icon:MapPin,label:'İşletme listesi talebi',title:'Bölgenizi seçin. Listenizi talep edin.',text:'Kategori ve il-ilçe seçin veya adres ve mesafeyi belirleyin. Talebinizin hazırlık durumunu izleyin.',steps:['Kategori ve konumu belirleyin','Liste talebinizi gönderin','Hazırlanan listeyi inceleyin'],visual:'Yeni liste talep',rows:['Kategori · Ev ürünleri','Konum · Bursa / Nilüfer','Durum · Hazırlanıyor'],status:'Talep takibi'},
 ];
 
 export function AudiencePaths(){

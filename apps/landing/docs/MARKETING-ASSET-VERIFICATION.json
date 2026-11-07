@@ -1,5 +1,5 @@
 {
-  "date": "2026-11-07T10:46:05.850Z",
+  "date": "2026-11-07T16:19:54.835Z",
   "scope": "Current marketing home and detail pages",
   "pending": [],
   "assets": [
@@ -20,18 +20,18 @@
     },
     {
       "file": "/landing/studio/scene.html",
-      "bytes": 9535,
-      "sha256": "81f53b00fbf2a8fef146c8ff8824c4329b8b2ce7bb5afb268fe7a773f86b7cad"
+      "bytes": 9558,
+      "sha256": "905261482c145d9c1fd13d73b5e5c627dc26982af8ea73be6f66a8aeb137b7fb"
     },
     {
       "file": "/landing/studio/scene.css",
-      "bytes": 35261,
-      "sha256": "66147364016ec8beb37fcffa579810b4af5a1ae5e8d78fcc361117215730d3d9"
+      "bytes": 35277,
+      "sha256": "e8c5e509a49d5c627ab8317554153951a0edf76d2f964a67796c4ee5fb4ce6ea"
     },
     {
       "file": "/landing/studio/scene.js",
-      "bytes": 10194,
-      "sha256": "6b11d5e5ffc6809361299e99a468772acf112241864d556c20b7a21edf572091"
+      "bytes": 10347,
+      "sha256": "bb6222801e38b3e7c0cbf7fa27f2357e03ad7276d652a01b867160460e4accf5"
     },
     {
       "file": "/landing/studio/istanbul-map.webp",
@@ -39,9 +39,24 @@
       "sha256": "00053c600e74ffc9137a7cc8c0e9dd7bbafe9aab25e6b7c350d7aec89639e552"
     },
     {
+      "file": "/landing/studio/hero-clarity.html",
+      "bytes": 4511,
+      "sha256": "4266827ee360d8acdc1f7673b7d27c0c28f9578c6f4c4aa9dafa04f937a18e51"
+    },
+    {
+      "file": "/landing/studio/hero-clarity.css",
+      "bytes": 6206,
+      "sha256": "903bd3ae76c4ac86dd1dcbd98cc68c7b6da1c968446ff97dcc6068d0630a3e27"
+    },
+    {
+      "file": "/landing/studio/hero-clarity.js",
+      "bytes": 5997,
+      "sha256": "f8c24ea7d9bc6be164031ba0e96180ba3d67a8973bbc37958e566205296264ee"
+    },
+    {
       "file": "/landing/studio/motion-film.html",
-      "bytes": 11450,
-      "sha256": "18e6d09952b7d5b5d93966af6646955b22c5c56bfc8c973b5de7f2a9bb5c2bd5"
+      "bytes": 11487,
+      "sha256": "e806e67a13c205377cb26bfb28362520be604a2eb1068eb956bbe594ff1fe62e"
     },
     {
       "file": "/landing/studio/motion-film.css",
@@ -55,13 +70,13 @@
     },
     {
       "file": "/landing/studio/scene-mobile-refinement.css",
-      "bytes": 2837,
-      "sha256": "ebc9e18c2e7723b77f64f2c6c7547cab30c7e032845da0bdb5b8e812344ca1bf"
+      "bytes": 2838,
+      "sha256": "c424c0b1d71efc2ead59c41dfe14f924bbb7f436bb234ad9d7713c0ef6dcde16"
     },
     {
       "file": "/landing/studio/film-system.css",
-      "bytes": 3088,
-      "sha256": "50b50fa7decf9e8d1180edd3c2a59cd6ea06a906aef1f4adb3e27e32c4511341"
+      "bytes": 3093,
+      "sha256": "d5dd106e9eecee951438f86782a350a1043757bbaad251e8711ef833d00763c1"
     },
     {
       "file": "/landing/studio/liora-source.webp",
@@ -100,13 +115,13 @@
     },
     {
       "file": "/fonts/LINE-SEED-OFL.txt",
-      "bytes": 4322,
-      "sha256": "1cfc3752ddd076bc7d461b6680e42a345f2579f91319fa04192b754b3b993f65"
+      "bytes": 4415,
+      "sha256": "31919e40ef0e45e9cd1da130f65bd6e3111ff7312ff447130899135170427bc9"
     },
     {
       "file": "/fonts/INTER-LICENSE.txt",
-      "bytes": 4380,
-      "sha256": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a"
+      "bytes": 4472,
+      "sha256": "b3195af0fb14368d1b3b10fb9d3fe503b7163ea083859d2ee553bc74da07c320"
     },
     {
       "file": "/fonts/inter-latin.woff2",
@@ -465,8 +480,8 @@
     },
     {
       "file": "/landing/studio/launch.mp4",
-      "bytes": 1172271,
-      "sha256": "24fb566dabfd0100c0eda064321529ffb10141d0d597ad0fe501ea7ec4c72fba",
+      "bytes": 660119,
+      "sha256": "fbeac28bd4a9a34132a276953045d554e3aeedf5f575ffed6ffb03e5a26dfcba",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -482,19 +497,19 @@
           }
         ],
         "format": {
-          "duration": "26.000000"
+          "duration": "34.000000"
         }
       }
     },
     {
       "file": "/landing/studio/launch-poster.jpg",
-      "bytes": 122573,
-      "sha256": "286536759db8b1dbca634eddac7334fce4a0172f6742b6d6ef8a94b2e19af9f7"
+      "bytes": 86338,
+      "sha256": "f3c6c9094ba84053c0e44397fa10b79975fd6964960bc5b03e892454c65b7343"
     },
     {
       "file": "/landing/studio/launch-mobile.mp4",
-      "bytes": 1731080,
-      "sha256": "120b74a634105d473a59f75b67441e76d3ff3c0b0de4120dcb1707cb2788c09c",
+      "bytes": 646828,
+      "sha256": "e7974c1fb8a0748f45d23f19ce853081d90281394c8ddd86e5ca4837924b190d",
       "probe": {
         "programs": [],
         "stream_groups": [],
@@ -510,14 +525,14 @@
           }
         ],
         "format": {
-          "duration": "26.000000"
+          "duration": "34.000000"
         }
       }
     },
     {
       "file": "/landing/studio/launch-mobile-poster.jpg",
-      "bytes": 128929,
-      "sha256": "596e2783cb359a7029a98634e67c0acf7bdc8c9ca524fce82afe6c3831a332a1"
+      "bytes": 85480,
+      "sha256": "5e1f4fafca47fb7e37cad94af2769b0ce6e5f1b8da579ba0eaf5cb253c2ae9ea"
     },
     {
       "file": "/landing/studio/import.mp4",

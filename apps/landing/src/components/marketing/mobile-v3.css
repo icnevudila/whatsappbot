@@ -23,3 +23,5 @@
 }
 @media(prefers-reduced-motion:reduce){.hero-typewriter-run>i{display:none;animation:none}.v3-work-gallery{scroll-behavior:auto}}
 @media(max-width:760px){.ms-site .v3-brands .bp-facts>div{border-top:0!important;border-right:1px solid #dce5da!important;padding:0 9px!important}.ms-site .v3-brands .bp-facts>div:last-child{border-right:0!important}}
+@media(max-width:760px){.ms-site .v3-brands .bp-facts{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:17px 0!important}.ms-site .v3-brands .bp-facts>div{min-width:0;padding:0 12px!important}.ms-site .v3-brands .bp-facts>div:nth-child(2){border-right:0!important}.ms-site .v3-brands .bp-facts>div:nth-child(n+3){padding-top:16px!important;border-top:1px solid #dce5da!important}.ms-site .v3-brands .bp-facts span{font-size:14px;line-height:1.5}}
+@media(max-width:760px){.ms-site .v3-hero .v3-primary{white-space:nowrap;gap:12px;padding-inline:16px;font-size:15px;min-height:56px}.ms-site .v3-hero .v3-primary>svg{flex-shrink:0}}@media(max-width:360px){.ms-site .v3-hero .v3-primary{font-size:14px;padding-inline:13px;gap:10px}}

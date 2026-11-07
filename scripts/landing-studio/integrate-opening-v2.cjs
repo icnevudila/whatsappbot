@@ -1,0 +1,10 @@
+const fs=require('node:fs');
+const file='apps/landing/src/components/marketing/site.tsx';
+let source=fs.readFileSync(file,'utf8');
+source=source.replace("import './site.css';","import './site.css';\nimport { OpeningHero, TransformationStory } from './opening';");
+const begin=source.indexOf('<section className="ms-hero ms-container">',source.indexOf('export function Home()'));
+const end=source.indexOf('<section className="ms-capabilities">',begin);
+if(begin<0||end<0)throw Error('Opening boundaries missing');
+source=source.slice(0,begin)+'<OpeningHero/><TransformationStory/>'+source.slice(end);
+fs.writeFileSync(file,source);
+console.log('Replaced home opening and proof section; retained supporting pages and later home sections.');
